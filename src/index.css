@@ -1,0 +1,130 @@
+@import 'tailwindcss';
+
+/*
+ * Palitra — sun'iy yo'ldosh tasviri ustida ishlash uchun tanlangan.
+ *
+ * Tasvir issiq va tuproq ranglariga to'la, shuning uchun UI sovuqroq va
+ * to'qroq: panellar tasvirdan ajralib turadi, o'z rangini unga qo'shmaydi.
+ * Brend rangi — ekin yashili, ammo to'yingan emas: u faqat harakat va
+ * tanlovni belgilaydi, fon bo'lib xizmat qilmaydi.
+ */
+@theme {
+  /* Yuza — sovuq neytral, deyarli oq emas */
+  --color-paper: #f4f5f3;
+  --color-surface: #ffffff;
+  --color-sunken: #eceee9;
+  --color-line: #dfe2dc;
+  --color-line-strong: #c6cbc2;
+
+  /* Matn — yashil tomonga bir oz siljigan qora, sof kulrang emas */
+  --color-ink: #16201a;
+  --color-body: #3c463e;
+  --color-muted: #6b756c;
+  --color-faint: #9aa39b;
+
+  /* Brend — ekin yashili */
+  --color-leaf: #2f7d4f;
+  --color-leaf-dark: #23603c;
+  --color-leaf-soft: #e4f0e8;
+  --color-leaf-line: #bcdcc8;
+
+  /* Ikkilamchi — bug'doy (ogohlantirish, kuzgi mavsum) */
+  --color-wheat: #b07d2a;
+  --color-wheat-soft: #f8efdc;
+
+  /* Suv (sug'orish, relyef) */
+  --color-water: #2c6e8f;
+  --color-water-soft: #e2eef3;
+
+  /* Xato / rad etish */
+  --color-clay: #a4473c;
+  --color-clay-soft: #f7e7e4;
+
+  /* Xaritadagi kontur chegarasi — sariq-yashil: sun'iy yo'ldoshda
+     qizildan yaxshi ko'rinadi va tuproq ranglariga singib ketmaydi */
+  --color-outline: #bdf06a;
+
+  --radius-card: 8px;
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background: var(--color-paper);
+    color: var(--color-body);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  /* Barcha raqamlar tabular — ustunlar sakramasin */
+  .nums,
+  table,
+  input[type='number'] {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Klaviatura fokusi ko'rinadigan, sichqoncha bosishida yo'q */
+  :focus-visible {
+    outline: 2px solid var(--color-leaf);
+    outline-offset: 1px;
+    border-radius: 3px;
+  }
+  input[type='range'] {
+    accent-color: var(--color-leaf);
+  }
+  input[type='checkbox'] {
+    accent-color: var(--color-leaf);
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+  /* Xarita ustidagi suzuvchi panel — tasvir ustida o'qilishi kerak */
+  .float-panel {
+    background: rgb(255 255 255 / 0.97);
+    backdrop-filter: blur(8px) saturate(1.1);
+    border: 1px solid var(--color-line-strong);
+    box-shadow:
+      0 1px 2px rgb(22 32 26 / 0.06),
+      0 8px 24px -8px rgb(22 32 26 / 0.18);
+  }
+  /* Ustun sarlavhasi — bo'limlarni ajratuvchi kichik yorliq */
+  .eyebrow {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+}
+
+/* MapLibre uslublarini loyihaga moslash */
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+  background: rgb(255 255 255 / 0.72) !important;
+  border-radius: 4px 0 0 0;
+}
+.maplibregl-ctrl-attrib a {
+  color: var(--color-muted);
+}
+.maplibregl-ctrl-scale {
+  border-color: var(--color-line-strong) !important;
+  background: rgb(255 255 255 / 0.8) !important;
+  color: var(--color-body) !important;
+  font-size: 10px;
+  border-radius: 0 3px 3px 0;
+}
+.maplibregl-canvas:focus {
+  outline: none;
+}

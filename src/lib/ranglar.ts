@@ -1,0 +1,149 @@
+import type { Qatlam } from '@/store/useApp'
+
+/**
+ * Klasslangan (classified) shkala — cho'zilgan gradient emas.
+ *
+ * Har bir klass o'z chegarasi va nomi bilan: agronom "62 ball" ni emas,
+ * "yaxshi" toifani ko'radi va legendadan aniq o'qiydi. Xaritadagi rang
+ * to'g'ridan-to'g'ri legenda katagiga mos keladi.
+ */
+export interface Klass {
+  /** Quyi chegara (shu qiymatdan boshlab shu klass) */
+  min: number
+  /** Yuqori chegara, oxirgi klassda Infinity */
+  max: number
+  rang: string
+  nom: string
+  /** Legendada ko'rsatiladigan diapazon matni */
+  oraliq?: string
+}
+
+export interface Shkala {
+  nom: string
+  izoh: string
+  klasslar: Klass[]
+  /** Diskret kategoriya qatlami (foydalanish turi) */
+  kategoriyami?: boolean
+}
+
+const YOQ_RANG = '#b9bfb6'
+
+// Bonitet — YlGn asosida, sun'iy yo'ldoshda aniq ajraladi
+const BONITET: Klass[] = [
+  { min: -Infinity, max: 41, rang: '#fff8d6', nom: 'Juda past', oraliq: '< 41' },
+  { min: 41, max: 51, rang: '#dbeda0', nom: 'Past', oraliq: '41–50' },
+  { min: 51, max: 61, rang: '#a2d47f', nom: "O'rtacha", oraliq: '51–60' },
+  { min: 61, max: 71, rang: '#55ab5c', nom: 'Yaxshi', oraliq: '61–70' },
+  { min: 71, max: Infinity, rang: '#1c7a3e', nom: 'Yuqori', oraliq: '71+' },
+]
+
+// Agrokimyo darajalari — 0..4, bir xil palitra uch ko'rsatkich uchun
+const DARAJA: Klass[] = [
+  { min: 0, max: 1, rang: '#fff8d6', nom: 'Juda kam' },
+  { min: 1, max: 2, rang: '#dbeda0', nom: 'Kam' },
+  { min: 2, max: 3, rang: '#a2d47f', nom: "O'rtacha" },
+  { min: 3, max: 4, rang: '#55ab5c', nom: "Ko'p" },
+  { min: 4, max: Infinity, rang: '#1c7a3e', nom: "Juda ko'p" },
+]
+
+// Sho'rlanish — teskari: yuqori = yomon, shuning uchun issiq palitra
+const SHOR: Klass[] = [
+  { min: 0, max: 2, rang: '#f2f6ee', nom: "Sho'rlanmagan" },
+  { min: 2, max: 3, rang: '#fcd9a8', nom: 'Kuchsiz' },
+  { min: 3, max: 4, rang: '#f2a465', nom: "O'rtacha" },
+  { min: 4, max: 6, rang: '#d96a4a', nom: 'Kuchli' },
+  { min: 6, max: Infinity, rang: '#9e3535', nom: "Sho'rxok" },
+]
+
+// Balandlik — gipsometrik, hudud diapazoni 711–1123 m
+const BALANDLIK: Klass[] = [
+  { min: -Infinity, max: 750, rang: '#4b8c5a', nom: 'Past tekislik', oraliq: '< 750 m' },
+  { min: 750, max: 800, rang: '#9cbd6c', nom: 'Tekislik', oraliq: '750–800' },
+  { min: 800, max: 870, rang: '#e2cc84', nom: 'Adirlar etagi', oraliq: '800–870' },
+  { min: 870, max: 960, rang: '#c99a63', nom: 'Adirlar', oraliq: '870–960' },
+  { min: 960, max: Infinity, rang: '#9a6a4c', nom: "Tog'oldi", oraliq: '960+' },
+]
+
+// Qiyalik — agrotexnika nuqtai nazaridan, yuqori = muammo
+const QIYALIK: Klass[] = [
+  { min: 0, max: 1, rang: '#eef4ea', nom: 'Tekis', oraliq: '< 1°' },
+  { min: 1, max: 3, rang: '#d5e3c4', nom: 'Deyarli tekis', oraliq: '1–3°' },
+  { min: 3, max: 8, rang: '#f0c273', nom: 'Yengil nishab', oraliq: '3–8°' },
+  { min: 8, max: 15, rang: '#dc8452', nom: 'Nishab', oraliq: '8–15°' },
+  { min: 15, max: Infinity, rang: '#a04430', nom: 'Tik', oraliq: '15°+' },
+]
+
+// Tavsiya bali — divergent: yaroqsizdan a'loga
+const TAVSIYA: Klass[] = [
+  { min: -Infinity, max: 25, rang: '#a4473c', nom: 'Mos emas', oraliq: '< 25' },
+  { min: 25, max: 45, rang: '#d9834a', nom: 'Zaif', oraliq: '25–44' },
+  { min: 45, max: 62, rang: '#f0cc63', nom: "O'rtacha", oraliq: '45–61' },
+  { min: 62, max: 78, rang: '#8fc45f', nom: 'Yaxshi', oraliq: '62–77' },
+  { min: 78, max: Infinity, rang: '#1c7a3e', nom: "A'lo", oraliq: '78+' },
+]
+
+export const FOYD_RANG: Record<number, string> = {
+  0: '#c9cec6',
+  1: '#e0b552',
+  2: '#ead9a6',
+  3: '#3f8f52',
+  4: '#8c62a8',
+  5: '#4e9c92',
+  6: '#dd8f55',
+  7: '#a7bc86',
+  8: '#8d9490',
+}
+
+const FOYD_NOMLAR = [
+  "Bo'sh",
+  'Haydalma',
+  'Lalmi',
+  "Bog'",
+  'Uzumzor',
+  'Tutzor',
+  'Tomorqa',
+  'Yaylov',
+  'Qurilish',
+]
+
+const FOYD: Klass[] = FOYD_NOMLAR.map((nom, i) => ({
+  min: i,
+  max: i + 1,
+  rang: FOYD_RANG[i],
+  nom,
+}))
+
+/**
+ * Tematik ranglashsiz rejimda kontur chegarasi.
+ * Och yashil-sariq: sun'iy yo'ldosh tasvirining tuproq va o'simlik ranglari
+ * orasida aniq ajraladi, ammo neon emas — chizig'i shaffofligi bilan
+ * birga xaritani shovqinga to'ldirmaydi.
+ */
+export const KONTUR_CHEGARA = '#bdf06a'
+
+export const SHKALA: Record<Qatlam, Shkala> = {
+  yoq: { nom: 'Konturlar', izoh: 'tematik ranglashsiz', klasslar: [] },
+  bonitet: { nom: 'Tuproq boniteti', izoh: 'ball', klasslar: BONITET },
+  gumus: { nom: 'Gumus', izoh: 'chirindi miqdori', klasslar: DARAJA },
+  fosfor: { nom: 'Fosfor', izoh: 'P₂O₅', klasslar: DARAJA },
+  kaliy: { nom: 'Kaliy', izoh: 'K₂O', klasslar: DARAJA },
+  shor: { nom: "Sho'rlanish", izoh: 'daraja', klasslar: SHOR },
+  balandlik: { nom: 'Balandlik', izoh: 'dengiz sathidan', klasslar: BALANDLIK },
+  qiyalik: { nom: 'Qiyalik', izoh: 'nishablik', klasslar: QIYALIK },
+  tavsiya: { nom: 'Moslik bali', izoh: 'tanlangan ekin uchun', klasslar: TAVSIYA },
+  foyd: { nom: 'Hozirgi foydalanish', izoh: 'yer turi', klasslar: FOYD, kategoriyami: true },
+}
+
+/** Qiymat qaysi klassga tushadi */
+export function klassOl(qatlam: Qatlam, v: number): Klass | null {
+  if (v < 0 || v === null || v === undefined) return null
+  const ks = SHKALA[qatlam].klasslar
+  return ks.find((k) => v >= k.min && v < k.max) ?? ks[ks.length - 1]
+}
+
+/** Kontur atributidan rang — CSS uchun */
+export function rangOl(qatlam: Qatlam, v: number): string {
+  return klassOl(qatlam, v)?.rang ?? YOQ_RANG
+}
+
+export { YOQ_RANG }
