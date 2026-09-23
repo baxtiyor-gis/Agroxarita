@@ -44,7 +44,7 @@ export default function App() {
         <div className="flex h-[68px] shrink-0 items-center gap-2.5 px-4">
           <Logo size={34} />
           <div className="flex items-baseline">
-            <span className="text-[22px] font-semibold tracking-[-0.02em] text-[#5fc427]">agro</span>
+            <span className="text-[22px] font-semibold tracking-[-0.02em] text-leaf">agro</span>
             <span className="text-[22px] font-semibold tracking-[-0.02em] text-white">xarita</span>
           </div>
         </div>
