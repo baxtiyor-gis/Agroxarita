@@ -120,6 +120,19 @@ Backend yo'q — hamma narsa statik, tavsiya brauzerda hisoblanadi.
 | `geom.geojson` | 2.9 MB | Geometriya, WGS84, soddalashtirilgan |
 | `crops.json` | 0.04 MB | 37 ekin agrotexnik me'yorlari |
 
+### 2026-yil ekinlari
+
+`data/New File Geodatabase.gdb` → `ekin_2026` (1 600 poligon, `crop_name` GDB domeni orqali nomlanadi)
+konturlarga **intersect** bilan bog'lanadi (UTM 42N):
+
+```bash
+python scripts/ekin_2026.py   # attrs.json ga lug.ekin26 va col.ekin26 qo'shadi
+```
+
+- Kontur maydonining 5 % dan kichik kesishmalari tashlanadi; asosiy ekin — kamida 20 % egallagan eng katta qism.
+- 18 ekin, 3 523 kontur; ekin maydonining 96 % konturlar ichiga tushadi.
+- Fermer nomi, INN, kadastr kabi shaxsiy maydonlar o'qilmaydi — `attrs.json` ochiq statik fayl.
+
 Manba geo-ma'lumotlar (`Data/`, ~40 MB) git'ga kiritilmagan — alohida saqlanadi.
 
 ---

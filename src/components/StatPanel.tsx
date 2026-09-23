@@ -1,9 +1,31 @@
 import { useMemo, useState } from 'react'
-import { ChevronDown, Eye, FlaskConical, Layers, LandPlot, MapPinned, Mountain } from 'lucide-react'
+import {
+  ChevronDown,
+  Eye,
+  FlaskConical,
+  Layers,
+  LandPlot,
+  MapPinned,
+  Mountain,
+} from 'lucide-react'
 import { useApp, type Qatlam } from '@/store/useApp'
-import { attrs, ustun } from '@/lib/data'
+import { attrs, ekinlar26, ustun } from '@/lib/data'
 import { SHKALA, YOQ_RANG } from '@/lib/ranglar'
 import { cn } from '@/lib/utils'
+
+/** Footer — loyiha egalari */
+const TASHKILOTLAR = [
+  {
+    nom: 'O‘zbekiston Respublikasi Qishloq xo‘jaligi vazirligi',
+    logo: 'qxv.png',
+    url: 'https://gov.uz/uz/agro',
+  },
+  {
+    nom: '“Agrosanoatni raqamlashtirish markazi” MCHJ',
+    logo: 'digitagro.png',
+    url: 'https://agroportal.digitagro.uz/',
+  },
+]
 
 const gaFmt = (v: number) => `${Math.round(v).toLocaleString('ru')} ga`
 const foizFmt = (v: number) => `${v.toFixed(1).replace('.', ',')} %`
@@ -37,6 +59,24 @@ function taqsimot(qatlam: Qatlam): Qism[] {
   return yoq.soni ? [...out, yoq] : out
 }
 
+/**
+ * 2026-yil ekinlari — haqiqiy ekin maydoni: kontur maydoni × kesishma ulushi.
+ * Bir konturda bir necha ekin bo'lishi mumkin, har biri o'z ulushi bilan.
+ */
+function ekinTaqsimot(): Qism[] {
+  const p = attrs()
+  const out: Qism[] = ekinlar26().map((e) => ({ nom: e.nom, rang: e.rang, soni: 0, maydon: 0 }))
+  const col = p.col.ekin26
+  if (!col) return out
+  for (let i = 0; i < p.n; i++) {
+    for (const [e, u] of col[i]) {
+      out[e].soni++
+      out[e].maydon += (p.col.maydon[i] * u) / 100
+    }
+  }
+  return out
+}
+
 /** Massivlar bo'yicha maydon — kamayish tartibida */
 function massivlar(): Qism[] {
   const p = attrs()
@@ -54,11 +94,11 @@ function massivlar(): Qism[] {
 
 function Korsatkich({ nom, qiymat, birlik }: { nom: string; qiymat: string; birlik?: string }) {
   return (
-    <div className="rounded-lg border border-line bg-white/[0.04] px-3 py-2.5">
-      <div className="text-[11px] text-muted">{nom}</div>
-      <div className="nums mt-1 text-[18px] leading-none font-semibold whitespace-nowrap text-ink">
+    <div className="rounded-lg border border-line bg-white/[0.04] px-2.5 py-2">
+      <div className="text-[11px] leading-none text-muted">{nom}</div>
+      <div className="nums mt-1.5 text-[16px] leading-none font-semibold whitespace-nowrap text-ink">
         {qiymat}
-        {birlik && <span className="ml-1 text-[12px] font-normal text-muted">{birlik}</span>}
+        {birlik && <span className="ml-1 text-[11px] font-normal text-muted">{birlik}</span>}
       </div>
     </div>
   )
@@ -179,7 +219,7 @@ function Taqsimot({
 
 export function StatPanel() {
   const { tayyor } = useApp()
-  const [ochiq, setOchiq] = useState<string | null>('yer')
+  const [ochiq, setOchiq] = useState<string | null>(null)
 
   const s = useMemo(() => {
     if (!tayyor) return null
@@ -204,6 +244,7 @@ export function StatPanel() {
       bonitet: bonMaydon ? bonSum / bonMaydon : null,
       massiv: mas,
       foyd: t('foyd'),
+      ekin: ekinTaqsimot(),
       bonitetT: t('bonitet'),
       shor: t('shor'),
       gumus: t('gumus'),
@@ -219,11 +260,19 @@ export function StatPanel() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="grid shrink-0 grid-cols-2 gap-2 border-b border-line px-4 pb-4">
+      <div className="grid shrink-0 grid-cols-2 gap-1.5 border-b border-line px-4 pb-3">
         <Korsatkich nom="Konturlar" qiymat={s.soni.toLocaleString('ru')} birlik="ta" />
-        <Korsatkich nom="Umumiy maydon" qiymat={Math.round(s.maydon).toLocaleString('ru')} birlik="ga" />
+        <Korsatkich
+          nom="Umumiy maydon"
+          qiymat={Math.round(s.maydon).toLocaleString('ru')}
+          birlik="ga"
+        />
         <Korsatkich nom="Massivlar" qiymat={String(s.massiv.length)} birlik="ta" />
-        <Korsatkich nom="O'rtacha bonitet" qiymat={s.bonitet ? s.bonitet.toFixed(0) : '—'} birlik="ball" />
+        <Korsatkich
+          nom="O'rtacha bonitet"
+          qiymat={s.bonitet ? s.bonitet.toFixed(0) : '—'}
+          birlik="ball"
+        />
       </div>
 
       <div className="scrollbar-dark min-h-0 flex-1 overflow-y-auto">
@@ -233,6 +282,9 @@ export function StatPanel() {
 
         <Bolim nom="Yer" icon={LandPlot} ochiq={ochiq === 'yer'} onToggle={() => almashtir('yer')}>
           <Taqsimot nom="Yer turi" qismlar={s.foyd} qatlam="foyd" />
+          {s.ekin.length > 0 && (
+            <Taqsimot nom="Ekilgan ekinlar (2026)" qismlar={s.ekin} qatlam="ekin" />
+          )}
         </Bolim>
 
         <Bolim nom="Tuproq" icon={Layers} ochiq={ochiq === 'tuproq'} onToggle={() => almashtir('tuproq')}>
@@ -257,9 +309,24 @@ export function StatPanel() {
         </Bolim>
       </div>
 
-      <div className="shrink-0 border-t border-line px-4 py-3 text-[11.5px] text-faint">
-        © Qishloq xo'jaligi vazirligi
-      </div>
+      <footer className="shrink-0 space-y-2.5 border-t border-line px-4 py-3.5">
+        {TASHKILOTLAR.map((t) => (
+          <a
+            key={t.url}
+            href={t.url}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-3 transition-opacity hover:opacity-80"
+          >
+            <img
+              src={`${import.meta.env.BASE_URL}brand/${t.logo}`}
+              alt=""
+              className="size-8 shrink-0 object-contain"
+            />
+            <span className="text-[11.5px] leading-snug text-body">{t.nom}</span>
+          </a>
+        ))}
+      </footer>
     </div>
   )
 }

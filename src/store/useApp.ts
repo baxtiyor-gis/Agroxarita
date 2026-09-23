@@ -13,6 +13,7 @@ export type Qatlam =
   | 'balandlik'
   | 'qiyalik'
   | 'foyd'
+  | 'ekin'
 
 export interface Filtr {
   qidiruv: string

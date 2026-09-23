@@ -85,6 +85,7 @@ function Sarlavha({ children }: { children: React.ReactNode }) {
 const TEMATIK: { id: Qatlam; guruh: string }[] = [
   { id: 'yoq', guruh: 'Asosiy' },
   { id: 'foyd', guruh: 'Asosiy' },
+  { id: 'ekin', guruh: 'Asosiy' },
   { id: 'bonitet', guruh: 'Tuproq' },
   { id: 'shor', guruh: 'Tuproq' },
   { id: 'gumus', guruh: 'Agrokimyo' },
