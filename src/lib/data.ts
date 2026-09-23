@@ -20,6 +20,7 @@ export async function yukla() {
   geomFC = g
   bbox = hisoblaBbox(g)
   yerTuriCol = hisoblaYerTuri(a)
+  ekinCol = (a.col.ekin26 ?? []).map((l) => (l.length && l[0][1] >= EKIN_MIN_ULUSH ? l[0][0] : -1))
   return { pack: a, crops: c }
 }
 
@@ -53,6 +54,27 @@ function hisoblaYerTuri(p: AttrPack): number[] {
   return p.col.foyd.map((f) => kodGuruh[f] ?? -1)
 }
 
+// ------------------------------------------------------------ ekin 2026
+/** Asosiy ekin deb hisoblash uchun kontur maydonidan minimal ulush, % */
+export const EKIN_MIN_ULUSH = 20
+
+/** Ekinlar lug'ati umumiy maydon bo'yicha tartiblangan — rang ham shu tartibda */
+const EKIN_PALITRA = [
+  '#d4904a', '#f2c94c', '#a56cf0', '#e5484d', '#ff8b3d', '#3ec1d3',
+  '#8bc34a', '#ff6fb5', '#2f9e44', '#7c4dff', '#00a8e8', '#c0ca33',
+  '#26a69a', '#9ccc65', '#8d6e63', '#d4b483', '#ad1457', '#4db6ac',
+]
+
+let ekinCol: number[] = []
+
+/** 2026-yil ekinlari: nom va rang, lug'at tartibida */
+export function ekinlar26(): { nom: string; rang: string }[] {
+  return (pack?.lug.ekin26 ?? []).map((nom, i) => ({
+    nom,
+    rang: EKIN_PALITRA[i % EKIN_PALITRA.length],
+  }))
+}
+
 /** Tematik qatlam uchun kontur qiymatlari ustuni (-1 = ma'lumot yo'q) */
 export function ustun(qatlam: string): number[] | null {
   const c = pack!.col
@@ -65,6 +87,7 @@ export function ustun(qatlam: string): number[] | null {
     balandlik: c.balandlik,
     qiyalik: c.qiyalik,
     foyd: yerTuriCol,
+    ekin: ekinCol,
   }
   return map[qatlam] ?? null
 }
@@ -136,6 +159,7 @@ export function kontur(i: number): Kontur {
     balandlik: q.balandlik[i],
     qiyalik: q.qiyalik[i],
     yonalish: q.yonalish[i],
+    ekin26: (q.ekin26?.[i] ?? []).map(([e, u]) => ({ nom: lug.ekin26![e], ulush: u })),
   }
 }
 
@@ -183,7 +207,8 @@ export const SHOR_NOM: Record<number, string> = {
   6: "Sho'rxok",
 }
 
-export const SIFAT_NOM = ["Bog'lanmagan", 'Past', "O'rta", 'Yuqori']
+/** Tuproq ma'lumotining konturga mos kelish darajasi (fazoviy bog'lash sifati) */
+export const SIFAT_NOM = ["Ma'lumot yo'q", 'Past aniqlik', "O'rta aniqlik", 'Yuqori aniqlik']
 
 /** Yo'nalish gradusdan nomga */
 export function yonalishNom(deg: number): string {

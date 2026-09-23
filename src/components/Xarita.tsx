@@ -334,6 +334,11 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
       'case',
       ['boolean', ['feature-state', 'yashirin'], false],
       tematik ? 0.07 : 0.01,
+      // Ekin qatlami siyrak (konturlarning ~38 %) — ma'lumotsizlari bo'yalmaydi,
+      // aks holda kulrang fon ekinli konturlarni ko'mib yuboradi
+      ...((qatlam === 'ekin'
+        ? [['<', ['coalesce', ['feature-state', 'v'], -1], 0], 0.01]
+        : []) as ExpressionSpecification[]),
       ['boolean', ['feature-state', 'hover'], false],
       ustida,
       toliq,

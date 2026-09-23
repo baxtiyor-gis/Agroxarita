@@ -48,7 +48,7 @@ export function Legenda() {
   const ekin = crops().find((c) => c.id === tavsiyaEkin)
 
   return (
-    <div className="pointer-events-auto absolute right-3 bottom-8 z-10 w-[290px] overflow-hidden rounded-card float-panel">
+    <div className="pointer-events-auto absolute right-3 bottom-8 z-10 flex max-h-[calc(100%-340px)] min-h-[160px] w-[290px] flex-col overflow-hidden rounded-card float-panel">
       <div className="border-b border-line px-3.5 py-2.5">
         <div className="text-[13.5px] font-semibold text-navy">
           {qatlam === 'tavsiya' && ekin ? `${ekin.nom} mosligi` : sh.nom}
@@ -58,7 +58,7 @@ export function Legenda() {
         </div>
       </div>
 
-      <div className="px-1.5 py-1.5">
+      <div className="scrollbar-thin min-h-0 flex-auto overflow-y-auto px-1.5 py-1.5">
         {sh.klasslar.map((k, i) => {
           const soni = sanoq?.n[i] ?? 0
           const tanlangan = klassFiltr === i
@@ -99,7 +99,11 @@ export function Legenda() {
           >
             <span
               className="size-3.5 shrink-0 rounded-[4px] ring-1 ring-black/10"
-              style={{ background: YOQ_RANG }}
+              style={
+                qatlam === 'ekin'
+                  ? { background: 'transparent', boxShadow: 'inset 0 0 0 1.5px var(--color-outline)' }
+                  : { background: YOQ_RANG }
+              }
             />
             <span className="flex-1 text-[12px] text-muted">Ma'lumot yo'q</span>
             <span className="nums w-10 shrink-0 text-right text-[11px] text-muted">

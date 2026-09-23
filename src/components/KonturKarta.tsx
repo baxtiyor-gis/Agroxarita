@@ -20,6 +20,8 @@ import {
   SHOR_NOM,
   SIFAT_NOM,
   YER_TURLARI,
+  EKIN_MIN_ULUSH,
+  ekinlar26,
   gradFmt,
   yerTuri,
   yonalishNom,
@@ -129,6 +131,8 @@ export function KonturKarta() {
 
   const ytIdx = yerTuri()[k.i]
   const yt = ytIdx >= 0 ? YER_TURLARI[ytIdx] : null
+  const ekinRang = new Map(ekinlar26().map((e) => [e.nom, e.rang]))
+  const asosiyEkin = k.ekin26[0]?.ulush >= EKIN_MIN_ULUSH ? k.ekin26[0] : null
   const mos = tav.filter((t) => t.ball >= 25)
   const nomos = tav.filter((t) => t.ball < 25)
 
@@ -158,6 +162,15 @@ export function KonturKarta() {
             <span className="flex items-center gap-1.5 rounded-full bg-sunken px-2.5 py-[3px] text-body">
               <span className="size-2.5 rounded-full ring-1 ring-black/10" style={{ background: yt.rang }} />
               {yt.nom}
+            </span>
+          )}
+          {asosiyEkin && (
+            <span
+              className="flex items-center gap-1.5 rounded-full bg-leaf-soft px-2.5 py-[3px] font-medium text-leaf-dark"
+              title="2026-yilda ekilgan asosiy ekin"
+            >
+              <Sprout className="size-3" strokeWidth={2.2} />
+              {asosiyEkin.nom} · 2026
             </span>
           )}
           {k.sifat < 2 && (
@@ -367,20 +380,30 @@ export function KonturKarta() {
 
         {tab === 'malumot' && (
           <div className="divide-y divide-line px-2.5">
-            <Satr nom="Bog'lanish" qiymat={SIFAT_NOM[k.sifat]} />
+            <Satr nom="Ekin (2026)" qiymat={k.ekin26.length ? undefined : "Ma'lumot yo'q"}>
+              {k.ekin26.length > 0 && (
+                <div className="space-y-1.5">
+                  {k.ekin26.map((e) => (
+                    <div key={e.nom} className="flex items-center gap-2 text-[13px]">
+                      <span
+                        className="size-2.5 shrink-0 rounded-[3px] ring-1 ring-black/10"
+                        style={{ background: ekinRang.get(e.nom) }}
+                      />
+                      <span className="flex-1 font-medium text-ink">{e.nom}</span>
+                      <span className="nums text-[12px] text-muted">
+                        {e.ulush} % · {ga((k.maydon * e.ulush) / 100)} ga
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Satr>
             <Satr nom="Kadastr kodi" qiymat={k.kod} />
             <Satr nom="Kontur raqami" qiymat={String(k.id)} />
             <Satr nom="Massiv" qiymat={k.massiv ?? '—'} />
             <Satr nom="MFY" qiymat={k.mfy ?? '—'} />
-            <div className="py-3 text-[11px] leading-relaxed text-muted">
-              Tuproq va agrokimyo ma'lumotlari fazoviy bog'lash orqali olingan: kontur bilan eng
-              katta kesishma maydoniga ega poligon tanlangan.
-              {k.sifat < 2 && (
-                <span className="mt-1.5 block text-wheat">
-                  Bu konturda qoplama ulushi past — tavsiyalar taxminiy.
-                </span>
-              )}
-            </div>
+            {/* Tuproq/agrokimyo poligoni konturga qanchalik to'liq tushgani */}
+            <Satr nom="Tuproq ma'lumoti" qiymat={SIFAT_NOM[k.sifat]} />
           </div>
         )}
       </div>

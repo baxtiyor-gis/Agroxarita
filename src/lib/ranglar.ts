@@ -1,5 +1,5 @@
 import type { Qatlam } from '@/store/useApp'
-import { YER_TURLARI } from './data'
+import { YER_TURLARI, ekinlar26 } from './data'
 
 /**
  * Klasslangan (classified) shkala — cho'zilgan gradient emas.
@@ -105,6 +105,15 @@ export const SHKALA: Record<Qatlam, Shkala> = {
   qiyalik: { nom: 'Qiyalik', izoh: 'nishablik', klasslar: QIYALIK },
   tavsiya: { nom: 'Moslik bali', izoh: 'tanlangan ekin uchun', klasslar: TAVSIYA },
   foyd: { nom: 'Yer turi', izoh: 'hozirgi foydalanish', klasslar: FOYD, kategoriyami: true },
+  ekin: {
+    nom: 'Ekilgan ekin (2026)',
+    izoh: 'asosiy ekin',
+    // Lug'at ma'lumot yuklangandan keyin ma'lum — shuning uchun getter
+    get klasslar() {
+      return ekinlar26().map((e, i) => ({ min: i, max: i + 1, rang: e.rang, nom: e.nom }))
+    },
+    kategoriyami: true,
+  },
 }
 
 /** Qiymat qaysi klassga tushadi */
