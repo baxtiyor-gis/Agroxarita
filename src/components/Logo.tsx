@@ -1,28 +1,12 @@
 /**
- * Agroxarita belgisi — kadastr konturi ichida o'sayotgan nihol.
- *
- * Ranglar to'g'ridan-to'g'ri yozilgan: SVG ichida CSS o'zgaruvchilari
- * `currentColor` dan boshqa holatlarda ishonchsiz ishlaydi.
+ * Agroportal (agroportal.digitagro.uz) belgisi — "G" va barg.
+ * Oq qismi navy fonda ishlatish uchun mo'ljallangan.
  */
 export function Logo({ size = 28 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden>
-      {/* Uchastka konturi */}
-      <path
-        d="M4 9.5 15.2 3.2a1.6 1.6 0 0 1 1.6 0L28 9.5v13a1.6 1.6 0 0 1-.8 1.4l-10.4 6a1.6 1.6 0 0 1-1.6 0l-10.4-6A1.6 1.6 0 0 1 4 22.5v-13Z"
-        fill="#e4f0e8"
-        stroke="#2f7d4f"
-        strokeWidth="1.7"
-        strokeLinejoin="round"
-      />
-      {/* Poya */}
-      <path d="M16 23.2v-7.6" stroke="#23603c" strokeWidth="1.9" strokeLinecap="round" />
-      {/* Chap barg */}
-      <path d="M16 17.2c-3.5 0-5.1-1.9-5.1-4.5 3-.5 5.1 1.1 5.1 4.5Z" fill="#2f7d4f" />
-      {/* O'ng barg — biroz yuqoriroq, tabiiy assimetriya */}
-      <path d="M16 14.7c0-3.3 1.9-4.9 4.7-4.5-.1 3.1-1.7 4.7-4.7 4.5Z" fill="#23603c" />
-      {/* Quyosh — bug'doy rangi */}
-      <circle cx="22.7" cy="7.3" r="2.2" fill="#b07d2a" />
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" aria-hidden>
+      <path d="M100 0.000946045C99.9997 27.6149 77.614 50 50 50C44.3772 50 28.3986 50 19.124 50C29.4634 30.48 54.2398 20.311 69.1084 15.79C63.7432 16.002 37.944 17.9605 19.7998 36.1045C8.48549 47.4188 4.71308 63.4171 8.47754 77.8574C3.12553 69.8967 1.92525e-07 60.3146 0 50.0009C0 22.3867 22.3858 0.000946045 50 0.000946045H100Z" fill="#469D18" />
+      <path d="M100 50.0009C100 77.6151 77.6143 100.001 50.0003 100.001V99.9883C42.6922 100.137 35.5349 98.8131 29.8909 95.872C13.3148 87.2342 10.6027 68.934 17.6634 52.9902C18.0689 52.0744 18.5064 51.1778 18.9729 50.2998C18.6486 52.03 18.4778 53.6654 18.4778 55.164C18.4778 62.6539 20.8484 81.4666 48.6565 82.0527L50.0003 82.0664C61.0653 82.0662 70.8213 76.461 76.5843 67.9355H60.3264V50.0009H100Z" fill="white" />
     </svg>
   )
 }
