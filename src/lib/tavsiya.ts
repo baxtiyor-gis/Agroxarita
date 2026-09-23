@@ -464,9 +464,9 @@ export function ballRang(ball: number): string {
 }
 
 export function ballNom(ball: number): string {
-  if (ball >= 85) return "a'lo"
-  if (ball >= 70) return 'yaxshi'
-  if (ball >= 50) return "o'rtacha"
-  if (ball >= 30) return 'zaif'
-  return 'mos emas'
+  if (ball >= 85) return "A'lo"
+  if (ball >= 70) return 'Yaxshi'
+  if (ball >= 50) return "O'rtacha"
+  if (ball >= 30) return 'Zaif'
+  return 'Mos emas'
 }

@@ -15,11 +15,13 @@ import { useApp } from '@/store/useApp'
 import {
   crops,
   kontur,
-  FOYD_NOM,
   DARAJA_NOM,
   MEX_NOM,
   SHOR_NOM,
   SIFAT_NOM,
+  YER_TURLARI,
+  gradFmt,
+  yerTuri,
   yonalishNom,
 } from '@/lib/data'
 import { tavsiyalar, ballRang, ballNom, mavsum, MAVSUM_NOM, type Mavsum } from '@/lib/tavsiya'
@@ -57,7 +59,6 @@ function TavsiyaQator({ t, ochiq, onToggle }: { t: Tavsiya; ochiq: boolean; onTo
         onClick={onToggle}
         className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left"
       >
-        <span className="nums w-3 shrink-0 text-[11px] text-faint">{t.crop.nom ? '' : ''}</span>
         <span className="flex-1 truncate text-[13px] font-medium text-ink">{t.crop.nom}</span>
         <span className="nums shrink-0 text-[13px] font-semibold tabular-nums" style={{ color: rang }}>
           {t.ball}
@@ -77,7 +78,7 @@ function TavsiyaQator({ t, ochiq, onToggle }: { t: Tavsiya; ochiq: boolean; onTo
           {t.sabablar.map((s, i) => (
             <div key={i} className="flex gap-1.5 text-[11.5px] leading-relaxed text-body">
               <SababIkon turi={s.turi} />
-              <span>{s.matn}</span>
+              <span>{s.matn.charAt(0).toUpperCase() + s.matn.slice(1)}</span>
             </div>
           ))}
           {t.crop.muddat && (
@@ -100,10 +101,10 @@ function TavsiyaQator({ t, ochiq, onToggle }: { t: Tavsiya; ochiq: boolean; onTo
 
 function Satr({ nom, qiymat, children }: { nom: string; qiymat?: string; children?: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-3 py-[7px]">
-      <span className="w-[88px] shrink-0 pt-[1px] text-[11px] text-muted">{nom}</span>
+    <div className="flex items-start gap-3 py-2.5">
+      <span className="w-[100px] shrink-0 pt-[1px] text-[12px] text-muted">{nom}</span>
       <div className="min-w-0 flex-1">
-        {qiymat && <div className="nums text-[12.5px] leading-tight text-ink">{qiymat}</div>}
+        {qiymat && <div className="nums text-[13px] leading-tight font-medium text-ink">{qiymat}</div>}
         {children}
       </div>
     </div>
@@ -113,68 +114,81 @@ function Satr({ nom, qiymat, children }: { nom: string; qiymat?: string; childre
 export function KonturKarta() {
   const { tanlangan, setTanlangan } = useApp()
   const [tab, setTab] = useState<Tab>('tavsiya')
+  // Sukut: hamma ekin qatorlari yopiq; boshqa kontur tanlansa yana yopiladi
   const [ochiq, setOchiq] = useState<string | null>(null)
+  const [oldingi, setOldingi] = useState(tanlangan)
+  if (oldingi !== tanlangan) {
+    setOldingi(tanlangan)
+    setOchiq(null)
+  }
 
   const k = useMemo(() => (tanlangan === null ? null : kontur(tanlangan)), [tanlangan])
   const tav = useMemo(() => (k ? tavsiyalar(crops(), k) : []), [k])
 
   if (!k) return null
 
+  const ytIdx = yerTuri()[k.i]
+  const yt = ytIdx >= 0 ? YER_TURLARI[ytIdx] : null
   const mos = tav.filter((t) => t.ball >= 25)
   const nomos = tav.filter((t) => t.ball < 25)
-  const birinchi = mos[0]?.crop.id ?? null
-  const hozirOchiq = ochiq ?? birinchi
 
   return (
-    <div className="pointer-events-auto absolute top-3 bottom-3 left-3 z-20 flex w-[400px] flex-col overflow-hidden rounded-card float-panel">
+    <div className="pointer-events-auto absolute top-3 left-3 z-20 flex max-h-[calc(100%-56px)] w-[400px] flex-col overflow-hidden rounded-card float-panel">
       {/* Sarlavha */}
-      <div className="shrink-0 border-b border-line bg-surface px-3.5 pt-3 pb-2.5">
+      <div className="shrink-0 bg-surface px-4 pt-3.5 pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="nums text-[15px] font-semibold tracking-tight text-ink">{k.kod}</div>
-            <div className="mt-0.5 truncate text-[11.5px] text-muted">
+            <div className="text-[11px] font-medium text-muted">Kontur</div>
+            <div className="nums text-[18px] leading-tight font-semibold tracking-tight text-navy">{k.kod}</div>
+            <div className="mt-0.5 truncate text-[12px] text-muted">
               {k.massiv} massivi{k.mfy ? ` · ${k.mfy} MFY` : ''}
             </div>
           </div>
           <button
             onClick={() => setTanlangan(null)}
-            className="-mt-0.5 -mr-1 rounded p-1 text-faint hover:bg-paper hover:text-ink"
+            aria-label="Yopish"
+            className="-mt-0.5 -mr-1.5 rounded-md p-1.5 text-muted hover:bg-sunken hover:text-ink"
           >
             <X className="size-4" />
           </button>
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
-          <span className="nums rounded-[4px] bg-sunken px-[7px] py-[2px] font-medium text-ink">{ga(k.maydon)} ga</span>
-          <span className="rounded-[4px] bg-sunken px-[7px] py-[2px] text-body">{FOYD_NOM[k.foyd]}</span>
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11.5px]">
+          <span className="nums rounded-full bg-sunken px-2.5 py-[3px] font-semibold text-ink">{ga(k.maydon)} ga</span>
+          {yt && (
+            <span className="flex items-center gap-1.5 rounded-full bg-sunken px-2.5 py-[3px] text-body">
+              <span className="size-2.5 rounded-full ring-1 ring-black/10" style={{ background: yt.rang }} />
+              {yt.nom}
+            </span>
+          )}
           {k.sifat < 2 && (
-            <span className="rounded-[4px] bg-wheat-soft px-[7px] py-[2px] text-wheat">
-              ma'lumot to'liq emas
+            <span className="rounded-full bg-wheat-soft px-2.5 py-[3px] font-medium text-wheat">
+              Ma'lumot to'liq emas
             </span>
           )}
         </div>
       </div>
 
       {/* Tablar */}
-      <div className="flex shrink-0 border-b border-line bg-surface px-1.5">
+      <div className="grid shrink-0 grid-cols-4 border-y border-line bg-surface">
         {TABLAR.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className={cn(
-              'flex items-center gap-1.5 border-b-2 px-2.5 py-2 text-[12px] transition-colors',
+              '-mb-px flex items-center justify-center gap-1.5 border-b-2 py-2.5 text-[12.5px] transition-colors',
               tab === t.id
-                ? 'border-leaf font-medium text-ink'
-                : 'border-transparent text-muted hover:border-line-strong hover:text-ink',
+                ? 'border-leaf font-semibold text-navy'
+                : 'border-transparent text-muted hover:text-ink',
             )}
           >
-            <t.icon className="size-3.5" strokeWidth={1.75} />
+            <t.icon className="size-4" strokeWidth={1.8} />
             {t.nom}
           </button>
         ))}
       </div>
 
       {/* Mazmun */}
-      <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-2 py-2">
+      <div className="scrollbar-thin min-h-0 flex-auto overflow-y-auto px-2 py-2.5">
         {tab === 'tavsiya' && (
           <>
             {mos.length === 0 && (
@@ -203,7 +217,7 @@ export function KonturKarta() {
               return (
                 <div key={msm} className="mb-2.5">
                   <div className="mb-1 flex items-center gap-1.5 px-2.5">
-                    <span className="eyebrow">{nom}</span>
+                    <span className="text-[11.5px] font-semibold text-navy">{nom}</span>
                     <span className="h-px flex-1 bg-line" />
                   </div>
                   <div className="space-y-0.5">
@@ -215,8 +229,8 @@ export function KonturKarta() {
                         <div className="min-w-0 flex-1">
                           <TavsiyaQator
                             t={t}
-                            ochiq={hozirOchiq === t.crop.id}
-                            onToggle={() => setOchiq(hozirOchiq === t.crop.id ? '' : t.crop.id)}
+                            ochiq={ochiq === t.crop.id}
+                            onToggle={() => setOchiq(ochiq === t.crop.id ? null : t.crop.id)}
                           />
                         </div>
                       </div>
@@ -228,7 +242,7 @@ export function KonturKarta() {
 
             {nomos.length > 0 && (
               <div className="mt-3 border-t border-line px-2.5 pt-2.5">
-                <div className="mb-1.5 text-[11px] font-medium text-muted">
+                <div className="mb-1.5 text-[11.5px] font-semibold text-muted">
                   Mos kelmaydi ({nomos.length})
                 </div>
                 <div className="flex flex-wrap gap-1">
@@ -236,7 +250,7 @@ export function KonturKarta() {
                     <span
                       key={t.crop.id}
                       title={t.radSabab ?? ''}
-                      className="cursor-help rounded-sm bg-surface px-1.5 py-0.5 text-[11px] text-muted"
+                      className="cursor-help rounded-full bg-sunken px-2 py-0.5 text-[11.5px] text-muted"
                     >
                       {t.crop.nom}
                     </span>
@@ -257,7 +271,7 @@ export function KonturKarta() {
 
         {tab === 'tuproq' && (
           <div className="divide-y divide-line px-2.5">
-            <Satr nom="Bonitet" qiymat={k.bonitet >= 0 ? `${k.bonitet} ball` : "o'rganilmagan"}>
+            <Satr nom="Bonitet" qiymat={k.bonitet >= 0 ? `${k.bonitet} ball` : "O'rganilmagan"}>
               {k.bonitet < 0 && (k.foyd === 'lalmi' || k.foyd === 'yaylov') && (
                 <div className="mt-1 text-[11px] text-muted">
                   {k.foyd === 'lalmi' ? 'Lalmi' : 'Yaylov'} yerlarda tuproq bonitirovkasi odatda
@@ -276,7 +290,7 @@ export function KonturKarta() {
             </Satr>
             <Satr
               nom="Gumus"
-              qiymat={k.gumus >= 0 ? `${DARAJA_NOM[k.gumus]}${k.gumusg ? ` · ${k.gumusg} %` : ''}` : '—'}
+              qiymat={k.gumus >= 0 ? `${DARAJA_NOM[k.gumus]}${k.gumusg ? ` · ${gradFmt(k.gumusg, '%')}` : ''}` : '—'}
             >
               <div className="mt-1.5">
                 <Darajalar daraja={k.gumus} />
@@ -285,7 +299,7 @@ export function KonturKarta() {
             <Satr
               nom="Fosfor"
               qiymat={
-                k.fosfor >= 0 ? `${DARAJA_NOM[k.fosfor]}${k.fosforg ? ` · ${k.fosforg} mg/kg` : ''}` : '—'
+                k.fosfor >= 0 ? `${DARAJA_NOM[k.fosfor]}${k.fosforg ? ` · ${gradFmt(k.fosforg, 'mg/kg')}` : ''}` : '—'
               }
             >
               <div className="mt-1.5">
@@ -295,7 +309,7 @@ export function KonturKarta() {
             <Satr
               nom="Kaliy"
               qiymat={
-                k.kaliy >= 0 ? `${DARAJA_NOM[k.kaliy]}${k.kaliyg ? ` · ${k.kaliyg} mg/kg` : ''}` : '—'
+                k.kaliy >= 0 ? `${DARAJA_NOM[k.kaliy]}${k.kaliyg ? ` · ${gradFmt(k.kaliyg, 'mg/kg')}` : ''}` : '—'
               }
             >
               <div className="mt-1.5">
@@ -304,7 +318,7 @@ export function KonturKarta() {
             </Satr>
             <Satr nom="Mexanika" qiymat={MEX_NOM[k.mex] ?? '—'} />
             <Satr nom="Sho'rlanish" qiymat={SHOR_NOM[k.shor] ?? '—'} />
-            <Satr nom="Yer osti suvi" qiymat={k.yos ? `${k.yos} m` : '—'} />
+            <Satr nom="Yer osti suvi" qiymat={gradFmt(k.yos, 'm') ?? '—'} />
           </div>
         )}
 
@@ -325,7 +339,7 @@ export function KonturKarta() {
               nom="Qiyalik"
               qiymat={
                 k.qiyalik >= 0
-                  ? `${k.qiyalik.toFixed(1)}° · ${k.qiyalik < 3 ? 'tekis' : k.qiyalik < 8 ? 'yengil nishab' : 'tik'}`
+                  ? `${k.qiyalik.toFixed(1).replace('.', ',')}° · ${k.qiyalik < 3 ? 'Tekis' : k.qiyalik < 8 ? 'Yengil nishab' : 'Tik'}`
                   : '—'
               }
             >

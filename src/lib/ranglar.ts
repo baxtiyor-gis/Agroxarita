@@ -1,4 +1,5 @@
 import type { Qatlam } from '@/store/useApp'
+import { YER_TURLARI } from './data'
 
 /**
  * Klasslangan (classified) shkala — cho'zilgan gradient emas.
@@ -82,44 +83,16 @@ const TAVSIYA: Klass[] = [
   { min: 78, max: Infinity, rang: '#1c7a3e', nom: "A'lo", oraliq: '78+' },
 ]
 
-export const FOYD_RANG: Record<number, string> = {
-  0: '#c9cec6',
-  1: '#e0b552',
-  2: '#ead9a6',
-  3: '#3f8f52',
-  4: '#8c62a8',
-  5: '#4e9c92',
-  6: '#dd8f55',
-  7: '#a7bc86',
-  8: '#8d9490',
-}
-
-const FOYD_NOMLAR = [
-  "Bo'sh",
-  'Haydalma',
-  'Lalmi',
-  "Bog'",
-  'Uzumzor',
-  'Tutzor',
-  'Tomorqa',
-  'Yaylov',
-  'Qurilish',
-]
-
-const FOYD: Klass[] = FOYD_NOMLAR.map((nom, i) => ({
+// Yer turi — kategoriya: indeks = YER_TURLARI tartibi (data.ts)
+const FOYD: Klass[] = YER_TURLARI.map((g, i) => ({
   min: i,
   max: i + 1,
-  rang: FOYD_RANG[i],
-  nom,
+  rang: g.rang,
+  nom: g.nom,
 }))
 
-/**
- * Tematik ranglashsiz rejimda kontur chegarasi.
- * Och yashil-sariq: sun'iy yo'ldosh tasvirining tuproq va o'simlik ranglari
- * orasida aniq ajraladi, ammo neon emas — chizig'i shaffofligi bilan
- * birga xaritani shovqinga to'ldirmaydi.
- */
-export const KONTUR_CHEGARA = '#bdf06a'
+/** Tematik ranglashsiz rejimda kontur chegarasi — qizil */
+export const KONTUR_CHEGARA = '#ff3b30'
 
 export const SHKALA: Record<Qatlam, Shkala> = {
   yoq: { nom: 'Konturlar', izoh: 'tematik ranglashsiz', klasslar: [] },
@@ -131,7 +104,7 @@ export const SHKALA: Record<Qatlam, Shkala> = {
   balandlik: { nom: 'Balandlik', izoh: 'dengiz sathidan', klasslar: BALANDLIK },
   qiyalik: { nom: 'Qiyalik', izoh: 'nishablik', klasslar: QIYALIK },
   tavsiya: { nom: 'Moslik bali', izoh: 'tanlangan ekin uchun', klasslar: TAVSIYA },
-  foyd: { nom: 'Hozirgi foydalanish', izoh: 'yer turi', klasslar: FOYD, kategoriyami: true },
+  foyd: { nom: 'Yer turi', izoh: 'hozirgi foydalanish', klasslar: FOYD, kategoriyami: true },
 }
 
 /** Qiymat qaysi klassga tushadi */

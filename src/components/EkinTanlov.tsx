@@ -54,84 +54,110 @@ export function EkinTanlov() {
       {ochiq && (
         <div
           ref={panel}
-          className="scrollbar-thin max-h-[calc(100vh-12rem)] w-[268px] overflow-y-auto rounded-card float-panel"
+          className="flex max-h-[calc(100vh-320px)] min-h-[240px] w-[300px] flex-col overflow-hidden rounded-card float-panel"
         >
-          <div className="sticky top-0 z-10 border-b border-line bg-surface p-2">
-            <div className="relative">
-              <Search className="absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-faint" />
+          <div className="shrink-0 border-b border-line px-3.5 pt-3 pb-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="text-[14px] font-semibold text-navy">Ekin mosligi</div>
+                <div className="mt-0.5 text-[11.5px] leading-snug text-muted">
+                  Tanlangan ekin uchun har bir kontur baholanadi
+                </div>
+              </div>
+              <button
+                onClick={() => setOchiq(false)}
+                aria-label="Yopish"
+                className="-mr-1 rounded-md p-1 text-muted hover:bg-sunken hover:text-ink"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="relative mt-2.5">
+              <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-faint" />
               <input
                 autoFocus
                 value={qidiruv}
                 onChange={(e) => setQidiruv(e.target.value)}
-                placeholder="Ekin nomi"
-                className="w-full rounded-card border border-line bg-paper py-1.5 pr-2 pl-7 text-[12px] placeholder:text-faint focus:border-leaf focus:outline-none"
+                placeholder="Ekin nomi bo'yicha qidirish"
+                className="h-9 w-full rounded-lg border border-line bg-surface pr-2 pl-8 text-[13px] text-ink placeholder:text-faint focus:border-leaf focus:ring-2 focus:ring-leaf-soft focus:outline-none"
               />
             </div>
           </div>
 
-          {daraxt.length === 0 && (
-            <div className="px-3 py-6 text-center text-[11.5px] text-muted">Ekin topilmadi</div>
-          )}
+          <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
+            {daraxt.length === 0 && (
+              <div className="px-3 py-8 text-center text-[12px] text-muted">Ekin topilmadi</div>
+            )}
 
-          {daraxt.map(({ msm, guruhlar }) => (
-            <div key={msm} className="border-b border-line p-2 last:border-b-0">
-              <div className="mb-1 px-1 text-[10px] font-medium tracking-wide text-faint uppercase">
-                {MAVSUM_NOM[msm]}
-              </div>
-              {guruhlar.map(([g, list]) => (
-                <div key={g} className="mb-1.5 last:mb-0">
-                  <div className="px-1 py-0.5 text-[10px] text-faint">{GURUH_NOM[g] ?? g}</div>
-                  <div className="flex flex-wrap gap-1">
-                    {list.map((c) => (
-                      <button
-                        key={c.id}
-                        onClick={() => {
-                          setTavsiyaEkin(tavsiyaEkin === c.id ? null : c.id)
-                          setOchiq(false)
-                        }}
-                        className={cn(
-                          'rounded-sm border px-1.5 py-[3px] text-[11px] transition-colors',
-                          tavsiyaEkin === c.id
-                            ? 'border-leaf bg-leaf-soft font-medium text-leaf-dark'
-                            : 'border-line text-muted hover:border-line-strong hover:text-ink',
-                        )}
-                      >
-                        {c.nom}
-                      </button>
-                    ))}
-                  </div>
+            {daraxt.map(({ msm, guruhlar }) => (
+              <div key={msm} className="border-b border-line px-3.5 py-3 last:border-b-0">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="size-1.5 rounded-full bg-leaf" />
+                  <span className="text-[12.5px] font-semibold text-ink">{MAVSUM_NOM[msm]}</span>
                 </div>
-              ))}
-            </div>
-          ))}
+                {guruhlar.map(([g, list]) => (
+                  <div key={g} className="mb-2.5 last:mb-0">
+                    <div className="mb-1 text-[11px] text-muted">{GURUH_NOM[g] ?? g}</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {list.map((c) => (
+                        <button
+                          key={c.id}
+                          onClick={() => {
+                            setTavsiyaEkin(tavsiyaEkin === c.id ? null : c.id)
+                            setOchiq(false)
+                          }}
+                          aria-pressed={tavsiyaEkin === c.id}
+                          className={cn(
+                            'rounded-full border px-2.5 py-1 text-[12px] leading-none transition-colors',
+                            tavsiyaEkin === c.id
+                              ? 'border-leaf bg-leaf font-medium text-white'
+                              : 'border-line text-body hover:border-leaf hover:text-leaf-dark',
+                          )}
+                        >
+                          {c.nom}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      <button
-        onClick={() => setOchiq(!ochiq)}
-        title={tanlangan ? `${tanlangan.nom} mosligi — bekor qilish uchun X` : 'Ekin mosligi'}
-        className={cn(
-          'flex size-8 shrink-0 items-center justify-center rounded-card transition-colors',
-          tanlangan
-            ? 'border border-leaf bg-leaf text-white shadow-[0_1px_2px_rgb(22_32_26/0.12)]'
-            : ochiq
-              ? 'float-panel bg-leaf-soft! text-leaf-dark'
-              : 'float-panel text-muted hover:text-ink',
-        )}
-      >
-        <Sprout className="size-4" strokeWidth={1.75} />
-      </button>
-
-      {tanlangan && (
+      {tanlangan ? (
+        <div className="flex h-10 items-center overflow-hidden rounded-card bg-leaf text-white shadow-[0_4px_12px_-2px_rgb(70_157_24/0.45)]">
+          <button
+            onClick={() => setOchiq(!ochiq)}
+            title="Boshqa ekin tanlash"
+            className="flex h-full items-center gap-1.5 pr-2.5 pl-3 text-[13px] font-medium transition-colors hover:bg-leaf-dark"
+          >
+            <Sprout className="size-4" strokeWidth={1.9} />
+            {tanlangan.nom}
+          </button>
+          <button
+            onClick={() => {
+              setTavsiyaEkin(null)
+              setOchiq(false)
+            }}
+            title="Ekin mosligini bekor qilish"
+            aria-label="Ekin mosligini bekor qilish"
+            className="flex h-full items-center border-l border-white/25 px-2.5 transition-colors hover:bg-leaf-dark"
+          >
+            <X className="size-4" strokeWidth={2} />
+          </button>
+        </div>
+      ) : (
         <button
-          onClick={() => {
-            setTavsiyaEkin(null)
-            setOchiq(false)
-          }}
-          title="Ekin mosligini bekor qilish"
-          className="float-panel flex size-8 shrink-0 items-center justify-center rounded-card text-muted transition-colors hover:text-ink"
+          onClick={() => setOchiq(!ochiq)}
+          title="Ekin mosligi"
+          className={cn(
+            'flex size-10 shrink-0 items-center justify-center rounded-card float-panel transition-colors',
+            ochiq ? 'bg-navy! text-white' : 'text-body hover:text-navy',
+          )}
         >
-          <X className="size-4" strokeWidth={1.9} />
+          <Sprout className="size-[18px]" strokeWidth={1.8} />
         </button>
       )}
     </div>
