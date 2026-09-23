@@ -160,6 +160,19 @@
 .maplibregl-ctrl-bottom-left .maplibregl-ctrl {
   margin: 0 0 12px 12px !important;
 }
+.kontur-yorliq {
+  pointer-events: none;
+  color: #fff;
+  font: 700 13px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  /* Fonsiz — sputnik ustida o'qilishi uchun qora kontur (halo) */
+  text-shadow:
+    0 0 3px rgb(0 0 0 / 0.9),
+    0 0 1px #000,
+    1px 1px 0 rgb(0 0 0 / 0.6),
+    -1px -1px 0 rgb(0 0 0 / 0.6);
+}
 .maplibregl-canvas:focus {
   outline: none;
 }

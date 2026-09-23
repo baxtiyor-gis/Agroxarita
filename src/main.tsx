@@ -6,12 +6,12 @@ import { setWorkerUrl } from 'maplibre-gl'
 // import qiladi, brauzer uni yecha olmaydi va worker darhol o'ladi.
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import './index.css'
-import App from './App.tsx'
+import Ildiz from './Ildiz.tsx'
 
 setWorkerUrl(workerUrl)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <Ildiz />
   </StrictMode>,
 )
