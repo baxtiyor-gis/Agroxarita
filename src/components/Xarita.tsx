@@ -6,12 +6,24 @@ import type {
   MapSourceDataEvent,
 } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { Loader2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useApp, type Qatlam } from '@/store/useApp'
-import { attrs, crops, kontur } from '@/lib/data'
-import { SHKALA, FOYD_RANG, YOQ_RANG, KONTUR_CHEGARA } from '@/lib/ranglar'
+import { attrs, crops, extent, geom, kontur, ustun } from '@/lib/data'
+import { SHKALA, YOQ_RANG, KONTUR_CHEGARA } from '@/lib/ranglar'
 import { baholash } from '@/lib/tavsiya'
 
-const MARKAZ: [number, number] = [67.355, 39.73]
+/** Extentga moslashda chetdan bo'sh joy, px */
+const CHET = 20
+/** Boshlang'ich ko'rinish extentdan shuncha zoom yaqinroq — hudud chetlari
+ *  asosan tog' va yaylov, asosiy dalalar markazda */
+const YAQIN = 0.55
+
+/** Boshlang'ich kamera: konturlar extenti + biroz yaqinlashtirish */
+function boshKamera(m: MlMap) {
+  const c = m.cameraForBounds(extent(), { padding: CHET })!
+  return { center: c.center, zoom: (c.zoom ?? 10) + YAQIN }
+}
 
 /** Atribut qiymatlarini xarita xususiyatlariga ko'chirish — id bo'yicha */
 function qiymatlar(qatlam: Qatlam, ekinId: string | null): Map<number, number> {
@@ -27,17 +39,8 @@ function qiymatlar(qatlam: Qatlam, ekinId: string | null): Map<number, number> {
     for (let i = 0; i < p.n; i++) m.set(c.id[i], baholash(crop, kontur(i)).ball)
     return m
   }
-  const src: Record<string, number[]> = {
-    bonitet: c.bonitet,
-    gumus: c.gumus,
-    fosfor: c.fosfor,
-    kaliy: c.kaliy,
-    shor: c.shor,
-    balandlik: c.balandlik,
-    qiyalik: c.qiyalik,
-    foyd: c.foyd,
-  }
-  const arr = src[qatlam]
+  const arr = ustun(qatlam)
+  if (!arr) return m
   for (let i = 0; i < p.n; i++) m.set(c.id[i], arr[i])
   return m
 }
@@ -51,13 +54,6 @@ function rangIfoda(qatlam: Qatlam): ExpressionSpecification {
 
   // Tematik ranglashsiz — ko'rinishni `fill-opacity` boshqaradi (0.01)
   if (qatlam === 'yoq') return '#ffffff' as unknown as ExpressionSpecification
-
-  if (qatlam === 'foyd') {
-    const cases: unknown[] = ['match', v]
-    for (const [k, rang] of Object.entries(FOYD_RANG)) cases.push(Number(k), rang)
-    cases.push(YOQ_RANG)
-    return cases as unknown as ExpressionSpecification
-  }
 
   const ks = SHKALA[qatlam].klasslar
   // step: birinchi rang, keyin har bir chegara uchun [chegara, rang]
@@ -89,7 +85,6 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
   const {
     qatlam,
     tavsiyaEkin,
-    hillshade,
     asos,
     konturKorinsin,
     tanlangan,
@@ -104,18 +99,23 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
     if (!apiRef) return
     apiRef.current = {
       zoom: (d) => map.current?.easeTo({ zoom: (map.current.getZoom() ?? 10) + d, duration: 250 }),
-      home: () => map.current?.easeTo({ center: MARKAZ, zoom: 10.4, duration: 600 }),
+      home: () => {
+        const m = map.current
+        if (m) m.easeTo({ ...boshKamera(m), duration: 600 })
+      },
     }
   }, [apiRef])
 
   // ---------------------------------------------------------- xaritani qurish
+  // Ma'lumot (geometriya bilan) yuklanmaguncha xarita qurilmaydi: birinchi
+  // kadrdanoq to'g'ri extent, sputnik va konturlar bo'lsin
   useEffect(() => {
-    if (!box.current || map.current) return
+    if (!box.current || map.current || !tayyor) return
 
     const m = new MapLibreMap({
       container: box.current,
-      center: MARKAZ,
-      zoom: 10.4,
+      bounds: extent(),
+      fitBoundsOptions: { padding: CHET },
       minZoom: 8,
       maxZoom: 17,
       attributionControl: { compact: true },
@@ -125,14 +125,6 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
         // yuklanmaydigan shrift manzili esa `load` hodisasini to'sib qo'yadi
         // va barcha ko'rinish effektlari ishlamay qoladi.
         sources: {
-          dem: {
-            type: 'raster-dem',
-            tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
-            encoding: 'terrarium',
-            tileSize: 256,
-            maxzoom: 13,
-            attribution: 'Relyef: Mapzen / SRTM',
-          },
           osm: {
             type: 'raster',
             tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
@@ -142,21 +134,23 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
           },
           sputnik: {
             type: 'raster',
-            tiles: [
-              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-            ],
+            // Google sun'iy yo'ldosh plitkalari (kalitsiz). 4 ta subdomen —
+            // brauzer bir xostga parallel so'rovlarni cheklaydi
+            tiles: [0, 1, 2, 3].map(
+              (i) => `https://mt${i}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}`,
+            ),
             tileSize: 256,
-            maxzoom: 19,
-            attribution: 'Esri, Maxar, Earthstar Geographics',
+            maxzoom: 20,
+            attribution: '© Google',
           },
           konturlar: {
             type: 'geojson',
-            data: `${import.meta.env.BASE_URL}data/geom.geojson`,
+            data: geom(),
             promoteId: 'id',
           },
         },
         layers: [
-          { id: 'fon', type: 'background', paint: { 'background-color': '#f4f5f3' } },
+          { id: 'fon', type: 'background', paint: { 'background-color': '#f5f6f8' } },
           {
             id: 'osm',
             type: 'raster',
@@ -169,17 +163,6 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
             type: 'raster',
             source: 'sputnik',
             paint: { 'raster-opacity': 1 },
-          },
-          {
-            id: 'hillshade',
-            type: 'hillshade',
-            source: 'dem',
-            paint: {
-              'hillshade-exaggeration': 0.45,
-              'hillshade-shadow-color': '#4a5a4e',
-              'hillshade-highlight-color': '#fdfefb',
-              'hillshade-accent-color': '#95a292',
-            },
           },
           // Boshlang'ich holat = store'dagi sukut (qatlam 'yoq'): ichi shaffof,
           // chegarasi qizil. Aks holda sahifa yuklanganda rang sakraydi.
@@ -200,7 +183,7 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
             source: 'konturlar',
             paint: {
               'line-color': KONTUR_CHEGARA,
-              'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.4, 14, 0.8, 16, 1.2],
+              'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.7, 14, 1.2, 16, 1.8],
               'line-opacity': [
                 'case',
                 ['boolean', ['feature-state', 'yashirin'], false],
@@ -230,6 +213,8 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
       },
     })
 
+    m.jumpTo(boshKamera(m))
+
     // Zoom tugmalari o'ng tepadagi o'z panelimizda — bu yerda faqat masshtab
     m.addControl(new ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-left')
 
@@ -241,9 +226,10 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
 
     m.on('load', () => {
       yuklandi.current = true
-      m.setTerrain({ source: 'dem', exaggeration: 0 })
       // Uslub tayyor — ko'rinish effektlari qayta ishga tushsin
       setStylTayyor(true)
+      // Birinchi `idle` — ko'rinadigan plitkalar va konturlar chizib bo'lindi
+      m.once('idle', () => useApp.getState().setXaritaTayyor(true))
     })
 
     // Hover
@@ -289,8 +275,9 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
       // ko'rinish effektlari eski `true` holatga tayanib o'tkazib yuboriladi
       // va konturlar hech qachon chizilmaydi.
       setStylTayyor(false)
+      useApp.getState().setXaritaTayyor(false)
     }
-  }, [])
+  }, [tayyor])
 
   // ------------------------------------------------- qatlam va ranglar
   useEffect(() => {
@@ -314,15 +301,6 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
     }
   }, [qatlam, tavsiyaEkin, tayyor])
 
-  // ------------------------------------------------------------ hillshade
-  useEffect(() => {
-    const m = map.current
-    if (!m || !yuklandi.current) return
-    if (m.getLayer('hillshade')) {
-      m.setLayoutProperty('hillshade', 'visibility', hillshade ? 'visible' : 'none')
-    }
-  }, [hillshade, stylTayyor])
-
   // ----------------------------------------------------------- asos qatlam
   useEffect(() => {
     const m = map.current
@@ -337,7 +315,7 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
     }
     if (yuklandi.current) qoll()
     else m.once('load', qoll)
-  }, [asos])
+  }, [asos, stylTayyor])
 
   // -------------------------------- kontur ko'rinishi: to'ldirish va chegara
   useEffect(() => {
@@ -373,11 +351,11 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
       ['linear'],
       ['zoom'],
       11,
-      !tematik ? 0.4 : 0.2,
+      !tematik ? 0.7 : 0.2,
       14,
-      !tematik ? 0.8 : 0.5,
+      !tematik ? 1.2 : 0.5,
       16,
-      !tematik ? 1.2 : 0.9,
+      !tematik ? 1.8 : 0.9,
     ])
     m.setPaintProperty('kontur-line', 'line-opacity', [
       'case',
@@ -422,7 +400,7 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
       }
       m.setFeatureState({ source: 'konturlar', id }, { yashirin })
     }
-  }, [natija, tayyor, klassFiltr, qatlam, tavsiyaEkin])
+  }, [natija, tayyor, klassFiltr, qatlam, tavsiyaEkin, stylTayyor])
 
   // ------------------------------------------------------ tanlangan kontur
   useEffect(() => {
@@ -434,7 +412,29 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
     }
     const id = attrs().col.id[tanlangan]
     m.setFilter('kontur-tanlangan', ['==', ['id'], id])
-  }, [tanlangan, setTanlangan])
+  }, [tanlangan, setTanlangan, stylTayyor])
 
-  return <div ref={box} className="size-full" />
+  return (
+    <div className="relative size-full">
+      <div ref={box} className="size-full" />
+      <XaritaLoader />
+    </div>
+  )
+}
+
+/** Xarita to'liq chizilguncha uni yopib turadi, keyin sekin yo'qoladi */
+function XaritaLoader() {
+  const xaritaTayyor = useApp((s) => s.xaritaTayyor)
+  return (
+    <div
+      className={cn(
+        'absolute inset-0 z-40 flex flex-col items-center justify-center gap-2.5 bg-paper transition-opacity duration-300',
+        xaritaTayyor && 'pointer-events-none opacity-0',
+      )}
+      aria-hidden={xaritaTayyor}
+    >
+      <Loader2 className="size-6 animate-spin text-leaf" />
+      <span className="text-[12px] text-muted">Xarita yuklanmoqda</span>
+    </div>
+  )
 }

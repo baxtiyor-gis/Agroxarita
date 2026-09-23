@@ -1,72 +1,108 @@
-import { useEffect, useRef, useState } from 'react'
-import {
-  Layers,
-  Home,
-  Plus,
-  Minus,
-  Satellite,
-  Map as MapIcon,
-  X,
-} from 'lucide-react'
-import { useApp } from '@/store/useApp'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Layers, Home, Plus, Minus, X, Check } from 'lucide-react'
+import { useApp, type Qatlam } from '@/store/useApp'
+import { extent } from '@/lib/data'
+import { SHKALA } from '@/lib/ranglar'
 import { cn } from '@/lib/utils'
 
+/** Xarita ustidagi tugma — chap tomonda nomi chiqadigan tooltip bilan */
 function Tugma({
   onClick,
   title,
   faol,
+  tooltip = true,
   children,
 }: {
   onClick: () => void
   title: string
   faol?: boolean
+  /** Yonidagi panel ochiq bo'lsa tooltip uning ustiga chiqmasin */
+  tooltip?: boolean
   children: React.ReactNode
 }) {
   return (
     <button
       onClick={onClick}
-      title={title}
+      aria-label={title}
+      aria-pressed={faol}
       className={cn(
-        'flex size-8 items-center justify-center transition-colors',
-        faol ? 'bg-leaf-soft text-leaf-dark' : 'text-muted hover:bg-paper hover:text-ink',
+        'group relative flex size-10 items-center justify-center transition-colors',
+        faol ? 'bg-navy text-white' : 'text-body hover:bg-sunken hover:text-navy',
       )}
     >
       {children}
+      {tooltip && !faol && (
+        <span className="pointer-events-none absolute top-1/2 right-full mr-2.5 -translate-y-1/2 rounded-md bg-navy px-2 py-1 text-[11.5px] font-medium whitespace-nowrap text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+          {title}
+        </span>
+      )}
     </button>
   )
 }
 
-/** Qatlam qatori — chap tomonda ko'rsatkich, o'ngda boshqaruv */
-function Qator({
+/** Switch qatori — nom, izoh va o'ngda almashtirgich */
+function Switch({
   nom,
   izoh,
   yoqilgan,
   onToggle,
-  children,
 }: {
   nom: string
   izoh?: string
   yoqilgan: boolean
   onToggle: () => void
-  children?: React.ReactNode
 }) {
   return (
-    <div className="px-2.5 py-2">
-      <label className="flex cursor-pointer items-start gap-2">
-        <input
-          type="checkbox"
-          checked={yoqilgan}
-          onChange={onToggle}
-          className="mt-[3px] accent-leaf"
+    <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-sunken">
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] font-medium text-ink">{nom}</span>
+        {izoh && <span className="mt-0.5 block text-[11px] text-muted">{izoh}</span>}
+      </span>
+      <input type="checkbox" checked={yoqilgan} onChange={onToggle} className="peer sr-only" />
+      <span
+        aria-hidden
+        className={cn(
+          'relative h-5 w-9 shrink-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-leaf/40',
+          yoqilgan ? 'bg-leaf' : 'bg-line-strong',
+        )}
+      >
+        <span
+          className={cn(
+            'absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow transition-transform',
+            yoqilgan && 'translate-x-4',
+          )}
         />
-        <span className="min-w-0 flex-1">
-          <span className="block text-[12px] leading-tight font-medium">{nom}</span>
-          {izoh && <span className="mt-0.5 block text-[10.5px] text-faint">{izoh}</span>}
-        </span>
-      </label>
-      {yoqilgan && children && <div className="mt-2 pl-[22px]">{children}</div>}
-    </div>
+      </span>
+    </label>
   )
+}
+
+function Sarlavha({ children }: { children: React.ReactNode }) {
+  return <div className="mb-2 px-2 text-[11.5px] font-semibold text-muted">{children}</div>
+}
+
+/** Tematik qatlamlar — xaritani ko'rsatkich bo'yicha ranglash */
+const TEMATIK: { id: Qatlam; guruh: string }[] = [
+  { id: 'yoq', guruh: 'Asosiy' },
+  { id: 'foyd', guruh: 'Asosiy' },
+  { id: 'bonitet', guruh: 'Tuproq' },
+  { id: 'shor', guruh: 'Tuproq' },
+  { id: 'gumus', guruh: 'Agrokimyo' },
+  { id: 'fosfor', guruh: 'Agrokimyo' },
+  { id: 'kaliy', guruh: 'Agrokimyo' },
+  { id: 'balandlik', guruh: 'Relyef' },
+  { id: 'qiyalik', guruh: 'Relyef' },
+]
+
+/** Asos xarita uchun preview — hudud markazidagi haqiqiy plitka */
+function plitka(z: number) {
+  const [w, s, e, n] = extent()
+  const lon = (w + e) / 2
+  const lat = (s + n) / 2
+  const x = Math.floor(((lon + 180) / 360) * 2 ** z)
+  const r = (lat * Math.PI) / 180
+  const y = Math.floor(((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * 2 ** z)
+  return { x, y, z }
 }
 
 export function XaritaBoshqaruv({
@@ -79,97 +115,201 @@ export function XaritaBoshqaruv({
   const {
     asos,
     setAsos,
-    hillshade,
-    toggleHillshade,
     konturKorinsin,
     toggleKonturKorinsin,
+    qatlam,
+    setQatlam,
+    tavsiyaEkin,
   } = useApp()
 
   const [ochiq, setOchiq] = useState(false)
   const panel = useRef<HTMLDivElement>(null)
+  const ustun = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!ochiq) return
     const h = (e: MouseEvent) => {
-      if (panel.current && !panel.current.contains(e.target as Node)) setOchiq(false)
+      const t = e.target as Node
+      if (panel.current?.contains(t) || ustun.current?.contains(t)) return
+      setOchiq(false)
     }
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && setOchiq(false)
     document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
+    document.addEventListener('keydown', k)
+    return () => {
+      document.removeEventListener('mousedown', h)
+      document.removeEventListener('keydown', k)
+    }
   }, [ochiq])
 
+  const t = useMemo(() => plitka(12), [])
+  const asoslar = [
+    {
+      id: 'sputnik' as const,
+      nom: "Sun'iy yo'ldosh",
+      rasm: `https://mt1.google.com/vt/lyrs=s&x=${t.x}&y=${t.y}&z=${t.z}`,
+    },
+    {
+      id: 'osm' as const,
+      nom: 'Sxematik',
+      rasm: `https://tile.openstreetmap.org/${t.z}/${t.x}/${t.y}.png`,
+    },
+  ]
+
   return (
-    <div className="pointer-events-auto flex items-start gap-1.5">
+    <div className="pointer-events-auto relative">
+      {/* Panel absolute — ochilganda boshqaruv ustunining joylashuvini o'zgartirmaydi */}
       {ochiq && (
         <div
           ref={panel}
-          className="w-[228px] overflow-hidden rounded-card float-panel"
+          className="absolute top-0 right-full mr-2 flex max-h-[calc(100vh-110px)] w-[290px] flex-col overflow-hidden rounded-card float-panel"
         >
-          <div className="flex items-center justify-between border-b border-line px-2.5 py-1.5">
-            <span className="text-[11px] font-medium tracking-wide text-muted uppercase">
-              Qatlamlar
-            </span>
+          <div className="flex shrink-0 items-center justify-between border-b border-line px-4 py-3">
+            <div>
+              <div className="text-[14px] font-semibold text-navy">Qatlamlar</div>
+              <div className="text-[11.5px] text-muted">Asos xarita va tematik ko'rsatkichlar</div>
+            </div>
             <button
               onClick={() => setOchiq(false)}
-              className="-mr-1 rounded p-0.5 text-faint hover:text-ink"
+              aria-label="Yopish"
+              className="-mr-1.5 rounded-md p-1.5 text-muted hover:bg-sunken hover:text-ink"
             >
-              <X className="size-3.5" />
+              <X className="size-4" />
             </button>
           </div>
 
-          {/* Basemap */}
-          <div className="border-b border-line px-2.5 py-2">
-            <div className="mb-1.5 text-[12px] font-medium">Asos xarita</div>
-            <div className="grid grid-cols-2 gap-1.5">
-              {(
-                [
-                  ['sputnik', "Sun'iy yo'ldosh", Satellite],
-                  ['osm', 'OpenStreetMap', MapIcon],
-                ] as const
-              ).map(([id, nom, Icon]) => (
-                <button
-                  key={id}
-                  onClick={() => setAsos(id)}
-                  className={cn(
-                    'flex flex-col items-center gap-1 rounded-card border py-2 text-[10.5px] transition-colors',
-                    asos === id
-                      ? 'border-leaf bg-leaf-soft font-medium text-leaf-dark'
-                      : 'border-line text-muted hover:border-line-strong hover:text-ink',
-                  )}
-                >
-                  <Icon className="size-4" strokeWidth={1.6} />
-                  {nom}
-                </button>
-              ))}
+          <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
+            {/* Asos xarita */}
+            <div className="border-b border-line px-2 py-3">
+              <Sarlavha>Asos xarita</Sarlavha>
+              <div className="grid grid-cols-2 gap-2 px-2">
+                {asoslar.map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => setAsos(a.id)}
+                    aria-pressed={asos === a.id}
+                    className="group text-left"
+                  >
+                    <span
+                      className={cn(
+                        'relative block h-[68px] overflow-hidden rounded-lg bg-sunken ring-2 transition-all',
+                        asos === a.id ? 'ring-leaf' : 'ring-transparent group-hover:ring-line-strong',
+                      )}
+                    >
+                      <img src={a.rasm} alt="" loading="lazy" className="size-full object-cover" />
+                      {asos === a.id && (
+                        <span className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full bg-leaf text-white shadow">
+                          <Check className="size-3" strokeWidth={3} />
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={cn(
+                        'mt-1.5 block text-center text-[12px]',
+                        asos === a.id ? 'font-semibold text-ink' : 'text-body',
+                      )}
+                    >
+                      {a.nom}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tematik ranglash */}
+            <div className="border-b border-line px-2 py-3">
+              <Sarlavha>Xaritani ranglash</Sarlavha>
+              {qatlam === 'tavsiya' && tavsiyaEkin && (
+                <div className="mx-2 mb-2 rounded-lg bg-leaf-soft px-2.5 py-2 text-[11.5px] leading-snug text-leaf-dark">
+                  Hozir ekin mosligi ko'rsatilmoqda. Boshqa qatlam tanlansa, u o'chadi.
+                </div>
+              )}
+              <div role="radiogroup" aria-label="Tematik qatlam">
+                {TEMATIK.map(({ id, guruh }, i) => {
+                  const sh = SHKALA[id]
+                  const faol = qatlam === id
+                  const yangiGuruh = i === 0 || TEMATIK[i - 1].guruh !== guruh
+                  return (
+                    <div key={id}>
+                      {yangiGuruh && guruh !== 'Asosiy' && (
+                        <div className="mt-2 mb-0.5 px-2 text-[10.5px] font-medium tracking-wide text-faint uppercase">
+                          {guruh}
+                        </div>
+                      )}
+                      <button
+                        role="radio"
+                        aria-checked={faol}
+                        onClick={() => setQatlam(id)}
+                        className={cn(
+                          'flex w-full items-center gap-2.5 rounded-lg px-2 py-[7px] text-left transition-colors',
+                          faol ? 'bg-leaf-soft' : 'hover:bg-sunken',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'flex size-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                            faol ? 'border-leaf' : 'border-line-strong',
+                          )}
+                        >
+                          {faol && <span className="size-2 rounded-full bg-leaf" />}
+                        </span>
+                        <span
+                          className={cn(
+                            'min-w-0 flex-1 truncate text-[12.5px]',
+                            faol ? 'font-semibold text-ink' : 'text-body',
+                          )}
+                        >
+                          {id === 'yoq' ? 'Faqat kontur chegaralari' : sh.nom}
+                        </span>
+                        {/* Palitra namunasi */}
+                        <span className="flex h-2.5 w-14 shrink-0 overflow-hidden rounded-full ring-1 ring-black/5">
+                          {id === 'yoq' ? (
+                            <span className="flex-1 border-2 border-outline bg-white" />
+                          ) : (
+                            sh.klasslar.map((k, i) => (
+                              <span key={i} className="flex-1" style={{ background: k.rang }} />
+                            ))
+                          )}
+                        </span>
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Qo'shimcha */}
+            <div className="px-2 py-3">
+              <Sarlavha>Qo'shimcha</Sarlavha>
+              <Switch
+                nom="Kontur chegaralari"
+                izoh="Kadastr konturlari"
+                yoqilgan={konturKorinsin}
+                onToggle={toggleKonturKorinsin}
+              />
             </div>
           </div>
-
-          {/* DEM */}
-          <div className="border-b border-line">
-            <Qator nom="Relyef (DEM)" yoqilgan={hillshade} onToggle={toggleHillshade} />
-          </div>
-
-          {/* Kontur */}
-          <Qator nom="Konturlar" yoqilgan={konturKorinsin} onToggle={toggleKonturKorinsin} />
         </div>
       )}
 
       {/* Vertikal boshqaruv ustuni */}
-      <div className="flex flex-col overflow-hidden rounded-card float-panel">
-        <Tugma onClick={() => setOchiq(!ochiq)} title="Qatlamlar" faol={ochiq}>
-          <Layers className="size-4" strokeWidth={1.7} />
-        </Tugma>
-        <div className="h-px bg-line" />
-        <Tugma onClick={onHome} title="Butun tumanni ko'rsatish">
-          <Home className="size-4" strokeWidth={1.7} />
-        </Tugma>
-        <div className="h-px bg-line" />
-        <Tugma onClick={() => onZoom(1)} title="Yaqinlashtirish">
-          <Plus className="size-4" strokeWidth={1.9} />
-        </Tugma>
-        <div className="h-px bg-line" />
-        <Tugma onClick={() => onZoom(-1)} title="Uzoqlashtirish">
-          <Minus className="size-4" strokeWidth={1.9} />
-        </Tugma>
+      <div ref={ustun} className="flex flex-col gap-2">
+        <div className="flex flex-col rounded-card float-panel [&>button]:rounded-card">
+          <Tugma onClick={() => setOchiq(!ochiq)} title="Qatlamlar" faol={ochiq}>
+            <Layers className="size-[18px]" strokeWidth={1.8} />
+          </Tugma>
+        </div>
+        <div className="flex flex-col divide-y divide-line rounded-card float-panel [&>button:first-child]:rounded-t-card [&>button:last-child]:rounded-b-card">
+          <Tugma onClick={onHome} title="Butun hudud" tooltip={!ochiq}>
+            <Home className="size-[18px]" strokeWidth={1.8} />
+          </Tugma>
+          <Tugma onClick={() => onZoom(1)} title="Yaqinlashtirish" tooltip={!ochiq}>
+            <Plus className="size-[18px]" strokeWidth={2} />
+          </Tugma>
+          <Tugma onClick={() => onZoom(-1)} title="Uzoqlashtirish" tooltip={!ochiq}>
+            <Minus className="size-[18px]" strokeWidth={2} />
+          </Tugma>
+        </div>
       </div>
     </div>
   )

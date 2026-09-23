@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { attrs } from '@/lib/data'
+import { attrs, yerTuri } from '@/lib/data'
 
 export type Qatlam =
   /** Tematik ranglash yo'q — faqat kontur chegaralari */
@@ -19,6 +19,7 @@ export interface Filtr {
   massiv: number[]
   mfy: number[]
   sug: number[]
+  /** YER_TURLARI indekslari */
   foyd: number[]
   maydon: [number, number]
   bonitet: [number, number]
@@ -51,15 +52,15 @@ export const BOSH_FILTR: Filtr = {
 interface App {
   tayyor: boolean
   setTayyor: (v: boolean) => void
+  /** Xarita birinchi marta to'liq chizildi: asos xarita va konturlar */
+  xaritaTayyor: boolean
+  setXaritaTayyor: (v: boolean) => void
 
   qatlam: Qatlam
   setQatlam: (q: Qatlam) => void
   /** Tavsiya qatlami qaysi ekin bo'yicha ranglanadi */
   tavsiyaEkin: string | null
   setTavsiyaEkin: (id: string | null) => void
-
-  hillshade: boolean
-  toggleHillshade: () => void
 
   /** Asos xarita: sun'iy yo'ldosh (sukut) yoki OpenStreetMap */
   asos: 'sputnik' | 'osm'
@@ -91,6 +92,7 @@ function filtrla(f: Filtr): Set<number> {
   const out = new Set<number>()
   const q = f.qidiruv.trim().toLowerCase()
   const lug = p.lug
+  const yt = yerTuri()
 
   const bosh =
     !q &&
@@ -121,7 +123,7 @@ function filtrla(f: Filtr): Set<number> {
     if (f.massiv.length && !f.massiv.includes(c.massiv[i])) continue
     if (f.mfy.length && !f.mfy.includes(c.mfy[i])) continue
     if (f.sug.length && !f.sug.includes(c.sug[i])) continue
-    if (f.foyd.length && !f.foyd.includes(c.foyd[i])) continue
+    if (f.foyd.length && !f.foyd.includes(yt[i])) continue
     if (f.shor.length && !f.shor.includes(c.shor[i])) continue
     if (f.gumus.length && !f.gumus.includes(c.gumus[i])) continue
     if (f.fosfor.length && !f.fosfor.includes(c.fosfor[i])) continue
@@ -153,11 +155,18 @@ function filtrla(f: Filtr): Set<number> {
 export const useApp = create<App>((set, get) => ({
   tayyor: false,
   setTayyor: (v) => set({ tayyor: v }),
+  xaritaTayyor: false,
+  setXaritaTayyor: (xaritaTayyor) => set({ xaritaTayyor }),
 
   // Boshlang'ich holat: asl konturlar, tematik ranglashsiz
   qatlam: 'yoq',
   // Qatlam almashsa legenda klasslari boshqacha — eski tanlov ma'nosini yo'qotadi
-  setQatlam: (qatlam) => set({ qatlam, klassFiltr: null }),
+  setQatlam: (qatlam) =>
+    set((s) => ({
+      qatlam,
+      klassFiltr: null,
+      tavsiyaEkin: qatlam === 'tavsiya' ? s.tavsiyaEkin : null,
+    })),
   tavsiyaEkin: null,
   // Ekin tanlanganda xarita o'sha ekin mosligi bo'yicha ranglanadi va
   // ochiq kontur kartasi yopiladi — ikki rejim bir vaqtda chalkashtiradi
@@ -169,12 +178,8 @@ export const useApp = create<App>((set, get) => ({
       tanlangan: null,
     }),
 
-  hillshade: false,
-  toggleHillshade: () => set((s) => ({ hillshade: !s.hillshade })),
-
   asos: 'sputnik',
-  // Sun'iy yo'ldoshda hillshade ortiqcha — tasvirda soya allaqachon bor
-  setAsos: (asos) => set({ asos, hillshade: asos === 'osm' }),
+  setAsos: (asos) => set({ asos }),
   konturKorinsin: true,
   toggleKonturKorinsin: () => set((s) => ({ konturKorinsin: !s.konturKorinsin })),
 
