@@ -15,11 +15,11 @@ import { cn } from '@/lib/utils'
 
 /** Footer — loyiha egalari */
 const TASHKILOTLAR = [
-  {
-    nom: 'O‘zbekiston Respublikasi Qishloq xo‘jaligi vazirligi',
-    logo: 'qxv.png',
-    url: 'https://gov.uz/uz/agro',
-  },
+  // {
+  //   nom: 'O‘zbekiston Respublikasi Qishloq xo‘jaligi vazirligi',
+  //   logo: 'qxv.png',
+  //   url: 'https://gov.uz/uz/agro',
+  // },
   {
     nom: '“Agrosanoatni raqamlashtirish markazi” MCHJ',
     logo: 'digitagro.png',

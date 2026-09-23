@@ -56,7 +56,7 @@ export interface AttrPack {
     balandlik: number[]
     qiyalik: number[]
     yonalish: number[]
-    /** 2026-yil ekinlari (scripts/ekin_2026.py): [[lug.ekin26 indeksi, ulush %], ...] */
+    /** 2026-yil ekinlari (ekin_2026 bilan intersect): [[lug.ekin26 indeksi, ulush %], ...] */
     ekin26?: [number, number][][]
   }
 }
