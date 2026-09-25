@@ -3,6 +3,7 @@ import { Marker } from 'maplibre-gl'
 import type { Map as MlMap } from 'maplibre-gl'
 import type { Feature, FeatureCollection, Point } from 'geojson'
 import { useApp } from '@/store/useApp'
+import { jsonOl, tumanUrl } from './tuman'
 
 /**
  * Relyef (Copernicus DEM 30 m) va gorizontallar qatlamlari.
@@ -16,9 +17,10 @@ export interface RelyefMeta {
   max: number
   /** balandlik (m) → rang */
   stops: [number, string][]
+  /** Gorizontallar izohi, masalan "har 10 m (1100 m gacha), asosiy — 50 m" (ixtiyoriy) */
+  gorizontalIzoh?: string
 }
 
-const url = (f: string) => `${import.meta.env.BASE_URL}data/${f}`
 const DEM_ATTR = 'Copernicus DEM © ESA'
 /** Gorizontal chiziqlari — iliq jigarrang: sputnikda ham, relyefda ham o'qiladi */
 const GOR_RANG = '#9a5218'
@@ -27,19 +29,39 @@ const GOR_ASOSIY = '#7c3c0c'
 /** Shu zoomdan kichikda yorliqlar yashiriladi */
 const YORLIQ_ZOOM = 12.5
 
+/**
+ * Tuman bo'yicha kesh — faqat joriy tuman saqlanadi (boshqa tumanga o'tilsa
+ * eski relyef/gorizontallar xotiradan ketadi). Xato bo'lgan so'rov keshda
+ * qolmaydi — keyingi yoqishda qayta uriniladi.
+ */
+let keshTuman: string | null = null
 let metaVaad: Promise<RelyefMeta> | null = null
-const metaOl = () =>
-  (metaVaad ??= fetch(url('relyef.json')).then((r) => {
-    if (!r.ok) throw new Error(`relyef.json: ${r.status}`)
-    return r.json() as Promise<RelyefMeta>
-  }))
-
 let gorVaad: Promise<FeatureCollection> | null = null
-const gorOl = () =>
-  (gorVaad ??= fetch(url('gorizontal.geojson')).then((r) => {
-    if (!r.ok) throw new Error(`gorizontal.geojson: ${r.status}`)
-    return r.json() as Promise<FeatureCollection>
-  }))
+function keshTekshir(tuman: string) {
+  if (keshTuman === tuman) return
+  keshTuman = tuman
+  metaVaad = null
+  gorVaad = null
+}
+
+/** Tumanning relyef.json i (rasm burchaklari, balandlik shkalasi, izohlar) */
+export function relyefMeta(tuman: string): Promise<RelyefMeta> {
+  keshTekshir(tuman)
+  const p = (metaVaad ??= jsonOl<RelyefMeta>(tumanUrl(tuman, 'relyef.json')))
+  p.catch(() => {
+    if (metaVaad === p) metaVaad = null
+  })
+  return p
+}
+
+function gorOl(tuman: string): Promise<FeatureCollection> {
+  keshTekshir(tuman)
+  const p = (gorVaad ??= jsonOl<FeatureCollection>(tumanUrl(tuman, 'gorizontal.geojson')))
+  p.catch(() => {
+    if (gorVaad === p) gorVaad = null
+  })
+  return p
+}
 
 /** Relyef va gorizontallar qatlamlari ostiga qo'yiladigan qatlam — konturlar doim ustida */
 const USTKI = 'kontur-fill'
@@ -47,6 +69,7 @@ const USTKI = 'kontur-fill'
 export function useRelyef(map: React.RefObject<MlMap | null>, stylTayyor: boolean) {
   const relyefKorinsin = useApp((s) => s.relyefKorinsin)
   const gorizontalKorinsin = useApp((s) => s.gorizontalKorinsin)
+  const tuman = useApp((s) => s.tuman)
   const [meta, setMeta] = useState<RelyefMeta | null>(null)
   const yorliqlar = useRef<Marker[]>([])
 
@@ -60,11 +83,11 @@ export function useRelyef(map: React.RefObject<MlMap | null>, stylTayyor: boolea
     }
     if (!relyefKorinsin) return
     let bekor = false
-    metaOl()
+    relyefMeta(tuman)
       .then((d) => {
         setMeta(d)
         if (bekor || m !== map.current || m.getSource('relyef')) return
-        m.addSource('relyef', { type: 'image', url: url('relyef.webp'), coordinates: d.corners })
+        m.addSource('relyef', { type: 'image', url: tumanUrl(tuman, 'relyef.webp'), coordinates: d.corners })
         // Image manbasi spetsifikatsiyada `attribution` qabul qilmaydi —
         // atribusiya boshqaruvi uni manba obyektidan o'qiydi
         const src = m.getSource('relyef') as unknown as { attribution?: string }
@@ -84,7 +107,7 @@ export function useRelyef(map: React.RefObject<MlMap | null>, stylTayyor: boolea
     return () => {
       bekor = true
     }
-  }, [map, stylTayyor, relyefKorinsin])
+  }, [map, stylTayyor, relyefKorinsin, tuman])
 
   // -------------------------------------------------------- gorizontallar
   useEffect(() => {
@@ -110,7 +133,7 @@ export function useRelyef(map: React.RefObject<MlMap | null>, stylTayyor: boolea
       for (const mk of yorliqlar.current) mk.getElement().style.display = k
     }
 
-    gorOl()
+    gorOl(tuman)
       .then((fc) => {
         if (bekor || m !== map.current) return
         if (!m.getSource('gorizontal')) {
@@ -198,7 +221,7 @@ export function useRelyef(map: React.RefObject<MlMap | null>, stylTayyor: boolea
       bekor = true
       m.off('zoom', zoomda)
     }
-  }, [map, stylTayyor, gorizontalKorinsin])
+  }, [map, stylTayyor, gorizontalKorinsin, tuman])
 
   // Xarita o'chirilganda markerlar ham ketadi
   useEffect(

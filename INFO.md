@@ -97,9 +97,12 @@ src/
     EkinTanlov.tsx      ekin mosligi tanlovi (mavsum → guruh)
     Logo.tsx, Shkala.tsx
 public/data/
-  attrs.json     9 257 kontur atributlari (0.62 MB, ustunli saqlash)
-  geom.geojson   geometriya (2.9 MB, gzip 0.4 MB)
-  crops.json     37 ekin agrotexnik me'yorlari
+  crops.json     37 ekin agrotexnik me'yorlari (barcha tumanlar uchun umumiy)
+  bulungur/      har bir tuman — alohida papka (src/lib/tuman.ts → TUMANLAR, URL: ?tuman=)
+    attrs.json     9 257 kontur atributlari (0.62 MB, ustunli saqlash)
+    geom.geojson   geometriya (2.9 MB, gzip 0.4 MB)
+    iqlim.json, relyef.webp, relyef.json, gorizontal.geojson
+  fargona/       xuddi shu fayllar (tayyorlanmoqda)
 ```
 
 **Stek:** Vite + React 19 + TypeScript, Tailwind v4, MapLibre GL JS, zustand, lucide-react.

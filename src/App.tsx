@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, Info, MapPin } from 'lucide-react'
+import { ChevronDown, Info, MapPin, MapPinOff } from 'lucide-react'
 import { InfoOyna } from '@/components/InfoOyna'
 import { Xarita, type XaritaAPI } from '@/components/Xarita'
 import { StatPanel } from '@/components/StatPanel'
@@ -9,27 +9,42 @@ import { EkinTanlov } from '@/components/EkinTanlov'
 import { Legenda } from '@/components/Legenda'
 import { Logo } from '@/components/Logo'
 import { useApp } from '@/store/useApp'
-import { yukla } from '@/lib/data'
-
-const TUMANLAR = [
-  { id: 'bulungur', nom: "Bulung'ur tumani" },
-  { id: 'fargona', nom: "Farg'ona tumani" },
-]
+import { BekorXato, yukla } from '@/lib/data'
+import { MalumotYoqXato, SUKUT_TUMAN, TUMANLAR, tumanOl, urlgaYoz } from '@/lib/tuman'
 
 export default function App() {
-  const { xaritaTayyor, setTayyor, hisobla } = useApp()
-  const [tuman, setTuman] = useState(TUMANLAR[0].id)
+  const { xaritaTayyor, setTayyor, hisobla, tuman, setTuman, yuklashXato, setYuklashXato } = useApp()
+  const joriy = tumanOl(tuman)
   const [info, setInfo] = useState(false)
   const xarita = useRef<XaritaAPI | null>(null)
 
+  // Tuman almashsa (yoki birinchi ochilishda) — URL, sarlavha va ma'lumotlar.
+  // setTuman allaqachon tayyor = false qilgan: xarita va panellar yangi
+  // ma'lumot kelguncha loader ortida turadi, keyin `key={tuman}` bilan
+  // noldan quriladi (yangi extent, manba, legenda, statistika).
   useEffect(() => {
-    yukla()
+    urlgaYoz(tuman)
+    document.title = `Agroxarita — ${tumanOl(tuman).nom}`
+    let tirik = true
+    yukla(tuman)
       .then(() => {
+        if (!tirik) return
         setTayyor(true)
         hisobla()
       })
-      .catch((e) => console.error("Ma'lumot yuklanmadi:", e))
-  }, [setTayyor, hisobla])
+      .catch((e) => {
+        if (!tirik || e instanceof BekorXato) return
+        if (e instanceof MalumotYoqXato) {
+          setYuklashXato('yoq')
+        } else {
+          console.error("Ma'lumot yuklanmadi:", e)
+          setYuklashXato('boshqa')
+        }
+      })
+    return () => {
+      tirik = false
+    }
+  }, [tuman, setTayyor, hisobla, setYuklashXato])
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -51,7 +66,7 @@ export default function App() {
           </div>
         </div>
         <div className="min-h-0 flex-1">
-          <StatPanel />
+          <StatPanel key={tuman} />
         </div>
       </aside>
 
@@ -59,13 +74,16 @@ export default function App() {
         <header className="z-30 flex h-[68px] shrink-0 items-center gap-3 border-b border-line bg-surface px-6">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="truncate text-[15px] font-semibold text-navy">Raqamli agroxarita</span>
+              <span className="truncate text-[15px] font-semibold text-navy">
+                Raqamli agroxarita
+                <span className="font-normal text-muted"> · {joriy.nom}</span>
+              </span>
               <span className="shrink-0 rounded-full bg-leaf-soft px-2 py-px text-[10.5px] font-medium text-leaf-dark">
                 Tajriba-sinov
               </span>
             </div>
             <div className="truncate text-[12px] text-muted">
-              Qishloq xo'jaligi yerlariga eng maqbul ekin turlarini joylashtirish
+              {joriy.viloyat}, {joriy.nom}: qishloq xo'jaligi yerlariga eng maqbul ekin turlarini joylashtirish
             </div>
           </div>
 
@@ -77,7 +95,7 @@ export default function App() {
             Loyiha haqida
           </button>
 
-          {/* Hozircha faqat ko'rinish uchun — Farg'ona ma'lumotlari hali yo'q */}
+          {/* Tuman tanlovi — ma'lumotlar public/data/<tuman>/ dan, URL: ?tuman= */}
           <div className="relative">
             <MapPin className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-leaf" />
             <select
@@ -98,7 +116,34 @@ export default function App() {
         <InfoOyna ochiq={info} onYop={() => setInfo(false)} />
 
         <main className="relative min-h-0 flex-1">
-          <Xarita apiRef={xarita} />
+          <Xarita key={tuman} apiRef={xarita} />
+          {yuklashXato && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-paper">
+              <div className="flex max-w-[380px] flex-col items-center gap-3 px-6 text-center">
+                <span className="flex size-11 items-center justify-center rounded-full bg-sunken text-muted">
+                  <MapPinOff className="size-5" strokeWidth={1.8} />
+                </span>
+                <div className="text-[15px] font-semibold text-navy">
+                  {yuklashXato === 'yoq'
+                    ? `${joriy.nom} ma'lumotlari hali yuklanmagan`
+                    : `${joriy.nom} ma'lumotlarini yuklab bo'lmadi`}
+                </div>
+                <div className="text-[12.5px] leading-relaxed text-muted">
+                  {yuklashXato === 'yoq'
+                    ? "Kontur, tuproq va iqlim ma'lumotlari tayyorlanmoqda. Hozircha boshqa tumanni tanlang."
+                    : "Tarmoq ulanishini tekshirib, sahifani qayta yuklang yoki boshqa tumanni tanlang."}
+                </div>
+                {tuman !== SUKUT_TUMAN && (
+                  <button
+                    onClick={() => setTuman(SUKUT_TUMAN)}
+                    className="mt-1 h-9 rounded-card bg-leaf px-4 text-[13px] font-medium text-white transition-colors hover:bg-leaf-dark"
+                  >
+                    {tumanOl(SUKUT_TUMAN).nom}ga o'tish
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
           {xaritaTayyor && (
             <>
               {/* O'ng tepadagi vertikal boshqaruv ustuni */}

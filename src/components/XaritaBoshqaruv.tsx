@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Layers, Home, Plus, Minus, X, Check } from 'lucide-react'
 import { useApp, type Qatlam } from '@/store/useApp'
-import { extent } from '@/lib/data'
-import { SHKALA } from '@/lib/ranglar'
+import { ekinYillar, extent } from '@/lib/data'
+import { relyefMeta } from '@/lib/relyef'
+import { tumanOl } from '@/lib/tuman'
+import { SHKALA, ekinYili } from '@/lib/ranglar'
 import { cn } from '@/lib/utils'
 
 /** Xarita ustidagi tugma — chap tomonda nomi chiqadigan tooltip bilan */
@@ -137,9 +139,33 @@ export function XaritaBoshqaruv({
     qatlam,
     setQatlam,
     tavsiyaEkin,
+    tuman,
   } = useApp()
-
   const [ochiq, setOchiq] = useState(false)
+
+  // Ekin qatlamlari — faqat tumanda ma'lumoti bor yillar
+  const tematik = useMemo(() => {
+    const yillar = ekinYillar()
+    return TEMATIK.filter(({ id }) => {
+      const y = ekinYili(id)
+      return y === null || yillar.includes(y)
+    })
+  }, [])
+
+  // Gorizontallar izohi: relyef.json dagi `gorizontalIzoh`, bo'lmasa tuman sozlamasi
+  const [metaIzoh, setMetaIzoh] = useState<string | null>(null)
+  useEffect(() => {
+    if (!ochiq) return
+    let tirik = true
+    relyefMeta(tuman)
+      .then((m) => tirik && setMetaIzoh(m.gorizontalIzoh ?? null))
+      .catch(() => {})
+    return () => {
+      tirik = false
+    }
+  }, [ochiq, tuman])
+  const gorIzoh = metaIzoh ?? tumanOl(tuman).gorizontalIzoh ?? 'Balandlik chiziqlari'
+
   const panel = useRef<HTMLDivElement>(null)
   const ustun = useRef<HTMLDivElement>(null)
 
@@ -242,10 +268,10 @@ export function XaritaBoshqaruv({
                 </div>
               )}
               <div role="radiogroup" aria-label="Tematik qatlam">
-                {TEMATIK.map(({ id, guruh }, i) => {
+                {tematik.map(({ id, guruh }, i) => {
                   const sh = SHKALA[id]
                   const faol = qatlam === id
-                  const yangiGuruh = i === 0 || TEMATIK[i - 1].guruh !== guruh
+                  const yangiGuruh = i === 0 || tematik[i - 1].guruh !== guruh
                   return (
                     <div key={id}>
                       {yangiGuruh && guruh !== 'Asosiy' && (
@@ -312,7 +338,7 @@ export function XaritaBoshqaruv({
               />
               <Switch
                 nom="Gorizontallar"
-                izoh="har 10 m (1100 m gacha), asosiy — 50 m"
+                izoh={gorIzoh}
                 yoqilgan={gorizontalKorinsin}
                 onToggle={toggleGorizontal}
               />

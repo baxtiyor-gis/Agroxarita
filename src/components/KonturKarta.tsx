@@ -26,7 +26,9 @@ import {
   gradFmt,
   yerTuri,
   yonalishNom,
+  balandlikOraliq,
 } from '@/lib/data'
+import { tumanOl } from '@/lib/tuman'
 import { tavsiyalar, ballRang, ballNom, mavsum, MAVSUM_NOM, type Mavsum } from '@/lib/tavsiya'
 
 /** Kartochkada ko'rsatish tartibi — asosiy ekish mavsumlari */
@@ -119,7 +121,12 @@ function Satr({ nom, qiymat, children }: { nom: string; qiymat?: string; childre
 }
 
 export function KonturKarta() {
-  const { tanlangan, setTanlangan } = useApp()
+  const { tanlangan, setTanlangan, tuman } = useApp()
+  // Balandlik shkalasi: tuman sozlamasi, bo'lmasa konturlar oralig'i (10 m ga yaxlitlangan)
+  const [hMin, hMax] = tumanOl(tuman).balandlikShkala ?? [
+    Math.floor(balandlikOraliq()[0] / 10) * 10,
+    Math.ceil(balandlikOraliq()[1] / 10) * 10,
+  ]
   const [tab, setTab] = useState<Tab>('tavsiya')
   // Sukut: hamma ekin qatorlari yopiq; boshqa kontur tanlansa yana yopiladi
   const [ochiq, setOchiq] = useState<string | null>(null)
@@ -352,10 +359,10 @@ export function KonturKarta() {
             <Satr nom="Balandlik" qiymat={k.balandlik >= 0 ? `${k.balandlik} m` : '—'}>
               {k.balandlik >= 0 && (
                 <div className="mt-1.5 pr-1">
-                  <Shkala qiymat={k.balandlik} min={620} max={1400} rang="var(--color-wheat)" />
+                  <Shkala qiymat={k.balandlik} min={hMin} max={hMax} rang="var(--color-wheat)" />
                   <div className="nums mt-1 flex justify-between text-[9.5px] text-faint">
-                    <span>620 m</span>
-                    <span>1400 m</span>
+                    <span>{hMin} m</span>
+                    <span>{hMax} m</span>
                   </div>
                 </div>
               )}
