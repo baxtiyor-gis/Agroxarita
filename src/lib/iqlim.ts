@@ -79,6 +79,112 @@ export function iqlimYukla(): Promise<void> {
   return yuklash
 }
 
+/** Haqiqiy ERA5 ma'lumoti yuklanganmi (namuna emas) */
+export const iqlimHaqiqiy = () => fayl !== null
+
+/**
+ * Tavsiya algoritmi uchun — FAQAT haqiqiy ma'lumot (namuna tavsiyaga ta'sir
+ * qilmasin). Ma'lumot yo'q bo'lsa null → iqlim omili 1.
+ */
+export function iqlimTavsiya(i: number): Iqlim | null {
+  if (!fayl || !idIdx) return null
+  const q = iqlim(i)
+  return q.namuna ? null : q
+}
+
+// -------------------------------------------------- xarita qatlamlari
+export type IqlimKorsatkich =
+  | 'fah'
+  | 'sovuqsiz'
+  | 'bahorgiSovuq'
+  | 'issiqKun'
+  | 'yillikYogin'
+  | 'suvTanqislik'
+  | 'oyHarorat'
+  | 'oyYogin'
+
+const ustunKesh = new Map<string, number[]>()
+export const HARORAT_SILJISH = 50
+export const IQLIM_QATLAMLAR: IqlimKorsatkich[] = [
+  'fah',
+  'sovuqsiz',
+  'bahorgiSovuq',
+  'issiqKun',
+  'yillikYogin',
+  'suvTanqislik',
+  'oyHarorat',
+  'oyYogin',
+]
+export const oylikmi = (q: string) => q === 'oyHarorat' || q === 'oyYogin'
+
+/** Oylik qatlamlar uchun joriy oy — store setIqlimOy orqali yangilanadi */
+let joriyOy = 6
+export const setJoriyOy = (oy: number) => {
+  joriyOy = oy
+}
+
+const OY_HARORAT_R = ['#4575b4', '#91bfdb', '#e0f3f8', '#fee090', '#fc8d59', '#d73027']
+const OY_YOGIN_R = ['#f7fbff', '#c6dbef', '#6baed6', '#3182bd', '#08519c', '#08306b']
+const HARORAT_NOM = ['Eng salqin', 'Salqin', "O'rtachadan past", "O'rtachadan yuqori", 'Iliq', 'Eng issiq']
+const YOGIN_NOM = ['Eng kam', 'Kam', "O'rtachadan kam", "O'rtachadan ko'p", "Ko'p", "Eng ko'p"]
+const klassKesh = new Map<string, { min: number; max: number; rang: string; nom: string; oraliq: string }[]>()
+
+/**
+ * Oylik qatlam klasslari — tanlangan oyning tuman bo'yicha oralig'iga moslab
+ * 6 ta teng qism. Tuman ichida bir oyda farq 2–4 °C, qat'iy 5 °C li shkala
+ * uni ko'rsatmas edi.
+ */
+export function oylikKlasslar(k: 'oyHarorat' | 'oyYogin') {
+  const kalit = `${k}:${joriyOy}:${fayl ? 1 : 0}`
+  const bor = klassKesh.get(kalit)
+  if (bor) return bor
+  const harorat = k === 'oyHarorat'
+  const qadam = harorat ? 0.5 : 1
+  const sil = harorat ? HARORAT_SILJISH : 0
+  const v = iqlimUstun(k, joriyOy).filter((x) => x >= 0)
+  let lo = Math.floor(Math.min(...v) / qadam) * qadam
+  let hi = Math.ceil(Math.max(...v) / qadam) * qadam
+  if (hi - lo < qadam * 6) hi = lo + qadam * 6
+  const bo = Math.max(qadam, Math.ceil((hi - lo) / 6 / qadam) * qadam)
+  const ranglar = harorat ? OY_HARORAT_R : OY_YOGIN_R
+  const f = (x: number) => (harorat ? (x - sil).toFixed(1).replace('.', ',').replace('-', '−') : String(Math.round(x)))
+  const out = ranglar.map((rang, i) => {
+    const a = lo + bo * i
+    const b = a + bo
+    return {
+      min: i === 0 ? -Infinity : a,
+      max: i === ranglar.length - 1 ? Infinity : b,
+      rang,
+      nom: (harorat ? HARORAT_NOM : YOGIN_NOM)[i],
+      oraliq: `${f(a)}–${f(b)}${harorat ? ' °C' : ' mm'}`,
+    }
+  })
+  klassKesh.set(kalit, out)
+  return out
+}
+
+/** Xarita/legenda uchun ustun — attrs.json tartibida (oylik ko'rsatkichda oy 0..11) */
+export function iqlimUstun(k: IqlimKorsatkich, oy = 0): number[] {
+  const kalit = `${k}:${k.startsWith('oy') ? oy : ''}:${fayl ? 1 : 0}`
+  const bor = ustunKesh.get(kalit)
+  if (bor) return bor
+  const n = attrs().n
+  const out = new Array<number>(n)
+  for (let i = 0; i < n; i++) {
+    const q = iqlim(i)
+    // Oylik harorat manfiy bo'lishi mumkin, xarita esa v < 0 ni "ma'lumot yo'q"
+    // deb biladi — shuning uchun HARORAT_SILJISH qo'shiladi (legenda buni hisobga oladi)
+    out[i] =
+      k === 'oyHarorat'
+        ? q.harorat[oy] + HARORAT_SILJISH
+        : k === 'oyYogin'
+          ? q.yogin[oy]
+          : (q[k] as number)
+  }
+  ustunKesh.set(kalit, out)
+  return out
+}
+
 /** Kontur indeksi bo'yicha iqlim; haqiqiy ma'lumot bo'lmasa — namuna */
 export function iqlim(i: number): Iqlim {
   const p = attrs()

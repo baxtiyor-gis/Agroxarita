@@ -1,3 +1,4 @@
+import type { Iqlim } from './iqlim'
 import type { EkinYil } from './data'
 
 export interface Crop {
@@ -27,6 +28,21 @@ export interface Crop {
   parvarish: string | null
   hosil: string | null
   himoya: { begona_ot: string | null; kasallik: string | null; zararkunanda: string | null }
+  /** Iqlim talablari (FAO, Losev 1994, BSE va boshqalar; 30 ekinda fah_min taxminiy) */
+  iqlim?: {
+    /** Faol haroratlar yig'indisi (>10 °C kunlar o'rtacha haroratlari yig'indisi) — minimum va maqbul */
+    fah_min: number | null
+    fah_opt: number | null
+    /** Sovuqqa chidamsiz ekinlar uchun kerakli sovuqsiz davr, kun */
+    sovuqsiz_min: number | null
+    /** 0 = yengil sovuqda nobud bo'ladi … 3 = qishlaydi */
+    sovuqqa_chidam: number
+    /** 0 = jaziramaga sezgir … 3 = chidamli */
+    issiqqa_chidam: number
+    /** Qishlaydigan ekinlar: qoplamasiz chidaydigan eng past harorat, °C */
+    qishlash_min: number | null
+    min_ekish_tuproqT: number | null
+  }
 }
 
 /** Ustunli saqlash — 9257 obyekt uchun obyektlar massividan ~4x ixcham */
@@ -93,6 +109,8 @@ export interface Kontur {
   yonalish: number
   /** Yillar bo'yicha ekilgan ekinlar (2022–2026) — ulush kamayish tartibida */
   ekin: Record<EkinYil, { nom: string; ulush: number }[]>
+  /** Iqlim (ERA5-Land, 2016–2025) — haqiqiy ma'lumot bo'lmasa null */
+  iqlim?: Iqlim | null
 }
 
 export type SababTuri = 'ok' | 'ogoh' | 'xato'

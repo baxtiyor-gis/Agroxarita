@@ -1,4 +1,6 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Pause, Play } from 'lucide-react'
+import { iqlimHaqiqiy, oylikmi, IQLIM_QATLAMLAR, OYLAR } from '@/lib/iqlim'
 import { useApp } from '@/store/useApp'
 import { attrs, crops, ustun } from '@/lib/data'
 import { SHKALA, klassOl, YOQ_RANG, ekinQatlami } from '@/lib/ranglar'
@@ -10,7 +12,16 @@ import { kontur } from '@/lib/data'
  * Katakka bosilsa xaritada faqat o'sha klass qoladi.
  */
 export function Legenda() {
-  const { qatlam, tavsiyaEkin, tayyor, klassFiltr, setKlassFiltr } = useApp()
+  const { qatlam, tavsiyaEkin, tayyor, klassFiltr, setKlassFiltr, iqlimOy, setIqlimOy } = useApp()
+  const oylik = oylikmi(qatlam)
+  const iqlimQ = (IQLIM_QATLAMLAR as string[]).includes(qatlam)
+  // Oylar animatsiyasi — ▶ bosilsa har 1,2 s da keyingi oy
+  const [oynat, setOynat] = useState(false)
+  useEffect(() => {
+    if (!oynat || !oylik) return
+    const t = setInterval(() => setIqlimOy((useApp.getState().iqlimOy + 1) % 12), 1200)
+    return () => clearInterval(t)
+  }, [oynat, oylik, setIqlimOy])
   const sh = SHKALA[qatlam]
 
   // Har bir klassda nechta kontur borligini sanaymiz
@@ -25,7 +36,7 @@ export function Legenda() {
         const crop = crops().find((x) => x.id === tavsiyaEkin)
         return crop ? baholash(crop, kontur(i)).ball : -1
       }
-      return ustun(qatlam)?.[i] ?? -1
+      return ustun(qatlam, iqlimOy)?.[i] ?? -1
     }
 
     for (let i = 0; i < p.n; i++) {
@@ -39,7 +50,7 @@ export function Legenda() {
       else n[n.length - 1]++
     }
     return { n, yoq }
-  }, [qatlam, tavsiyaEkin, tayyor, sh])
+  }, [qatlam, tavsiyaEkin, tayyor, sh, iqlimOy])
 
   // Tematik ranglash yo'q — legenda ham kerak emas
   if (qatlam === 'yoq') return null
@@ -56,6 +67,35 @@ export function Legenda() {
         <div className="mt-0.5 text-[11px] text-muted">
           {qatlam === 'tavsiya' ? 'moslik bali, 0–100' : sh.izoh} · bosib filtrlash
         </div>
+        {iqlimQ && !iqlimHaqiqiy() && (
+          <div className="mt-1.5 rounded-md border border-dashed border-line-strong px-2 py-1 text-[10.5px] text-muted">
+            Namuna ma'lumot — ERA5-Land hisobi tugagach almashtiriladi
+          </div>
+        )}
+        {oylik && (
+          <div className="mt-2.5 flex items-center gap-2">
+            <button
+              onClick={() => setOynat(!oynat)}
+              aria-label={oynat ? "To'xtatish" : "Oylar bo'yicha o'ynatish"}
+              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-leaf text-white hover:brightness-110"
+            >
+              {oynat ? <Pause className="size-3.5" /> : <Play className="size-3.5 translate-x-px" />}
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={11}
+              value={iqlimOy}
+              onChange={(e) => {
+                setOynat(false)
+                setIqlimOy(+e.target.value)
+              }}
+              aria-label="Oy"
+              className="min-w-0 flex-1 accent-leaf"
+            />
+            <span className="w-10 shrink-0 text-right text-[12.5px] font-semibold text-navy">{OYLAR[iqlimOy]}</span>
+          </div>
+        )}
       </div>
 
       <div className="scrollbar-thin min-h-0 flex-auto overflow-y-auto px-1.5 py-1.5">

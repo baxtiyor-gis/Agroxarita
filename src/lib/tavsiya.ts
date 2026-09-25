@@ -426,6 +426,104 @@ export const MAVSUM_NOM: Record<Mavsum, string> = {
 }
 
 // ------------------------------------------------------------------ asos
+// ---------------------------------------------------------------- iqlim
+/**
+ * Iqlim omili — ERA5-Land (2016–2025) konturga interpolyatsiya qilingan,
+ * balandlik bo'yicha tuzatilgan. Qoidalar: ekin_iqlim HISOBOT 4-bo'lim.
+ *
+ * Bulung'ur ichida odatda 0,85–1: iqlim ro'yxatni balandlik bo'yicha qayta
+ * tartiblaydi, lekin tuproq (sho'rlanish, qiyalik) omillaridan kuchli emas.
+ * Iqlim ma'lumoti yo'q bo'lsa — 1, sabab yozilmaydi.
+ */
+const f0 = (v: number) => Math.round(v).toLocaleString('ru')
+
+function iqlimBali(c: Crop, k: Kontur, s: Sabab[]) {
+  const q = k.iqlim
+  const t = c.iqlim
+  if (!q || !t) return 1
+  const kuzgiDon = mavsum(c) === 'kuzgi' && c.id !== 'qulupnay'
+
+  // 4.1 + 4.2 — issiqlik yetarliligi va sovuqsiz davr (ikkalasi balandlikka bog'liq → min)
+  let issiqlik = 1
+  let issiqlikMatn: Sabab | null = null
+  if (!kuzgiDon && t.fah_min) {
+    const opt = t.fah_opt ?? t.fah_min
+    if (q.fah >= opt) {
+      if (t.fah_min >= 2500)
+        issiqlikMatn = { turi: 'ok', matn: `Faol haroratlar yig'indisi ${f0(q.fah)}°C — ${c.nom} uchun yetarli (talab ${f0(t.fah_min)})` }
+    } else if (q.fah >= t.fah_min) {
+      issiqlik = 0.9 + (0.1 * (q.fah - t.fah_min)) / Math.max(1, opt - t.fah_min)
+      issiqlikMatn = { turi: 'ok', matn: `Faol haroratlar ${f0(q.fah)}°C — yetarli, lekin kechpishar navlarga kam (maqbul ${f0(opt)})` }
+    } else {
+      issiqlik = Math.max(0.3, 1 - 2.5 * (1 - q.fah / t.fah_min))
+      issiqlikMatn = {
+        turi: issiqlik < 0.5 ? 'xato' : 'ogoh',
+        matn: `Faol haroratlar ${f0(q.fah)}°C — ${c.nom} uchun yetmaydi (talab ${f0(t.fah_min)}), hosil to'liq pishmaydi`,
+      }
+    }
+  }
+  if (t.sovuqsiz_min && q.sovuqsiz < t.sovuqsiz_min) {
+    const sk = Math.max(0.6, 1 - 0.01 * (t.sovuqsiz_min - q.sovuqsiz))
+    if (sk < issiqlik) {
+      issiqlik = sk
+      issiqlikMatn = {
+        turi: 'ogoh',
+        matn: `Sovuqsiz davr ${q.sovuqsiz} kun — ${c.nom} uchun qisqa (talab ${t.sovuqsiz_min}), erta kuzgi sovuq xavfi`,
+      }
+    }
+  }
+  if (issiqlikMatn) s.push(issiqlikMatn)
+
+  // 4.3 — kech bahorgi sovuq (10 yildan nechtasida so'nggi sovuq 10-apreldan keyin)
+  let kech = 1
+  const n = q.kechSovuqYil
+  if (c.id === 'qulupnay') kech = n >= 4 ? 0.8 : n >= 2 ? 0.9 : 1
+  else if (!kuzgiDon && t.sovuqqa_chidam === 0) kech = n >= 4 ? 0.85 : n >= 2 ? 0.93 : 1
+  else if (!kuzgiDon && t.sovuqqa_chidam === 1) kech = n >= 4 ? 0.95 : 1
+  if (kech < 1)
+    s.push({
+      turi: 'ogoh',
+      matn:
+        n >= 4
+          ? `Kech bahorgi sovuq 10 yilda ${n} marta — gullash davrida hosil nobud bo'lish xavfi`
+          : `Kech bahorgi sovuq 10 yilda ${n} marta — ekish muddatini kechiktiring`,
+    })
+
+  // 4.4 — jazirama (Tmax ≥ 35 °C kunlar)
+  const kun = q.issiqKun
+  const JADVAL: Record<number, number[]> = {
+    3: [1, 1, 1, 1],
+    2: [1, 1, 1, 0.95],
+    1: [1, 0.95, 0.9, 0.85],
+    0: [1, 0.9, 0.8, 0.7],
+  }
+  const oraliq = kun <= 20 ? 0 : kun <= 40 ? 1 : kun <= 60 ? 2 : 3
+  let issiq = (JADVAL[t.issiqqa_chidam] ?? JADVAL[2])[oraliq]
+  if (kuzgiDon) issiq = Math.max(0.95, issiq)
+  if (issiq < 1)
+    s.push({
+      turi: 'ogoh',
+      matn: kuzgiDon
+        ? `Yozda ${Math.round(kun)} kun jazirama — don to'lishida garmsel xavfi`
+        : `Yozda ${Math.round(kun)} kun ≥35°C — ${c.nom}ni erta bahorgi yoki kuzgi muddatda eking`,
+    })
+
+  // 4.5 — qishki sovuq (faqat qishlaydigan ekinlar)
+  let qish = 1
+  if (t.qishlash_min != null) {
+    const farq = t.qishlash_min - q.minT
+    if (farq > 3) qish = 0.7
+    else if (farq > 0) qish = 0.85
+    if (qish < 1)
+      s.push({
+        turi: 'ogoh',
+        matn: `Yillik minimum ${q.minT.toFixed(1).replace('.', ',')}°C — qishki ayoz xavfi (chidaydi ${t.qishlash_min}°C gacha)`,
+      })
+  }
+
+  return Math.max(0.45, issiqlik * kech * issiq * qish)
+}
+
 export function baholash(c: Crop, k: Kontur): Tavsiya {
   const s: Sabab[] = []
 
@@ -436,8 +534,9 @@ export function baholash(c: Crop, k: Kontur): Tavsiya {
   const q = qiyalikBali(k, s)
   const f = foydalanishBali(c, k, s)
   const a = ahamiyatBali(c, k, s)
+  const iq = iqlimBali(c, k, s)
 
-  const kopaytma = b * sh * w * m * q * f * a
+  const kopaytma = b * sh * w * m * q * f * a * iq
   const jarima = kopaytma > 0 ? agrokimyo(c, k, s) : 0
   const ball = Math.max(0, Math.round(kopaytma * 100 - jarima))
 
