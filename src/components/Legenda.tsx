@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useApp } from '@/store/useApp'
 import { attrs, crops, ustun } from '@/lib/data'
-import { SHKALA, klassOl, YOQ_RANG } from '@/lib/ranglar'
+import { SHKALA, klassOl, YOQ_RANG, ekinQatlami } from '@/lib/ranglar'
 import { baholash } from '@/lib/tavsiya'
 import { kontur } from '@/lib/data'
 
@@ -63,6 +63,8 @@ export function Legenda() {
           const soni = sanoq?.n[i] ?? 0
           const tanlangan = klassFiltr === i
           const sonsiz = soni === 0
+          // Ekin lug'ati barcha yillar uchun umumiy — shu yilda yo'q ekinlar ko'rsatilmaydi
+          if (sonsiz && ekinQatlami(qatlam)) return null
           return (
             <button
               key={i}
@@ -100,7 +102,7 @@ export function Legenda() {
             <span
               className="size-3.5 shrink-0 rounded-[4px] ring-1 ring-black/10"
               style={
-                qatlam === 'ekin'
+                ekinQatlami(qatlam)
                   ? { background: 'transparent', boxShadow: 'inset 0 0 0 1.5px var(--color-outline)' }
                   : { background: YOQ_RANG }
               }

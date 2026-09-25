@@ -20,7 +20,9 @@ export async function yukla() {
   geomFC = g
   bbox = hisoblaBbox(g)
   yerTuriCol = hisoblaYerTuri(a)
-  ekinCol = (a.col.ekin26 ?? []).map((l) => (l.length && l[0][1] >= EKIN_MIN_ULUSH ? l[0][0] : -1))
+  for (const y of EKIN_YILLAR) {
+    ekinCol[y] = ekinUstun(a, y).map((l) => (l.length && l[0][1] >= EKIN_MIN_ULUSH ? l[0][0] : -1))
+  }
   return { pack: a, crops: c }
 }
 
@@ -54,25 +56,92 @@ function hisoblaYerTuri(p: AttrPack): number[] {
   return p.col.foyd.map((f) => kodGuruh[f] ?? -1)
 }
 
-// ------------------------------------------------------------ ekin 2026
+// ---------------------------------------------------- ekinlar 2022–2026
+/** Ekin xaritasi mavjud yillar (attrs.json da col.ekin22 ... col.ekin26) */
+export const EKIN_YILLAR = [2022, 2023, 2024, 2025, 2026] as const
+export type EkinYil = (typeof EKIN_YILLAR)[number]
+
+/** Yilning attrs.json ustuni: har kontur uchun [[lug.ekin indeksi, ulush %], ...] */
+function ekinUstun(p: AttrPack, y: EkinYil): [number, number][][] {
+  return p.col[`ekin${y % 100}` as `ekin${22 | 23 | 24 | 25 | 26}`] ?? []
+}
+
 /** Asosiy ekin deb hisoblash uchun kontur maydonidan minimal ulush, % */
 export const EKIN_MIN_ULUSH = 20
 
-/** Ekinlar lug'ati umumiy maydon bo'yicha tartiblangan — rang ham shu tartibda */
+/**
+ * Yagona ekin lug'ati (lug.ekin) — rang shu indeks bo'yicha, shuning uchun bir
+ * ekin har yili bir xil rangda. Dastlabki 31 tasi 2024–2026 umumiy maydoni
+ * bo'yicha tartiblangan; 2022–2023 dagi yangi ekinlar oxiriga qo'shilgan
+ * (mavjud ranglar siljimasligi uchun). Boshidagi ranglar eng aniq ajraladiganlari.
+ */
 const EKIN_PALITRA = [
-  '#d4904a', '#f2c94c', '#a56cf0', '#e5484d', '#ff8b3d', '#3ec1d3',
-  '#8bc34a', '#ff6fb5', '#2f9e44', '#7c4dff', '#00a8e8', '#c0ca33',
-  '#26a69a', '#9ccc65', '#8d6e63', '#d4b483', '#ad1457', '#4db6ac',
+  '#f2c94c', '#d4904a', '#00a8e8', '#ff8b3d', '#a56cf0', '#e5484d',
+  '#2f9e44', '#9ccc65', '#3ec1d3', '#c0ca33', '#7c4dff', '#ff6fb5',
+  '#8d6e63', '#26a69a', '#1565c0', '#ad1457', '#ffb74d', '#b39ddb',
+  '#5c6bc0', '#e6d690', '#80deea', '#558b2f', '#cddc39', '#f06292',
+  '#00695c', '#bcaaa4', '#d81b60', '#827717', '#ffe082', '#90a4ae',
+  '#6a1b9a',
+  // 2022–2023 dan qo'shilganlar (indeks 31+): Noma'lum (kod 1) — kulrang, Gulkaram,
+  // Soya, Makkajo'xori don uchun, Xashaki lavlagi, Paxta — oq, Qand lavlagi
+  '#9e9e9e', '#f8bbd0', '#4e342e', '#ff9e80', '#004d40', '#f5f5f5', '#b71c1c',
 ]
 
-let ekinCol: number[] = []
+const ekinCol: Record<EkinYil, number[]> = { 2022: [], 2023: [], 2024: [], 2025: [], 2026: [] }
 
-/** 2026-yil ekinlari: nom va rang, lug'at tartibida */
-export function ekinlar26(): { nom: string; rang: string }[] {
-  return (pack?.lug.ekin26 ?? []).map((nom, i) => ({
+/** Barcha yillar ekinlari: nom va rang, lug'at tartibida */
+export function ekinlar(): { nom: string; rang: string }[] {
+  return (pack?.lug.ekin ?? []).map((nom, i) => ({
     nom,
     rang: EKIN_PALITRA[i % EKIN_PALITRA.length],
   }))
+}
+
+/** Ekin rangi nomi bo'yicha (lug'atda yo'q bo'lsa — kulrang) */
+export function ekinRang(nom: string): string {
+  const i = pack?.lug.ekin?.indexOf(nom) ?? -1
+  return i >= 0 ? EKIN_PALITRA[i % EKIN_PALITRA.length] : '#b8bcc4'
+}
+
+/** Ko'p yillik ekinlar — har yili takrorlanishi tabiiy, almashlab ekish eslatmasi kerak emas */
+export const KOP_YILLIK = new Set(['Uzumzor', 'Mevali daraxtlar', 'Tutzor', 'Beda', "G'alla + Beda (ozuqa uchun)"])
+
+/** Kontur ekin tarixi: barcha yillar 2022 → 2026, ma'lumot yo'q yilda ekinlar = [] */
+export function ekinTarixi(i: number): { yil: EkinYil; ekinlar: { nom: string; rang: string; ulush: number }[] }[] {
+  const p = pack!
+  return EKIN_YILLAR.map((yil) => ({
+    yil,
+    ekinlar: (ekinUstun(p, yil)[i] ?? []).map(([e, u]) => ({
+      nom: p.lug.ekin![e],
+      rang: EKIN_PALITRA[e % EKIN_PALITRA.length],
+      ulush: u,
+    })),
+  }))
+}
+
+/**
+ * Almashlab ekish ogohlantirishi: bir xil asosiy ekin (ulushi ≥ EKIN_MIN_ULUSH)
+ * ketma-ket 3 va undan ko'p yil. Eng uzun takror qaytariladi (teng bo'lsa —
+ * eng oxirgisi). Ko'p yillik ekinlar hisobga olinmaydi.
+ */
+export function almashlabOgoh(i: number): { ekin: string; yillar: [number, number]; uzunlik: number } | null {
+  const p = pack!
+  const asosiy = EKIN_YILLAR.map((y) => {
+    const e = ekinUstun(p, y)[i]?.[0]
+    return e && e[1] >= EKIN_MIN_ULUSH ? p.lug.ekin![e[0]] : null
+  })
+  let eng: { ekin: string; yillar: [number, number]; uzunlik: number } | null = null
+  let bosh = 0
+  for (let j = 1; j <= asosiy.length; j++) {
+    if (j < asosiy.length && asosiy[j] !== null && asosiy[j] === asosiy[bosh]) continue
+    const ekin = asosiy[bosh]
+    const uzunlik = j - bosh
+    if (ekin && uzunlik >= 3 && !KOP_YILLIK.has(ekin) && uzunlik >= (eng?.uzunlik ?? 0)) {
+      eng = { ekin, yillar: [EKIN_YILLAR[bosh], EKIN_YILLAR[j - 1]], uzunlik }
+    }
+    bosh = j
+  }
+  return eng
 }
 
 /** Tematik qatlam uchun kontur qiymatlari ustuni (-1 = ma'lumot yo'q) */
@@ -87,7 +156,11 @@ export function ustun(qatlam: string): number[] | null {
     balandlik: c.balandlik,
     qiyalik: c.qiyalik,
     foyd: yerTuriCol,
-    ekin: ekinCol,
+    ekin22: ekinCol[2022],
+    ekin23: ekinCol[2023],
+    ekin24: ekinCol[2024],
+    ekin25: ekinCol[2025],
+    ekin26: ekinCol[2026],
   }
   return map[qatlam] ?? null
 }
@@ -159,8 +232,12 @@ export function kontur(i: number): Kontur {
     balandlik: q.balandlik[i],
     qiyalik: q.qiyalik[i],
     yonalish: q.yonalish[i],
-    ekin26: (q.ekin26?.[i] ?? []).map(([e, u]) => ({ nom: lug.ekin26![e], ulush: u })),
+    ekin: Object.fromEntries(EKIN_YILLAR.map((y) => [y, ekinRoyxat(ekinUstun(p, y)[i], lug.ekin)])) as Kontur['ekin'],
   }
+}
+
+function ekinRoyxat(l: [number, number][] | undefined, lug: string[] | undefined) {
+  return (l ?? []).map(([e, u]) => ({ nom: lug![e], ulush: u }))
 }
 
 /** kontur_raq -> massiv indeksi */

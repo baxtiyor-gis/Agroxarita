@@ -173,6 +173,19 @@
     1px 1px 0 rgb(0 0 0 / 0.6),
     -1px -1px 0 rgb(0 0 0 / 0.6);
 }
+.gorizontal-yorliq {
+  pointer-events: none;
+  color: #5c2d08;
+  font: 700 11px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  /* Oq halo — sputnik va relyef ustida o'qilsin */
+  text-shadow:
+    0 0 2px #fff,
+    0 0 2px #fff,
+    0 0 3px #fff,
+    0 0 4px rgb(255 255 255 / 0.9);
+}
 .maplibregl-canvas:focus {
   outline: none;
 }

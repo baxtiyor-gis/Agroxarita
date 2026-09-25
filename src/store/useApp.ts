@@ -13,7 +13,11 @@ export type Qatlam =
   | 'balandlik'
   | 'qiyalik'
   | 'foyd'
-  | 'ekin'
+  | 'ekin22'
+  | 'ekin23'
+  | 'ekin24'
+  | 'ekin25'
+  | 'ekin26'
 
 export interface Filtr {
   qidiruv: string
@@ -69,6 +73,11 @@ interface App {
   /** Kontur qatlami ko'rinadimi */
   konturKorinsin: boolean
   toggleKonturKorinsin: () => void
+  /** Relyef (DEM) rasmi va gorizontallar — sukut bo'yicha o'chiq */
+  relyefKorinsin: boolean
+  toggleRelyef: () => void
+  gorizontalKorinsin: boolean
+  toggleGorizontal: () => void
 
   tanlangan: number | null
   setTanlangan: (i: number | null) => void
@@ -183,6 +192,10 @@ export const useApp = create<App>((set, get) => ({
   setAsos: (asos) => set({ asos }),
   konturKorinsin: true,
   toggleKonturKorinsin: () => set((s) => ({ konturKorinsin: !s.konturKorinsin })),
+  relyefKorinsin: false,
+  toggleRelyef: () => set((s) => ({ relyefKorinsin: !s.relyefKorinsin })),
+  gorizontalKorinsin: false,
+  toggleGorizontal: () => set((s) => ({ gorizontalKorinsin: !s.gorizontalKorinsin })),
 
   tanlangan: null,
   setTanlangan: (tanlangan) => set({ tanlangan }),

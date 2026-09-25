@@ -9,8 +9,8 @@ import {
   Mountain,
 } from 'lucide-react'
 import { useApp, type Qatlam } from '@/store/useApp'
-import { attrs, ekinlar26, ustun } from '@/lib/data'
-import { SHKALA, YOQ_RANG } from '@/lib/ranglar'
+import { attrs, ekinlar, ustun, EKIN_YILLAR, type EkinYil } from '@/lib/data'
+import { SHKALA, YOQ_RANG, ekinQatlami, ekinQatlamId, ekinYili } from '@/lib/ranglar'
 import { cn } from '@/lib/utils'
 
 /** Footer — loyiha egalari */
@@ -60,21 +60,59 @@ function taqsimot(qatlam: Qatlam): Qism[] {
 }
 
 /**
- * 2026-yil ekinlari — haqiqiy ekin maydoni: kontur maydoni × kesishma ulushi.
+ * Yil ekinlari — haqiqiy ekin maydoni: kontur maydoni × kesishma ulushi.
  * Bir konturda bir necha ekin bo'lishi mumkin, har biri o'z ulushi bilan.
+ * Lug'at barcha yillar uchun umumiy — shu yilda yo'q ekinlar tashlanadi.
  */
-function ekinTaqsimot(): Qism[] {
+function ekinTaqsimot(yil: EkinYil): Qism[] {
   const p = attrs()
-  const out: Qism[] = ekinlar26().map((e) => ({ nom: e.nom, rang: e.rang, soni: 0, maydon: 0 }))
-  const col = p.col.ekin26
-  if (!col) return out
+  const out: Qism[] = ekinlar().map((e) => ({ nom: e.nom, rang: e.rang, soni: 0, maydon: 0 }))
+  const col = p.col[ekinQatlamId(yil)]
+  if (!col) return []
   for (let i = 0; i < p.n; i++) {
     for (const [e, u] of col[i]) {
       out[e].soni++
       out[e].maydon += (p.col.maydon[i] * u) / 100
     }
   }
-  return out
+  return out.filter((q) => q.soni > 0).sort((a, b) => b.maydon - a.maydon)
+}
+
+/** Ekilgan ekinlar — yil almashtirgich bilan (sukut: 2026) */
+function EkinTaqsimot({ qismlar }: { qismlar: Record<EkinYil, Qism[]> }) {
+  const { qatlam, setQatlam } = useApp()
+  const [tanlanganYil, setYil] = useState<EkinYil>(2026)
+  // Xaritada ekin qatlami yoqilgan bo'lsa — panel o'sha yilni ko'rsatadi
+  const yil = ekinYili(qatlam) ?? tanlanganYil
+  const almashtir = (y: EkinYil) => {
+    setYil(y)
+    if (ekinQatlami(qatlam)) setQatlam(ekinQatlamId(y))
+  }
+  return (
+    <Taqsimot
+      nom="Ekilgan ekinlar"
+      qismlar={qismlar[yil]}
+      qatlam={ekinQatlamId(yil)}
+      ostida={
+        <div role="radiogroup" aria-label="Yil" className="mb-1.5 flex gap-0.5 rounded-lg bg-white/[0.06] p-0.5">
+          {EKIN_YILLAR.map((y) => (
+            <button
+              key={y}
+              role="radio"
+              aria-checked={y === yil}
+              onClick={() => almashtir(y)}
+              className={cn(
+                'nums min-w-0 flex-1 rounded-md py-1 text-[11px] font-medium transition-colors',
+                y === yil ? 'bg-sky/20 font-semibold text-sky' : 'text-muted hover:bg-white/[0.06] hover:text-ink',
+              )}
+            >
+              {y}
+            </button>
+          ))}
+        </div>
+      }
+    />
+  )
 }
 
 /** Massivlar bo'yicha maydon — kamayish tartibida */
@@ -148,6 +186,7 @@ function Taqsimot({
   qismlar,
   qatlam,
   nisbiy = false,
+  ostida,
 }: {
   nom: string
   qismlar: Qism[]
@@ -155,6 +194,8 @@ function Taqsimot({
   qatlam?: Qatlam
   /** Chiziq uzunligi eng kattasiga nisbatan (massivlar kabi uzun ro'yxat uchun) */
   nisbiy?: boolean
+  /** Sarlavha ostidagi qo'shimcha boshqaruv (masalan, yil almashtirgich) */
+  ostida?: React.ReactNode
 }) {
   const { qatlam: joriy, setQatlam } = useApp()
   const jami = qismlar.reduce((s, q) => s + q.maydon, 0) || 1
@@ -179,6 +220,7 @@ function Taqsimot({
           </button>
         )}
       </div>
+      {ostida}
       {qismlar.map((q) => {
         const ulush = (q.maydon / jami) * 100
         return (
@@ -244,7 +286,7 @@ export function StatPanel() {
       bonitet: bonMaydon ? bonSum / bonMaydon : null,
       massiv: mas,
       foyd: t('foyd'),
-      ekin: ekinTaqsimot(),
+      ekin: Object.fromEntries(EKIN_YILLAR.map((y) => [y, ekinTaqsimot(y)])) as Record<EkinYil, Qism[]>,
       bonitetT: t('bonitet'),
       shor: t('shor'),
       gumus: t('gumus'),
@@ -282,9 +324,7 @@ export function StatPanel() {
 
         <Bolim nom="Yer" icon={LandPlot} ochiq={ochiq === 'yer'} onToggle={() => almashtir('yer')}>
           <Taqsimot nom="Yer turi" qismlar={s.foyd} qatlam="foyd" />
-          {s.ekin.length > 0 && (
-            <Taqsimot nom="Ekilgan ekinlar (2026)" qismlar={s.ekin} qatlam="ekin" />
-          )}
+          {EKIN_YILLAR.some((y) => s.ekin[y].length > 0) && <EkinTaqsimot qismlar={s.ekin} />}
         </Bolim>
 
         <Bolim nom="Tuproq" icon={Layers} ochiq={ochiq === 'tuproq'} onToggle={() => almashtir('tuproq')}>

@@ -85,7 +85,11 @@ function Sarlavha({ children }: { children: React.ReactNode }) {
 const TEMATIK: { id: Qatlam; guruh: string }[] = [
   { id: 'yoq', guruh: 'Asosiy' },
   { id: 'foyd', guruh: 'Asosiy' },
-  { id: 'ekin', guruh: 'Asosiy' },
+  { id: 'ekin22', guruh: 'Asosiy' },
+  { id: 'ekin23', guruh: 'Asosiy' },
+  { id: 'ekin24', guruh: 'Asosiy' },
+  { id: 'ekin25', guruh: 'Asosiy' },
+  { id: 'ekin26', guruh: 'Asosiy' },
   { id: 'bonitet', guruh: 'Tuproq' },
   { id: 'shor', guruh: 'Tuproq' },
   { id: 'gumus', guruh: 'Agrokimyo' },
@@ -118,6 +122,10 @@ export function XaritaBoshqaruv({
     setAsos,
     konturKorinsin,
     toggleKonturKorinsin,
+    relyefKorinsin,
+    toggleRelyef,
+    gorizontalKorinsin,
+    toggleGorizontal,
     qatlam,
     setQatlam,
     tavsiyaEkin,
@@ -287,6 +295,18 @@ export function XaritaBoshqaruv({
                 izoh="Kadastr konturlari"
                 yoqilgan={konturKorinsin}
                 onToggle={toggleKonturKorinsin}
+              />
+              <Switch
+                nom="Relyef (DEM)"
+                izoh="Copernicus DEM 30 m"
+                yoqilgan={relyefKorinsin}
+                onToggle={toggleRelyef}
+              />
+              <Switch
+                nom="Gorizontallar"
+                izoh="har 10 m (1100 m gacha), asosiy — 50 m"
+                yoqilgan={gorizontalKorinsin}
+                onToggle={toggleGorizontal}
               />
             </div>
           </div>

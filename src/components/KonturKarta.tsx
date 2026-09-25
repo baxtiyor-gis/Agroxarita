@@ -10,7 +10,10 @@ import {
   Sprout,
   Info,
   Droplets,
+  Wheat,
+  CloudSun,
 } from 'lucide-react'
+import { EkinlarTab, IqlimTab } from './KonturTablar'
 import { useApp } from '@/store/useApp'
 import {
   crops,
@@ -18,10 +21,8 @@ import {
   DARAJA_NOM,
   MEX_NOM,
   SHOR_NOM,
-  SIFAT_NOM,
   YER_TURLARI,
   EKIN_MIN_ULUSH,
-  ekinlar26,
   gradFmt,
   yerTuri,
   yonalishNom,
@@ -37,10 +38,12 @@ import type { Sabab, Tavsiya } from '@/lib/types'
 import { cn, ga } from '@/lib/utils'
 import { Shkala, Darajalar } from './Shkala'
 
-type Tab = 'tavsiya' | 'tuproq' | 'relyef' | 'malumot'
+type Tab = 'tavsiya' | 'ekinlar' | 'iqlim' | 'tuproq' | 'relyef' | 'malumot'
 
 const TABLAR: { id: Tab; nom: string; icon: typeof Sprout }[] = [
   { id: 'tavsiya', nom: 'Tavsiya', icon: Sprout },
+  { id: 'ekinlar', nom: 'Ekinlar', icon: Wheat },
+  { id: 'iqlim', nom: 'Iqlim', icon: CloudSun },
   { id: 'tuproq', nom: 'Tuproq', icon: Layers },
   { id: 'relyef', nom: 'Relyef', icon: Mountain },
   { id: 'malumot', nom: "Ma'lumot", icon: Info },
@@ -101,6 +104,8 @@ function TavsiyaQator({ t, ochiq, onToggle }: { t: Tavsiya; ochiq: boolean; onTo
   )
 }
 
+const YOQ = "Ma'lumot yo'q"
+
 function Satr({ nom, qiymat, children }: { nom: string; qiymat?: string; children?: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3 py-2.5">
@@ -131,13 +136,12 @@ export function KonturKarta() {
 
   const ytIdx = yerTuri()[k.i]
   const yt = ytIdx >= 0 ? YER_TURLARI[ytIdx] : null
-  const ekinRang = new Map(ekinlar26().map((e) => [e.nom, e.rang]))
-  const asosiyEkin = k.ekin26[0]?.ulush >= EKIN_MIN_ULUSH ? k.ekin26[0] : null
+  const asosiyEkin = k.ekin[2026][0]?.ulush >= EKIN_MIN_ULUSH ? k.ekin[2026][0] : null
   const mos = tav.filter((t) => t.ball >= 25)
   const nomos = tav.filter((t) => t.ball < 25)
 
   return (
-    <div className="pointer-events-auto absolute top-3 left-3 z-20 flex max-h-[calc(100%-56px)] w-[400px] flex-col overflow-hidden rounded-card float-panel">
+    <div className="pointer-events-auto absolute top-3 bottom-11 left-3 z-20 flex max-h-[820px] w-[400px] flex-col overflow-hidden rounded-card float-panel">
       {/* Sarlavha */}
       <div className="shrink-0 bg-surface px-4 pt-3.5 pb-3">
         <div className="flex items-start justify-between gap-2">
@@ -174,21 +178,26 @@ export function KonturKarta() {
             </span>
           )}
           {k.sifat < 2 && (
-            <span className="rounded-full bg-wheat-soft px-2.5 py-[3px] font-medium text-wheat">
-              Ma'lumot to'liq emas
+            <span
+              className="rounded-full bg-wheat-soft px-2.5 py-[3px] font-medium text-wheat"
+              title="Tuproq va agrokimyo poligoni konturni qisman qoplaydi — ko'rsatkichlar taxminiy"
+            >
+              Tuproq taxminiy
             </span>
           )}
         </div>
       </div>
 
       {/* Tablar */}
-      <div className="grid shrink-0 grid-cols-4 border-y border-line bg-surface">
+      <div role="tablist" aria-label="Kontur ma'lumotlari" className="grid shrink-0 grid-cols-6 border-y border-line bg-surface">
         {TABLAR.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
+            role="tab"
+            aria-selected={tab === t.id}
             className={cn(
-              '-mb-px flex items-center justify-center gap-1.5 border-b-2 py-2.5 text-[12.5px] transition-colors',
+              '-mb-px flex flex-col items-center justify-center gap-1 border-b-2 pt-2 pb-1.5 text-[11px] transition-colors',
               tab === t.id
                 ? 'border-leaf font-semibold text-navy'
                 : 'border-transparent text-muted hover:text-ink',
@@ -272,7 +281,7 @@ export function KonturKarta() {
                     <span className="px-1 py-0.5 text-[11px] text-faint">+{nomos.length - 10}</span>
                   )}
                 </div>
-                {nomos[0]?.radSabab && (
+                {mos.length > 0 && nomos[0]?.radSabab && (
                   <div className="mt-1.5 text-[10.5px] text-faint">
                     Asosiy sabab: {nomos[0].radSabab.toLowerCase()}
                   </div>
@@ -281,6 +290,9 @@ export function KonturKarta() {
             )}
           </>
         )}
+
+        {tab === 'ekinlar' && <EkinlarTab k={k} />}
+        {tab === 'iqlim' && <IqlimTab k={k} />}
 
         {tab === 'tuproq' && (
           <div className="divide-y divide-line px-2.5">
@@ -303,7 +315,7 @@ export function KonturKarta() {
             </Satr>
             <Satr
               nom="Gumus"
-              qiymat={k.gumus >= 0 ? `${DARAJA_NOM[k.gumus]}${k.gumusg ? ` · ${gradFmt(k.gumusg, '%')}` : ''}` : '—'}
+              qiymat={k.gumus >= 0 ? `${DARAJA_NOM[k.gumus]}${k.gumusg ? ` · ${gradFmt(k.gumusg, '%')}` : ''}` : YOQ}
             >
               <div className="mt-1.5">
                 <Darajalar daraja={k.gumus} />
@@ -329,9 +341,9 @@ export function KonturKarta() {
                 <Darajalar daraja={k.kaliy} />
               </div>
             </Satr>
-            <Satr nom="Mexanika" qiymat={MEX_NOM[k.mex] ?? '—'} />
-            <Satr nom="Sho'rlanish" qiymat={SHOR_NOM[k.shor] ?? '—'} />
-            <Satr nom="Yer osti suvi" qiymat={gradFmt(k.yos, 'm') ?? '—'} />
+            <Satr nom="Mexanika" qiymat={MEX_NOM[k.mex] ?? YOQ} />
+            <Satr nom="Sho'rlanish" qiymat={SHOR_NOM[k.shor] ?? YOQ} />
+            <Satr nom="Yer osti suvi" qiymat={gradFmt(k.yos, 'm') ?? YOQ} />
           </div>
         )}
 
@@ -380,30 +392,9 @@ export function KonturKarta() {
 
         {tab === 'malumot' && (
           <div className="divide-y divide-line px-2.5">
-            <Satr nom="Ekin (2026)" qiymat={k.ekin26.length ? undefined : "Ma'lumot yo'q"}>
-              {k.ekin26.length > 0 && (
-                <div className="space-y-1.5">
-                  {k.ekin26.map((e) => (
-                    <div key={e.nom} className="flex items-center gap-2 text-[13px]">
-                      <span
-                        className="size-2.5 shrink-0 rounded-[3px] ring-1 ring-black/10"
-                        style={{ background: ekinRang.get(e.nom) }}
-                      />
-                      <span className="flex-1 font-medium text-ink">{e.nom}</span>
-                      <span className="nums text-[12px] text-muted">
-                        {e.ulush} % · {ga((k.maydon * e.ulush) / 100)} ga
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Satr>
-            <Satr nom="Kadastr kodi" qiymat={k.kod} />
             <Satr nom="Kontur raqami" qiymat={String(k.id)} />
             <Satr nom="Massiv" qiymat={k.massiv ?? '—'} />
             <Satr nom="MFY" qiymat={k.mfy ?? '—'} />
-            {/* Tuproq/agrokimyo poligoni konturga qanchalik to'liq tushgani */}
-            <Satr nom="Tuproq ma'lumoti" qiymat={SIFAT_NOM[k.sifat]} />
           </div>
         )}
       </div>
