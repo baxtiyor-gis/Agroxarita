@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, Info, MapPin, MapPinOff } from 'lucide-react'
 import { InfoOyna } from '@/components/InfoOyna'
 import { Xarita, type XaritaAPI } from '@/components/Xarita'
-import { StatPanel } from '@/components/StatPanel'
+// import { StatPanel } from '@/components/StatPanel' — sidebar vaqtincha yashirilgan
 import { KonturKarta } from '@/components/KonturKarta'
 import { XaritaBoshqaruv } from '@/components/XaritaBoshqaruv'
 import { EkinTanlov } from '@/components/EkinTanlov'
 import { Legenda } from '@/components/Legenda'
-import { Logo } from '@/components/Logo'
+// import { Logo } from '@/components/Logo' — sidebar vaqtincha yashirilgan
 import { useApp } from '@/store/useApp'
 import { BekorXato, yukla } from '@/lib/data'
 import { MalumotYoqXato, SUKUT_TUMAN, TUMANLAR, tumanOl, urlgaYoz } from '@/lib/tuman'
@@ -56,7 +56,8 @@ export default function App() {
 
   return (
     <div className="flex h-full">
-      {/* Chap: to'q ko'k sidebar — logo va filtrlar */}
+      {/* Sidebar vaqtincha yashirilgan — qaytarish uchun izohdan chiqaring
+      (Chap: to'q ko'k sidebar — logo va statistika)
       <aside className="sidebar-navy z-30 flex w-[320px] shrink-0 flex-col">
         <div className="flex h-[68px] shrink-0 items-center gap-2.5 px-4">
           <Logo size={34} />
@@ -69,6 +70,7 @@ export default function App() {
           <StatPanel key={tuman} />
         </div>
       </aside>
+      */}
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="z-30 flex h-[68px] shrink-0 items-center gap-3 border-b border-line bg-surface px-6">
