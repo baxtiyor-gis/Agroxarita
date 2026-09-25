@@ -21,7 +21,8 @@ import {
   SIFAT_NOM,
   YER_TURLARI,
   EKIN_MIN_ULUSH,
-  ekinlar26,
+  EKIN_YILLAR,
+  ekinlar,
   gradFmt,
   yerTuri,
   yonalishNom,
@@ -33,7 +34,7 @@ const MAVSUMLAR: [Mavsum, string][] = [
   ['kuzgi', MAVSUM_NOM.kuzgi],
   ['bahorgi', MAVSUM_NOM.bahorgi],
 ]
-import type { Sabab, Tavsiya } from '@/lib/types'
+import type { Kontur, Sabab, Tavsiya } from '@/lib/types'
 import { cn, ga } from '@/lib/utils'
 import { Shkala, Darajalar } from './Shkala'
 
@@ -113,6 +114,23 @@ function Satr({ nom, qiymat, children }: { nom: string; qiymat?: string; childre
   )
 }
 
+/** Ko'p yillik ekinlar — har yili takrorlanishi tabiiy, eslatma kerak emas */
+const KOP_YILLIK = new Set(['Uzumzor', 'Mevali daraxtlar', 'Tutzor', 'Beda', "G'alla + Beda (ozuqa uchun)"])
+
+/**
+ * Almashlab ekish eslatmasi: bir yillik asosiy ekin (≥ EKIN_MIN_ULUSH) uch yil
+ * ketma-ket takrorlangan bo'lsa. Faqat faktni aytadi — tavsiya algoritmiga ta'sir qilmaydi.
+ */
+function almashlabEslatma(k: Kontur): string | null {
+  const asosiy = EKIN_YILLAR.map((y) => {
+    const e = k.ekin[y][0]
+    return e && e.ulush >= EKIN_MIN_ULUSH ? e.nom : null
+  })
+  const [a, b, c] = asosiy
+  if (c && a === c && b === c && !KOP_YILLIK.has(c)) return `3 yil ketma-ket ${c} — almashlab ekish tavsiya etiladi`
+  return null
+}
+
 export function KonturKarta() {
   const { tanlangan, setTanlangan } = useApp()
   const [tab, setTab] = useState<Tab>('tavsiya')
@@ -131,8 +149,9 @@ export function KonturKarta() {
 
   const ytIdx = yerTuri()[k.i]
   const yt = ytIdx >= 0 ? YER_TURLARI[ytIdx] : null
-  const ekinRang = new Map(ekinlar26().map((e) => [e.nom, e.rang]))
-  const asosiyEkin = k.ekin26[0]?.ulush >= EKIN_MIN_ULUSH ? k.ekin26[0] : null
+  const ekinRang = new Map(ekinlar().map((e) => [e.nom, e.rang]))
+  const asosiyEkin = k.ekin['26'][0]?.ulush >= EKIN_MIN_ULUSH ? k.ekin['26'][0] : null
+  const almashlab = almashlabEslatma(k)
   const mos = tav.filter((t) => t.ball >= 25)
   const nomos = tav.filter((t) => t.ball < 25)
 
@@ -380,23 +399,38 @@ export function KonturKarta() {
 
         {tab === 'malumot' && (
           <div className="divide-y divide-line px-2.5">
-            <Satr nom="Ekin (2026)" qiymat={k.ekin26.length ? undefined : "Ma'lumot yo'q"}>
-              {k.ekin26.length > 0 && (
-                <div className="space-y-1.5">
-                  {k.ekin26.map((e) => (
-                    <div key={e.nom} className="flex items-center gap-2 text-[13px]">
-                      <span
-                        className="size-2.5 shrink-0 rounded-[3px] ring-1 ring-black/10"
-                        style={{ background: ekinRang.get(e.nom) }}
-                      />
-                      <span className="flex-1 font-medium text-ink">{e.nom}</span>
-                      <span className="nums text-[12px] text-muted">
-                        {e.ulush} % · {ga((k.maydon * e.ulush) / 100)} ga
-                      </span>
+            <Satr nom="Ekin tarixi">
+              <div className="space-y-2">
+                {EKIN_YILLAR.map((y) => {
+                  const l = k.ekin[y]
+                  return (
+                    <div key={y} className="flex items-start gap-2.5">
+                      <span className="nums w-9 shrink-0 pt-px text-[12px] font-semibold text-muted">20{y}</span>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        {l.length === 0 && <div className="text-[12.5px] text-faint">Ma'lumot yo'q</div>}
+                        {l.map((e) => (
+                          <div key={e.nom} className="flex items-center gap-2 text-[13px]">
+                            <span
+                              className="size-2.5 shrink-0 rounded-[3px] ring-1 ring-black/10"
+                              style={{ background: ekinRang.get(e.nom) }}
+                            />
+                            <span className="min-w-0 flex-1 truncate font-medium text-ink">{e.nom}</span>
+                            <span className="nums shrink-0 text-[12px] text-muted">
+                              {e.ulush} % · {ga((k.maydon * e.ulush) / 100)} ga
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  )
+                })}
+                {almashlab && (
+                  <div className="flex items-start gap-1.5 rounded-lg bg-wheat-soft px-2.5 py-2 text-[11.5px] leading-snug font-medium text-wheat">
+                    <AlertTriangle className="mt-px size-3.5 shrink-0" strokeWidth={2.2} />
+                    {almashlab}
+                  </div>
+                )}
+              </div>
             </Satr>
             <Satr nom="Kadastr kodi" qiymat={k.kod} />
             <Satr nom="Kontur raqami" qiymat={String(k.id)} />

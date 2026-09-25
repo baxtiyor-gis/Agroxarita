@@ -1,5 +1,5 @@
 import type { Qatlam } from '@/store/useApp'
-import { YER_TURLARI, ekinlar26 } from './data'
+import { YER_TURLARI, ekinlar } from './data'
 
 /**
  * Klasslangan (classified) shkala — cho'zilgan gradient emas.
@@ -94,6 +94,22 @@ const FOYD: Klass[] = YER_TURLARI.map((g, i) => ({
 /** Tematik ranglashsiz rejimda kontur chegarasi — qizil */
 export const KONTUR_CHEGARA = '#ff3b30'
 
+/** Ekin qatlami — uch yil uchun bir xil klasslar (yagona lug'at, yagona ranglar) */
+function ekinShkala(yil: string): Shkala {
+  return {
+    nom: `Ekilgan ekin (${yil})`,
+    izoh: 'asosiy ekin',
+    // Lug'at ma'lumot yuklangandan keyin ma'lum — shuning uchun getter
+    get klasslar() {
+      return ekinlar().map((e, i) => ({ min: i, max: i + 1, rang: e.rang, nom: e.nom }))
+    },
+    kategoriyami: true,
+  }
+}
+
+/** Ekin qatlamimi (ma'lumotsiz konturlar bo'yalmaydi, legendada faqat bor ekinlar) */
+export const ekinQatlami = (q: Qatlam) => q === 'ekin24' || q === 'ekin25' || q === 'ekin26'
+
 export const SHKALA: Record<Qatlam, Shkala> = {
   yoq: { nom: 'Konturlar', izoh: 'tematik ranglashsiz', klasslar: [] },
   bonitet: { nom: 'Tuproq boniteti', izoh: 'ball', klasslar: BONITET },
@@ -105,15 +121,9 @@ export const SHKALA: Record<Qatlam, Shkala> = {
   qiyalik: { nom: 'Qiyalik', izoh: 'nishablik', klasslar: QIYALIK },
   tavsiya: { nom: 'Moslik bali', izoh: 'tanlangan ekin uchun', klasslar: TAVSIYA },
   foyd: { nom: 'Yer turi', izoh: 'hozirgi foydalanish', klasslar: FOYD, kategoriyami: true },
-  ekin: {
-    nom: 'Ekilgan ekin (2026)',
-    izoh: 'asosiy ekin',
-    // Lug'at ma'lumot yuklangandan keyin ma'lum — shuning uchun getter
-    get klasslar() {
-      return ekinlar26().map((e, i) => ({ min: i, max: i + 1, rang: e.rang, nom: e.nom }))
-    },
-    kategoriyami: true,
-  },
+  ekin24: ekinShkala('2024'),
+  ekin25: ekinShkala('2025'),
+  ekin26: ekinShkala('2026'),
 }
 
 /** Qiymat qaysi klassga tushadi */

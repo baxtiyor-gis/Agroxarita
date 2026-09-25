@@ -13,7 +13,9 @@ export type Qatlam =
   | 'balandlik'
   | 'qiyalik'
   | 'foyd'
-  | 'ekin'
+  | 'ekin24'
+  | 'ekin25'
+  | 'ekin26'
 
 export interface Filtr {
   qidiruv: string

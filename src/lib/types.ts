@@ -30,7 +30,7 @@ export interface Crop {
 /** Ustunli saqlash — 9257 obyekt uchun obyektlar massividan ~4x ixcham */
 export interface AttrPack {
   n: number
-  lug: { massiv: string[]; mfy: string[]; grad: string[]; foyd: string[]; ekin26?: string[] }
+  lug: { massiv: string[]; mfy: string[]; grad: string[]; foyd: string[]; ekin?: string[] }
   col: {
     id: number[]
     kod: string[]
@@ -56,7 +56,9 @@ export interface AttrPack {
     balandlik: number[]
     qiyalik: number[]
     yonalish: number[]
-    /** 2026-yil ekinlari (ekin_2026 bilan intersect): [[lug.ekin26 indeksi, ulush %], ...] */
+    /** Yil ekinlari (ekin_20XX bilan intersect): [[lug.ekin indeksi, ulush %], ...] */
+    ekin24?: [number, number][][]
+    ekin25?: [number, number][][]
     ekin26?: [number, number][][]
   }
 }
@@ -85,8 +87,8 @@ export interface Kontur {
   balandlik: number
   qiyalik: number
   yonalish: number
-  /** 2026-yilda ekilgan ekinlar — ulush kamayish tartibida */
-  ekin26: { nom: string; ulush: number }[]
+  /** Yillar bo'yicha ekilgan ekinlar ('24' = 2024) — ulush kamayish tartibida */
+  ekin: Record<'24' | '25' | '26', { nom: string; ulush: number }[]>
 }
 
 export type SababTuri = 'ok' | 'ogoh' | 'xato'

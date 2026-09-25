@@ -10,7 +10,7 @@ import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useApp, type Qatlam } from '@/store/useApp'
 import { attrs, crops, extent, geom, kontur, ustun } from '@/lib/data'
-import { SHKALA, YOQ_RANG, KONTUR_CHEGARA } from '@/lib/ranglar'
+import { SHKALA, YOQ_RANG, KONTUR_CHEGARA, ekinQatlami } from '@/lib/ranglar'
 import { baholash } from '@/lib/tavsiya'
 
 /** Extentga moslashda chetdan bo'sh joy, px */
@@ -336,7 +336,7 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
       tematik ? 0.07 : 0.01,
       // Ekin qatlami siyrak (konturlarning ~38 %) — ma'lumotsizlari bo'yalmaydi,
       // aks holda kulrang fon ekinli konturlarni ko'mib yuboradi
-      ...((qatlam === 'ekin'
+      ...((ekinQatlami(qatlam)
         ? [['<', ['coalesce', ['feature-state', 'v'], -1], 0], 0.01]
         : []) as ExpressionSpecification[]),
       ['boolean', ['feature-state', 'hover'], false],
