@@ -169,6 +169,12 @@ export function InfoOyna({ ochiq, onYop }: { ochiq: boolean; onYop: () => void }
                   <li>Tuproq, agrokimyo, relyef va iqlim qatlamlari, statistika</li>
                 </ul>
               </div>
+              <div>
+                <Sarlavha>Sun'iy intellekt</Sarlavha>
+                <p>
+                 Konturlar bo‘yicha tuproq, relyef, iqlim va oldingi yillarda ekilgan ekinlar ma’lumotlari asosida CatBoost modeli va ko‘p sinfli tasniflash algoritmi qo‘llanildi. Model tarixiy ekin ma’lumotlarida o‘qitilib, har bir kontur uchun mos ekinlarni bashorat qildi. Bashoratlar amaldagi qoidaviy tavsiya ballari bilan solishtirildi, tavsiyaga ta’sir qilgan omillar esa SHAP tahlili orqali aniqlandi
+                </p>
+              </div>
               <p className="rounded-lg bg-sunken px-3.5 py-2.5 text-[12.5px] text-muted">
                 Tajriba-sinov hududlari —{' '}
                 {TUMANLAR.map((t, i) => (
