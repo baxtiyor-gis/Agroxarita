@@ -63,7 +63,7 @@ export function Legenda() {
           const soni = sanoq?.n[i] ?? 0
           const tanlangan = klassFiltr === i
           const sonsiz = soni === 0
-          // Ekin lug'ati uch yil uchun umumiy — shu yilda yo'q ekinlar ko'rsatilmaydi
+          // Ekin lug'ati barcha yillar uchun umumiy — shu yilda yo'q ekinlar ko'rsatilmaydi
           if (sonsiz && ekinQatlami(qatlam)) return null
           return (
             <button

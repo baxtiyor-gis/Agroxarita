@@ -1,5 +1,5 @@
 import type { Qatlam } from '@/store/useApp'
-import { YER_TURLARI, ekinlar } from './data'
+import { YER_TURLARI, ekinlar, EKIN_YILLAR, type EkinYil } from './data'
 
 /**
  * Klasslangan (classified) shkala — cho'zilgan gradient emas.
@@ -94,7 +94,7 @@ const FOYD: Klass[] = YER_TURLARI.map((g, i) => ({
 /** Tematik ranglashsiz rejimda kontur chegarasi — qizil */
 export const KONTUR_CHEGARA = '#ff3b30'
 
-/** Ekin qatlami — uch yil uchun bir xil klasslar (yagona lug'at, yagona ranglar) */
+/** Ekin qatlami — barcha yillar uchun bir xil klasslar (yagona lug'at, yagona ranglar) */
 function ekinShkala(yil: string): Shkala {
   return {
     nom: `Ekilgan ekin (${yil})`,
@@ -108,7 +108,15 @@ function ekinShkala(yil: string): Shkala {
 }
 
 /** Ekin qatlamimi (ma'lumotsiz konturlar bo'yalmaydi, legendada faqat bor ekinlar) */
-export const ekinQatlami = (q: Qatlam) => q === 'ekin24' || q === 'ekin25' || q === 'ekin26'
+export const ekinQatlami = (q: Qatlam) => ekinYili(q) !== null
+
+/** Yilning xarita qatlami: 2022 → 'ekin22' */
+export const ekinQatlamId = (y: EkinYil) => `ekin${y % 100}` as Extract<Qatlam, `ekin${number}`>
+
+/** Ekin qatlamining yili ('ekin22' → 2022), boshqa qatlamda null */
+export function ekinYili(q: Qatlam): EkinYil | null {
+  return EKIN_YILLAR.find((y) => ekinQatlamId(y) === q) ?? null
+}
 
 export const SHKALA: Record<Qatlam, Shkala> = {
   yoq: { nom: 'Konturlar', izoh: 'tematik ranglashsiz', klasslar: [] },
@@ -121,6 +129,8 @@ export const SHKALA: Record<Qatlam, Shkala> = {
   qiyalik: { nom: 'Qiyalik', izoh: 'nishablik', klasslar: QIYALIK },
   tavsiya: { nom: 'Moslik bali', izoh: 'tanlangan ekin uchun', klasslar: TAVSIYA },
   foyd: { nom: 'Yer turi', izoh: 'hozirgi foydalanish', klasslar: FOYD, kategoriyami: true },
+  ekin22: ekinShkala('2022'),
+  ekin23: ekinShkala('2023'),
   ekin24: ekinShkala('2024'),
   ekin25: ekinShkala('2025'),
   ekin26: ekinShkala('2026'),

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { useApp, type Qatlam } from '@/store/useApp'
 import { attrs, ekinlar, ustun, EKIN_YILLAR, type EkinYil } from '@/lib/data'
-import { SHKALA, YOQ_RANG, ekinQatlami } from '@/lib/ranglar'
+import { SHKALA, YOQ_RANG, ekinQatlami, ekinQatlamId, ekinYili } from '@/lib/ranglar'
 import { cn } from '@/lib/utils'
 
 /** Footer — loyiha egalari */
@@ -62,12 +62,12 @@ function taqsimot(qatlam: Qatlam): Qism[] {
 /**
  * Yil ekinlari — haqiqiy ekin maydoni: kontur maydoni × kesishma ulushi.
  * Bir konturda bir necha ekin bo'lishi mumkin, har biri o'z ulushi bilan.
- * Lug'at uch yil uchun umumiy — shu yilda yo'q ekinlar tashlanadi.
+ * Lug'at barcha yillar uchun umumiy — shu yilda yo'q ekinlar tashlanadi.
  */
 function ekinTaqsimot(yil: EkinYil): Qism[] {
   const p = attrs()
   const out: Qism[] = ekinlar().map((e) => ({ nom: e.nom, rang: e.rang, soni: 0, maydon: 0 }))
-  const col = p.col[`ekin${yil}`]
+  const col = p.col[ekinQatlamId(yil)]
   if (!col) return []
   for (let i = 0; i < p.n; i++) {
     for (const [e, u] of col[i]) {
@@ -81,18 +81,18 @@ function ekinTaqsimot(yil: EkinYil): Qism[] {
 /** Ekilgan ekinlar — yil almashtirgich bilan (sukut: 2026) */
 function EkinTaqsimot({ qismlar }: { qismlar: Record<EkinYil, Qism[]> }) {
   const { qatlam, setQatlam } = useApp()
-  const [tanlanganYil, setYil] = useState<EkinYil>('26')
+  const [tanlanganYil, setYil] = useState<EkinYil>(2026)
   // Xaritada ekin qatlami yoqilgan bo'lsa — panel o'sha yilni ko'rsatadi
-  const yil = ekinQatlami(qatlam) ? (qatlam.slice(4) as EkinYil) : tanlanganYil
+  const yil = ekinYili(qatlam) ?? tanlanganYil
   const almashtir = (y: EkinYil) => {
     setYil(y)
-    if (ekinQatlami(qatlam)) setQatlam(`ekin${y}`)
+    if (ekinQatlami(qatlam)) setQatlam(ekinQatlamId(y))
   }
   return (
     <Taqsimot
       nom="Ekilgan ekinlar"
       qismlar={qismlar[yil]}
-      qatlam={`ekin${yil}`}
+      qatlam={ekinQatlamId(yil)}
       ostida={
         <div role="radiogroup" aria-label="Yil" className="mb-1.5 flex gap-0.5 rounded-lg bg-white/[0.06] p-0.5">
           {EKIN_YILLAR.map((y) => (
@@ -102,11 +102,11 @@ function EkinTaqsimot({ qismlar }: { qismlar: Record<EkinYil, Qism[]> }) {
               aria-checked={y === yil}
               onClick={() => almashtir(y)}
               className={cn(
-                'nums flex-1 rounded-md py-1 text-[11.5px] font-medium transition-colors',
+                'nums min-w-0 flex-1 rounded-md py-1 text-[11px] font-medium transition-colors',
                 y === yil ? 'bg-sky/20 font-semibold text-sky' : 'text-muted hover:bg-white/[0.06] hover:text-ink',
               )}
             >
-              20{y}
+              {y}
             </button>
           ))}
         </div>
@@ -286,7 +286,7 @@ export function StatPanel() {
       bonitet: bonMaydon ? bonSum / bonMaydon : null,
       massiv: mas,
       foyd: t('foyd'),
-      ekin: { '24': ekinTaqsimot('24'), '25': ekinTaqsimot('25'), '26': ekinTaqsimot('26') },
+      ekin: Object.fromEntries(EKIN_YILLAR.map((y) => [y, ekinTaqsimot(y)])) as Record<EkinYil, Qism[]>,
       bonitetT: t('bonitet'),
       shor: t('shor'),
       gumus: t('gumus'),

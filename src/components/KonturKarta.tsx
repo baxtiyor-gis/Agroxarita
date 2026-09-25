@@ -22,6 +22,7 @@ import {
   YER_TURLARI,
   EKIN_MIN_ULUSH,
   EKIN_YILLAR,
+  almashlabOgoh,
   ekinlar,
   gradFmt,
   yerTuri,
@@ -114,21 +115,13 @@ function Satr({ nom, qiymat, children }: { nom: string; qiymat?: string; childre
   )
 }
 
-/** Ko'p yillik ekinlar — har yili takrorlanishi tabiiy, eslatma kerak emas */
-const KOP_YILLIK = new Set(['Uzumzor', 'Mevali daraxtlar', 'Tutzor', 'Beda', "G'alla + Beda (ozuqa uchun)"])
-
 /**
- * Almashlab ekish eslatmasi: bir yillik asosiy ekin (≥ EKIN_MIN_ULUSH) uch yil
- * ketma-ket takrorlangan bo'lsa. Faqat faktni aytadi — tavsiya algoritmiga ta'sir qilmaydi.
+ * Almashlab ekish eslatmasi: bir yillik asosiy ekin 3+ yil ketma-ket takrorlangan
+ * bo'lsa. Faqat faktni aytadi — tavsiya algoritmiga ta'sir qilmaydi.
  */
 function almashlabEslatma(k: Kontur): string | null {
-  const asosiy = EKIN_YILLAR.map((y) => {
-    const e = k.ekin[y][0]
-    return e && e.ulush >= EKIN_MIN_ULUSH ? e.nom : null
-  })
-  const [a, b, c] = asosiy
-  if (c && a === c && b === c && !KOP_YILLIK.has(c)) return `3 yil ketma-ket ${c} — almashlab ekish tavsiya etiladi`
-  return null
+  const o = almashlabOgoh(k.i)
+  return o && `${o.uzunlik} yil ketma-ket (${o.yillar[0]}–${o.yillar[1]}) ${o.ekin} — almashlab ekish tavsiya etiladi`
 }
 
 export function KonturKarta() {
@@ -150,7 +143,7 @@ export function KonturKarta() {
   const ytIdx = yerTuri()[k.i]
   const yt = ytIdx >= 0 ? YER_TURLARI[ytIdx] : null
   const ekinRang = new Map(ekinlar().map((e) => [e.nom, e.rang]))
-  const asosiyEkin = k.ekin['26'][0]?.ulush >= EKIN_MIN_ULUSH ? k.ekin['26'][0] : null
+  const asosiyEkin = k.ekin[2026][0]?.ulush >= EKIN_MIN_ULUSH ? k.ekin[2026][0] : null
   const almashlab = almashlabEslatma(k)
   const mos = tav.filter((t) => t.ball >= 25)
   const nomos = tav.filter((t) => t.ball < 25)
@@ -405,7 +398,7 @@ export function KonturKarta() {
                   const l = k.ekin[y]
                   return (
                     <div key={y} className="flex items-start gap-2.5">
-                      <span className="nums w-9 shrink-0 pt-px text-[12px] font-semibold text-muted">20{y}</span>
+                      <span className="nums w-9 shrink-0 pt-px text-[12px] font-semibold text-muted">{y}</span>
                       <div className="min-w-0 flex-1 space-y-1">
                         {l.length === 0 && <div className="text-[12.5px] text-faint">Ma'lumot yo'q</div>}
                         {l.map((e) => (

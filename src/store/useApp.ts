@@ -13,6 +13,8 @@ export type Qatlam =
   | 'balandlik'
   | 'qiyalik'
   | 'foyd'
+  | 'ekin22'
+  | 'ekin23'
   | 'ekin24'
   | 'ekin25'
   | 'ekin26'

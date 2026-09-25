@@ -1,3 +1,5 @@
+import type { EkinYil } from './data'
+
 export interface Crop {
   id: string
   nom: string
@@ -57,6 +59,8 @@ export interface AttrPack {
     qiyalik: number[]
     yonalish: number[]
     /** Yil ekinlari (ekin_20XX bilan intersect): [[lug.ekin indeksi, ulush %], ...] */
+    ekin22?: [number, number][][]
+    ekin23?: [number, number][][]
     ekin24?: [number, number][][]
     ekin25?: [number, number][][]
     ekin26?: [number, number][][]
@@ -87,8 +91,8 @@ export interface Kontur {
   balandlik: number
   qiyalik: number
   yonalish: number
-  /** Yillar bo'yicha ekilgan ekinlar ('24' = 2024) — ulush kamayish tartibida */
-  ekin: Record<'24' | '25' | '26', { nom: string; ulush: number }[]>
+  /** Yillar bo'yicha ekilgan ekinlar (2022–2026) — ulush kamayish tartibida */
+  ekin: Record<EkinYil, { nom: string; ulush: number }[]>
 }
 
 export type SababTuri = 'ok' | 'ogoh' | 'xato'
