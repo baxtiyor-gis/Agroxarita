@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, Droplets, Flame, Snowflake, Sprout, Sun, Thermometer } from 'lucide-react'
-import { EKIN_YILLAR, almashlabOgoh, ekinTarixi } from '@/lib/data'
+import { almashlabOgoh, ekinTarixi, ekinYillar } from '@/lib/data'
 import { iqlim, iqlimYillar, iqlimYukla, kunSana, OYLAR, tuproqIsishOyi, type Iqlim } from '@/lib/iqlim'
 import type { Kontur } from '@/lib/types'
 import { cn, ga } from '@/lib/utils'
@@ -17,7 +17,7 @@ export function EkinlarTab({ k }: { k: Kontur }) {
     <div className="px-2.5 pb-1">
       {/* Qisqa xulosa */}
       <div className="grid grid-cols-3 gap-2">
-        <Kichik nom="Ma'lumot bor" qiymat={`${borYil} / ${EKIN_YILLAR.length}`} birlik="yil" />
+        <Kichik nom="Ma'lumot bor" qiymat={`${borYil} / ${ekinYillar().length}`} birlik="yil" />
         <Kichik nom="Ekin turlari" qiymat={String(turlar.size)} birlik="ta" />
         <Kichik
           nom={ogoh ? 'Ketma-ket ekilgan' : 'Almashlab ekish'}
@@ -128,12 +128,6 @@ export function IqlimTab({ k }: { k: Kontur }) {
   const isish = tuproqIsishOyi(q.tuproqT)
   return (
     <div className="px-2.5 pb-1">
-      {q.namuna && (
-        <div className="mb-3 rounded-lg border border-dashed border-line-strong px-3 py-2 text-[11.5px] leading-snug text-muted">
-          <b className="font-semibold text-body">Namuna ma'lumot.</b> ERA5-Land (2016–2025) hisob-kitobi
-          tugagach, haqiqiy qiymatlar avtomatik ko'rsatiladi.
-        </div>
-      )}
 
       <div className="grid grid-cols-2 gap-2">
         <Korsatkich

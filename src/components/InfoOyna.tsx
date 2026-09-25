@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, Database, FileText, Globe2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { attrs } from '@/lib/data'
+import { TUMANLAR } from '@/lib/tuman'
+import { useApp } from '@/store/useApp'
 
 type Tab = 'loyiha' | 'farmon' | 'malumot' | 'uslub'
 
@@ -16,12 +19,12 @@ const MANBALAR: { nom: string; manba: string; izoh: string }[] = [
   {
     nom: 'Ekin konturlari',
     manba: 'Kadastr agentligi',
-    izoh: "9 257 kontur: chegara, maydon, massiv, MFY, yer turi",
+    izoh: 'Har bir kontur: chegara, maydon, massiv, MFY, yer turi',
   },
   {
-    nom: 'Ekilgan ekinlar (2022–2026)',
+    nom: 'Ekilgan ekinlar',
     manba: "Qishloq xo'jaligi vazirligi geoaxborot tizimi",
-    izoh: 'Dalaga chiqib aniqlangan; konturlarga fazoviy bog\'langan',
+    izoh: "2022–2026 (tumanda mavjud yillar); dalaga chiqib aniqlangan, konturlarga fazoviy bog'langan",
   },
   {
     nom: 'Tuproq va agrokimyo',
@@ -59,6 +62,14 @@ const TAJRIBA: { davlat: string; tajriba: string; orni: string }[] = [
 
 export function InfoOyna({ ochiq, onYop }: { ochiq: boolean; onYop: () => void }) {
   const [tab, setTab] = useState<Tab>('loyiha')
+  const tayyor = useApp((s) => s.tayyor)
+  // Joriy tuman raqamlari — yuklangan ma'lumotdan
+  const raqam = useMemo(() => {
+    if (!tayyor) return null
+    const p = attrs()
+    const maydon = p.col.maydon.reduce((s, m) => s + m, 0)
+    return { soni: p.n.toLocaleString('ru'), maydon: Math.round(maydon).toLocaleString('ru') }
+  }, [tayyor])
   const yopBtn = useRef<HTMLButtonElement>(null)
   const onYopRef = useRef(onYop)
   useEffect(() => {
@@ -145,8 +156,8 @@ export function InfoOyna({ ochiq, onYop }: { ochiq: boolean; onYop: () => void }
                 mosligini 0–100 ballda baholaydi va har bir bahoning sababini ko'rsatadi.
               </p>
               <div className="grid grid-cols-3 gap-2.5">
-                <Raqam qiymat="9 257" nom="kontur" />
-                <Raqam qiymat="41 518" nom="gektar" />
+                <Raqam qiymat={raqam?.soni ?? '—'} nom="kontur" />
+                <Raqam qiymat={raqam?.maydon ?? '—'} nom="gektar" />
                 <Raqam qiymat="37" nom="ekin baholanadi" />
               </div>
               <div>
@@ -154,13 +165,19 @@ export function InfoOyna({ ochiq, onYop }: { ochiq: boolean; onYop: () => void }
                 <ul className="list-disc space-y-1 pl-5">
                   <li>Kontur bo'yicha ekin tavsiyasi — kuzgi va bahorgi ekish, sabablari bilan</li>
                   <li>Tanlangan ekin uchun butun tuman bo'yicha moslik xaritasi</li>
-                  <li>Besh yillik ekin tarixi va almashlab ekish ogohlantirishi</li>
+                  <li>Yillar bo'yicha ekin tarixi va almashlab ekish ogohlantirishi</li>
                   <li>Tuproq, agrokimyo, relyef va iqlim qatlamlari, statistika</li>
                 </ul>
               </div>
               <p className="rounded-lg bg-sunken px-3.5 py-2.5 text-[12.5px] text-muted">
-                Birinchi bosqich — <b className="text-ink">Bulung'ur tumani</b>. Farg'ona tumani ma'lumotlari
-                tayyorlanmoqda.
+                Tajriba-sinov hududlari —{' '}
+                {TUMANLAR.map((t, i) => (
+                  <span key={t.id}>
+                    {i > 0 && (i === TUMANLAR.length - 1 ? ' va ' : ', ')}
+                    <b className="text-ink">{t.nom}</b> ({t.viloyat})
+                  </span>
+                ))}
+                . Tumanni sarlavhadagi ro'yxatdan tanlang.
               </p>
             </div>
           )}

@@ -240,7 +240,7 @@ function agrokimyo(c: Crop, k: Kontur, s: Sabab[]) {
 /**
  * Hududning asosiy ekinlari birinchi navbatda tavsiya etiladi.
  *
- * Bulung'ur — sug'orma dehqonchilik zonasi: g'alla va paxta almashlab ekish
+ * Tajriba-sinov tumanlari — sug'orma dehqonchilik zonasi: g'alla va paxta almashlab ekish
  * asosi, beda oraliq ekin. Kunjut yoki mahsar agronomik jihatdan mos bo'lsa
  * ham, ular asosiy ekin emas — ro'yxat boshida turishi noto'g'ri.
  */
@@ -431,7 +431,7 @@ export const MAVSUM_NOM: Record<Mavsum, string> = {
  * Iqlim omili — ERA5-Land (2016–2025) konturga interpolyatsiya qilingan,
  * balandlik bo'yicha tuzatilgan. Qoidalar: ekin_iqlim HISOBOT 4-bo'lim.
  *
- * Bulung'ur ichida odatda 0,85–1: iqlim ro'yxatni balandlik bo'yicha qayta
+ * Bir tuman ichida odatda 0,85–1: iqlim ro'yxatni balandlik bo'yicha qayta
  * tartiblaydi, lekin tuproq (sho'rlanish, qiyalik) omillaridan kuchli emas.
  * Iqlim ma'lumoti yo'q bo'lsa — 1, sabab yozilmaydi.
  */

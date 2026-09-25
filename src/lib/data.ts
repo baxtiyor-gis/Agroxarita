@@ -1,31 +1,65 @@
 import type { FeatureCollection } from 'geojson'
 import type { AttrPack, Crop, Kontur } from './types'
 import { IQLIM_QATLAMLAR, iqlimTavsiya, iqlimUstun, iqlimYukla, type IqlimKorsatkich } from './iqlim'
+import { jsonOl, tumanUrl } from './tuman'
 
 let pack: AttrPack | null = null
 let cropList: Crop[] = []
+let cropVaad: Promise<Crop[]> | null = null
 let geomFC: FeatureCollection | null = null
 let bbox: [number, number, number, number] | null = null
+/** Ketma-ket almashtirishda eski so'rov natijasi yangisini bosib ketmasin */
+let yuklashNo = 0
 
-export async function yukla() {
-  const url = (f: string) => `${import.meta.env.BASE_URL}data/${f}`
+/** Tez almashtirishda eskirgan yuklash — xato emas, jimgina tashlanadi */
+export class BekorXato extends Error {
+  constructor() {
+    super('bekor')
+    this.name = 'BekorXato'
+  }
+}
+
+/**
+ * Tuman ma'lumotlarini yuklaydi: attrs va geometriya — tuman papkasidan
+ * (public/data/<tuman>/), crops.json — umumiy, bir marta. Hamma fayl kelgach
+ * modul holati va keshlari (yer turi, ekin ustunlari, id indeksi, iqlim)
+ * birdaniga yangi tumanga almashadi. Fayl yo'q bo'lsa — MalumotYoqXato.
+ */
+export async function yukla(tuman: string) {
+  const no = ++yuklashNo
+  cropVaad ??= jsonOl<Crop[]>(`${import.meta.env.BASE_URL}data/crops.json`).catch((e) => {
+    cropVaad = null
+    throw e
+  })
   const [a, c, g] = await Promise.all([
-    fetch(url('attrs.json')).then((r) => r.json() as Promise<AttrPack>),
-    fetch(url('crops.json')).then((r) => r.json() as Promise<Crop[]>),
+    jsonOl<AttrPack>(tumanUrl(tuman, 'attrs.json')),
+    cropVaad,
     // Geometriya ham shu yerda: xarita konturlar extentiga moslab quriladi,
     // shuning uchun u xaritadan oldin kerak
-    fetch(url('geom.geojson')).then((r) => r.json() as Promise<FeatureCollection>),
+    jsonOl<FeatureCollection>(tumanUrl(tuman, 'geom.geojson')),
+    // Iqlim (ERA5-Land) — tavsiya va xarita uni ishlatadi; fayl bo'lmasa namuna rejimi
+    iqlimYukla(tuman),
   ])
+  if (no !== yuklashNo) throw new BekorXato()
   pack = a
   cropList = c
   geomFC = g
-  // Iqlim (ERA5-Land) — tavsiya va xarita uni ishlatadi; fayl bo'lmasa namuna rejimi
-  await iqlimYukla()
+  idIndex = null
   bbox = hisoblaBbox(g)
   yerTuriCol = hisoblaYerTuri(a)
   for (const y of EKIN_YILLAR) {
     ekinCol[y] = ekinUstun(a, y).map((l) => (l.length && l[0][1] >= EKIN_MIN_ULUSH ? l[0][0] : -1))
   }
+  // Tumanda ekin xaritasi bor yillar — ustun bor va kamida bitta yozuv bo'sh emas
+  mavjudYil = EKIN_YILLAR.filter((y) => ekinUstun(a, y).some((l) => l.length > 0))
+  let hMin = Infinity
+  let hMax = -Infinity
+  for (const h of a.col.balandlik) {
+    if (h < 0) continue
+    if (h < hMin) hMin = h
+    if (h > hMax) hMax = h
+  }
+  balOraliq = hMin <= hMax ? [hMin, hMax] : [0, 0]
   return { pack: a, crops: c }
 }
 
@@ -63,6 +97,17 @@ function hisoblaYerTuri(p: AttrPack): number[] {
 /** Ekin xaritasi mavjud yillar (attrs.json da col.ekin22 ... col.ekin26) */
 export const EKIN_YILLAR = [2022, 2023, 2024, 2025, 2026] as const
 export type EkinYil = (typeof EKIN_YILLAR)[number]
+
+let mavjudYil: EkinYil[] = []
+/**
+ * Joriy tumanda ekin ma'lumoti bor yillar (masalan, Farg'ona — faqat 2024 va
+ * 2026). Qatlamlar ro'yxati va yil almashtirgich faqat shularni ko'rsatadi.
+ */
+export const ekinYillar = () => mavjudYil
+
+let balOraliq: [number, number] = [0, 0]
+/** Tuman konturlari balandligi oralig'i, m: [min, max] */
+export const balandlikOraliq = () => balOraliq
 
 /** Yilning attrs.json ustuni: har kontur uchun [[lug.ekin indeksi, ulush %], ...] */
 function ekinUstun(p: AttrPack, y: EkinYil): [number, number][][] {
@@ -109,10 +154,13 @@ export function ekinRang(nom: string): string {
 /** Ko'p yillik ekinlar — har yili takrorlanishi tabiiy, almashlab ekish eslatmasi kerak emas */
 export const KOP_YILLIK = new Set(['Uzumzor', 'Mevali daraxtlar', 'Tutzor', 'Beda', "G'alla + Beda (ozuqa uchun)"])
 
-/** Kontur ekin tarixi: barcha yillar 2022 → 2026, ma'lumot yo'q yilda ekinlar = [] */
+/**
+ * Kontur ekin tarixi: tumanda ma'lumoti bor yillar (o'sish tartibida);
+ * konturda shu yil ma'lumot yo'q bo'lsa ekinlar = []
+ */
 export function ekinTarixi(i: number): { yil: EkinYil; ekinlar: { nom: string; rang: string; ulush: number }[] }[] {
   const p = pack!
-  return EKIN_YILLAR.map((yil) => ({
+  return mavjudYil.map((yil) => ({
     yil,
     ekinlar: (ekinUstun(p, yil)[i] ?? []).map(([e, u]) => ({
       nom: p.lug.ekin![e],

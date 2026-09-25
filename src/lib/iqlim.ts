@@ -1,9 +1,10 @@
 import { attrs } from './data'
+import { tumanUrl } from './tuman'
 
 /**
  * Konturning iqlim ko'rsatkichlari — ERA5-Land (2016–2025).
  *
- * Manba: public/data/iqlim.json (ustunli, attrs.json col.id tartibida).
+ * Manba: public/data/<tuman>/iqlim.json (ustunli, attrs.json col.id tartibida).
  * Fayl hali tayyor bo'lmasa — NAMUNA ma'lumot: Samarqand iqlim me'yorlari
  * balandlik bo'yicha tuzatilgan (−0,65 °C / 100 m). UI buni `namuna` bilan
  * ochiq ko'rsatadi.
@@ -41,7 +42,7 @@ export const OYLAR = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 
 const OY_KUN = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
 /**
- * public/data/iqlim.json — balandlik zonalari bo'yicha (ERA5-Land, 2016–2025).
+ * public/data/<tuman>/iqlim.json — balandlik zonalari bo'yicha (ERA5-Land, 2016–2025).
  * Oylik qiymatlar zona × yil × oy; kontur — zona, harorat tuzatmasi (dT,
  * −0,65 °C/100 m) va 10 yillik yillik ko'rsatkichlar.
  */
@@ -79,20 +80,38 @@ export interface IqlimFayl {
 let fayl: IqlimFayl | null = null
 let idIdx: Map<number, number> | null = null
 let yuklash: Promise<void> | null = null
+/** Qaysi tuman iqlimi yuklangan / yuklanmoqda */
+let yuklashTuman: string | null = null
 
-/** iqlim.json ni bir marta yuklashga urinadi; yo'q bo'lsa — namuna rejimi */
-export function iqlimYukla(): Promise<void> {
-  yuklash ??= fetch(`${import.meta.env.BASE_URL}data/iqlim.json`)
+/**
+ * Tumanning iqlim.json ini bir marta yuklashga urinadi; yo'q bo'lsa — namuna
+ * rejimi. Tuman almashsa barcha holat va keshlar tozalanadi. Argumentsiz
+ * chaqirilsa — joriy (oxirgi so'ralgan) tuman.
+ */
+export function iqlimYukla(tuman: string | null = yuklashTuman): Promise<void> {
+  if (tuman === null) return Promise.resolve()
+  if (yuklash && yuklashTuman === tuman) return yuklash
+  yuklashTuman = tuman
+  fayl = null
+  idIdx = null
+  ustunKesh.clear()
+  klassKesh.clear()
+  const p: Promise<void> = fetch(tumanUrl(tuman, 'iqlim.json'))
     .then((r) => (r.ok ? r.json() : null))
     .then((d: IqlimFayl | null) => {
+      // Shu orada boshqa tuman tanlangan bo'lsa — natija eskirgan
+      if (yuklash !== p) return
       if (d?.kontur?.id?.length) {
         fayl = d
         idIdx = new Map(d.kontur.id.map((v, i) => [v, i]))
+        ustunKesh.clear()
+        klassKesh.clear()
       }
     })
     // Fayl yo'q (index.html qaytadi → JSON xato) — namuna ishlatiladi
     .catch(() => {})
-  return yuklash
+  yuklash = p
+  return p
 }
 
 /** Haqiqiy ERA5 ma'lumoti yuklanganmi (namuna emas) */
@@ -141,8 +160,8 @@ export const setJoriyOy = (oy: number) => {
 
 const OY_HARORAT_R = ['#4575b4', '#91bfdb', '#e0f3f8', '#fee090', '#fc8d59', '#d73027']
 const OY_YOGIN_R = ['#f7fbff', '#c6dbef', '#6baed6', '#3182bd', '#08519c', '#08306b']
-const HARORAT_NOM = ['Eng salqin', 'Salqin', "O'rtachadan past", "O'rtachadan yuqori", 'Iliq', 'Eng issiq']
-const YOGIN_NOM = ['Eng kam', 'Kam', "O'rtachadan kam", "O'rtachadan ko'p", "Ko'p", "Eng ko'p"]
+const HARORAT_NOM = ['Eng salqin', 'Salqin', 'Salqinroq', 'Iliqroq', 'Iliq', 'Eng issiq']
+const YOGIN_NOM = ['Eng kam', 'Kam', 'Kamroq', "Ko'proq", "Ko'p", "Eng ko'p"]
 const klassKesh = new Map<string, { min: number; max: number; rang: string; nom: string; oraliq: string }[]>()
 
 /**

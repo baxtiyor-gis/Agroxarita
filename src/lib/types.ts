@@ -45,7 +45,7 @@ export interface Crop {
   }
 }
 
-/** Ustunli saqlash — 9257 obyekt uchun obyektlar massividan ~4x ixcham */
+/** Ustunli saqlash — minglab obyekt uchun obyektlar massividan ~4x ixcham */
 export interface AttrPack {
   n: number
   lug: { massiv: string[]; mfy: string[]; grad: string[]; foyd: string[]; ekin?: string[] }

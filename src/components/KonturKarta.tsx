@@ -22,11 +22,12 @@ import {
   MEX_NOM,
   SHOR_NOM,
   YER_TURLARI,
-  EKIN_MIN_ULUSH,
   gradFmt,
   yerTuri,
   yonalishNom,
+  balandlikOraliq,
 } from '@/lib/data'
+import { tumanOl } from '@/lib/tuman'
 import { tavsiyalar, ballRang, ballNom, mavsum, MAVSUM_NOM, type Mavsum } from '@/lib/tavsiya'
 
 /** Kartochkada ko'rsatish tartibi — asosiy ekish mavsumlari */
@@ -119,7 +120,12 @@ function Satr({ nom, qiymat, children }: { nom: string; qiymat?: string; childre
 }
 
 export function KonturKarta() {
-  const { tanlangan, setTanlangan } = useApp()
+  const { tanlangan, setTanlangan, tuman } = useApp()
+  // Balandlik shkalasi: tuman sozlamasi, bo'lmasa konturlar oralig'i (10 m ga yaxlitlangan)
+  const [hMin, hMax] = tumanOl(tuman).balandlikShkala ?? [
+    Math.floor(balandlikOraliq()[0] / 10) * 10,
+    Math.ceil(balandlikOraliq()[1] / 10) * 10,
+  ]
   const [tab, setTab] = useState<Tab>('tavsiya')
   // Sukut: hamma ekin qatorlari yopiq; boshqa kontur tanlansa yana yopiladi
   const [ochiq, setOchiq] = useState<string | null>(null)
@@ -136,7 +142,6 @@ export function KonturKarta() {
 
   const ytIdx = yerTuri()[k.i]
   const yt = ytIdx >= 0 ? YER_TURLARI[ytIdx] : null
-  const asosiyEkin = k.ekin[2026][0]?.ulush >= EKIN_MIN_ULUSH ? k.ekin[2026][0] : null
   const mos = tav.filter((t) => t.ball >= 25)
   const nomos = tav.filter((t) => t.ball < 25)
 
@@ -146,8 +151,7 @@ export function KonturKarta() {
       <div className="shrink-0 bg-surface px-4 pt-3.5 pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-[11px] font-medium text-muted">Kontur</div>
-            <div className="nums text-[18px] leading-tight font-semibold tracking-tight text-navy">{k.kod}</div>
+            <div className="nums text-[18px] leading-tight font-semibold tracking-tight text-navy">Kontur {k.id}</div>
             <div className="mt-0.5 truncate text-[12px] text-muted">
               {k.massiv} massivi{k.mfy ? ` · ${k.mfy} MFY` : ''}
             </div>
@@ -166,23 +170,6 @@ export function KonturKarta() {
             <span className="flex items-center gap-1.5 rounded-full bg-sunken px-2.5 py-[3px] text-body">
               <span className="size-2.5 rounded-full ring-1 ring-black/10" style={{ background: yt.rang }} />
               {yt.nom}
-            </span>
-          )}
-          {asosiyEkin && (
-            <span
-              className="flex items-center gap-1.5 rounded-full bg-leaf-soft px-2.5 py-[3px] font-medium text-leaf-dark"
-              title="2026-yilda ekilgan asosiy ekin"
-            >
-              <Sprout className="size-3" strokeWidth={2.2} />
-              {asosiyEkin.nom} · 2026
-            </span>
-          )}
-          {k.sifat < 2 && (
-            <span
-              className="rounded-full bg-wheat-soft px-2.5 py-[3px] font-medium text-wheat"
-              title="Tuproq va agrokimyo poligoni konturni qisman qoplaydi — ko'rsatkichlar taxminiy"
-            >
-              Tuproq taxminiy
             </span>
           )}
         </div>
@@ -352,10 +339,10 @@ export function KonturKarta() {
             <Satr nom="Balandlik" qiymat={k.balandlik >= 0 ? `${k.balandlik} m` : '—'}>
               {k.balandlik >= 0 && (
                 <div className="mt-1.5 pr-1">
-                  <Shkala qiymat={k.balandlik} min={620} max={1400} rang="var(--color-wheat)" />
+                  <Shkala qiymat={k.balandlik} min={hMin} max={hMax} rang="var(--color-wheat)" />
                   <div className="nums mt-1 flex justify-between text-[9.5px] text-faint">
-                    <span>620 m</span>
-                    <span>1400 m</span>
+                    <span>{hMin} m</span>
+                    <span>{hMax} m</span>
                   </div>
                 </div>
               )}

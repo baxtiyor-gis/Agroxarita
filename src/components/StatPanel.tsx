@@ -9,7 +9,7 @@ import {
   Mountain,
 } from 'lucide-react'
 import { useApp, type Qatlam } from '@/store/useApp'
-import { attrs, ekinlar, ustun, EKIN_YILLAR, type EkinYil } from '@/lib/data'
+import { attrs, ekinlar, ekinYillar, ustun, type EkinYil } from '@/lib/data'
 import { SHKALA, YOQ_RANG, ekinQatlami, ekinQatlamId, ekinYili } from '@/lib/ranglar'
 import { cn } from '@/lib/utils'
 
@@ -78,10 +78,11 @@ function ekinTaqsimot(yil: EkinYil): Qism[] {
   return out.filter((q) => q.soni > 0).sort((a, b) => b.maydon - a.maydon)
 }
 
-/** Ekilgan ekinlar — yil almashtirgich bilan (sukut: 2026) */
+/** Ekilgan ekinlar — yil almashtirgich bilan (sukut: tumandagi eng oxirgi yil) */
 function EkinTaqsimot({ qismlar }: { qismlar: Record<EkinYil, Qism[]> }) {
   const { qatlam, setQatlam } = useApp()
-  const [tanlanganYil, setYil] = useState<EkinYil>(2026)
+  const yillar = ekinYillar()
+  const [tanlanganYil, setYil] = useState<EkinYil>(yillar[yillar.length - 1])
   // Xaritada ekin qatlami yoqilgan bo'lsa — panel o'sha yilni ko'rsatadi
   const yil = ekinYili(qatlam) ?? tanlanganYil
   const almashtir = (y: EkinYil) => {
@@ -91,11 +92,11 @@ function EkinTaqsimot({ qismlar }: { qismlar: Record<EkinYil, Qism[]> }) {
   return (
     <Taqsimot
       nom="Ekilgan ekinlar"
-      qismlar={qismlar[yil]}
+      qismlar={qismlar[yil] ?? []}
       qatlam={ekinQatlamId(yil)}
       ostida={
         <div role="radiogroup" aria-label="Yil" className="mb-1.5 flex gap-0.5 rounded-lg bg-white/[0.06] p-0.5">
-          {EKIN_YILLAR.map((y) => (
+          {yillar.map((y) => (
             <button
               key={y}
               role="radio"
@@ -286,7 +287,7 @@ export function StatPanel() {
       bonitet: bonMaydon ? bonSum / bonMaydon : null,
       massiv: mas,
       foyd: t('foyd'),
-      ekin: Object.fromEntries(EKIN_YILLAR.map((y) => [y, ekinTaqsimot(y)])) as Record<EkinYil, Qism[]>,
+      ekin: Object.fromEntries(ekinYillar().map((y) => [y, ekinTaqsimot(y)])) as Record<EkinYil, Qism[]>,
       bonitetT: t('bonitet'),
       shor: t('shor'),
       gumus: t('gumus'),
@@ -324,7 +325,7 @@ export function StatPanel() {
 
         <Bolim nom="Yer" icon={LandPlot} ochiq={ochiq === 'yer'} onToggle={() => almashtir('yer')}>
           <Taqsimot nom="Yer turi" qismlar={s.foyd} qatlam="foyd" />
-          {EKIN_YILLAR.some((y) => s.ekin[y].length > 0) && <EkinTaqsimot qismlar={s.ekin} />}
+          {ekinYillar().length > 0 && <EkinTaqsimot qismlar={s.ekin} />}
         </Bolim>
 
         <Bolim nom="Tuproq" icon={Layers} ochiq={ochiq === 'tuproq'} onToggle={() => almashtir('tuproq')}>

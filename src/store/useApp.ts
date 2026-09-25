@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { setJoriyOy } from '@/lib/iqlim'
 import { attrs, yerTuri } from '@/lib/data'
+import { urlTuman } from '@/lib/tuman'
 
 export type Qatlam =
   /** Tematik ranglash yo'q — faqat kontur chegaralari */
@@ -64,6 +65,17 @@ export const BOSH_FILTR: Filtr = {
 }
 
 interface App {
+  /** Joriy tuman (TUMANLAR id si) — URL dagi ?tuman= bilan bir xil */
+  tuman: string
+  /**
+   * Boshqa tumanga o'tish: ma'lumot qayta yuklanguncha tayyor = false,
+   * tanlov, filtr va tematik qatlam tozalanadi (yangi tumanda ma'nosi yo'q)
+   */
+  setTuman: (id: string) => void
+  /** Tuman ma'lumotlarini yuklash xatosi: 'yoq' — fayllar hali qo'yilmagan */
+  yuklashXato: 'yoq' | 'boshqa' | null
+  setYuklashXato: (x: 'yoq' | 'boshqa' | null) => void
+
   tayyor: boolean
   setTayyor: (v: boolean) => void
   /** Xarita birinchi marta to'liq chizildi: asos xarita va konturlar */
@@ -175,6 +187,25 @@ function filtrla(f: Filtr): Set<number> {
 }
 
 export const useApp = create<App>((set, get) => ({
+  tuman: urlTuman(),
+  setTuman: (tuman) => {
+    if (tuman === get().tuman) return
+    set({
+      tuman,
+      tayyor: false,
+      xaritaTayyor: false,
+      yuklashXato: null,
+      tanlangan: null,
+      qatlam: 'yoq',
+      tavsiyaEkin: null,
+      klassFiltr: null,
+      filtr: BOSH_FILTR,
+      natija: new Set<number>(),
+    })
+  },
+  yuklashXato: null,
+  setYuklashXato: (yuklashXato) => set({ yuklashXato }),
+
   tayyor: false,
   setTayyor: (v) => set({ tayyor: v }),
   xaritaTayyor: false,
