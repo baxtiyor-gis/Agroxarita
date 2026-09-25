@@ -74,7 +74,12 @@ export default function App() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="z-30 flex h-[68px] shrink-0 items-center gap-3 border-b border-line bg-surface px-6">
-          <div className="min-w-0 truncate text-[15px] font-semibold text-navy">
+          <span className="shrink-0 text-[20px] font-semibold tracking-[-0.02em]">
+            <span className="text-leaf">agro</span>
+            <span className="text-navy">xarita</span>
+          </span>
+          <span className="h-7 w-px shrink-0 bg-line" />
+          <div className="min-w-0 truncate text-[14px] font-medium text-body">
             Qishloq xo'jaligi yerlariga eng maqbul ekin turlarini joylashtirish
           </div>
 
