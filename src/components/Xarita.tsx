@@ -28,7 +28,7 @@ function boshKamera(m: MlMap) {
 }
 
 /** Atribut qiymatlarini xarita xususiyatlariga ko'chirish — id bo'yicha */
-function qiymatlar(qatlam: Qatlam, ekinId: string | null): Map<number, number> {
+function qiymatlar(qatlam: Qatlam, ekinId: string | null, oy = 0): Map<number, number> {
   const p = attrs()
   const c = p.col
   const m = new Map<number, number>()
@@ -41,7 +41,7 @@ function qiymatlar(qatlam: Qatlam, ekinId: string | null): Map<number, number> {
     for (let i = 0; i < p.n; i++) m.set(c.id[i], baholash(crop, kontur(i)).ball)
     return m
   }
-  const arr = ustun(qatlam)
+  const arr = ustun(qatlam, oy)
   if (!arr) return m
   for (let i = 0; i < p.n; i++) m.set(c.id[i], arr[i])
   return m
@@ -94,6 +94,7 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
     natija,
     tayyor,
     klassFiltr,
+    iqlimOy,
   } = useApp()
 
   // Relyef (DEM) va gorizontallar — o'z modulida
@@ -290,7 +291,7 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
     if (!m || !tayyor) return
     const qoll = () => {
       m.setPaintProperty('kontur-fill', 'fill-color', rangIfoda(qatlam))
-      const vals = qiymatlar(qatlam, tavsiyaEkin)
+      const vals = qiymatlar(qatlam, tavsiyaEkin, iqlimOy)
       for (const [id, v] of vals) {
         m.setFeatureState({ source: 'konturlar', id }, { v })
       }
@@ -304,7 +305,7 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
     } else {
       m.once('idle', qoll)
     }
-  }, [qatlam, tavsiyaEkin, tayyor])
+  }, [qatlam, tavsiyaEkin, tayyor, iqlimOy])
 
   // ----------------------------------------------------------- asos qatlam
   useEffect(() => {
@@ -391,7 +392,7 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
     if (!m || !tayyor || !m.getSource('konturlar')) return
     const p = attrs()
     const hammasi = natija.size === 0 || natija.size === p.n
-    const vals = klassFiltr === null ? null : qiymatlar(qatlam, tavsiyaEkin)
+    const vals = klassFiltr === null ? null : qiymatlar(qatlam, tavsiyaEkin, iqlimOy)
     const ks = SHKALA[qatlam].klasslar
 
     for (let i = 0; i < p.n; i++) {
@@ -410,7 +411,7 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
       }
       m.setFeatureState({ source: 'konturlar', id }, { yashirin })
     }
-  }, [natija, tayyor, klassFiltr, qatlam, tavsiyaEkin, stylTayyor])
+  }, [natija, tayyor, klassFiltr, qatlam, tavsiyaEkin, stylTayyor, iqlimOy])
 
   // ------------------------------------------------------ tanlangan kontur
   useEffect(() => {

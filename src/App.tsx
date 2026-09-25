@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, MapPin } from 'lucide-react'
+import { ChevronDown, Info, MapPin } from 'lucide-react'
+import { InfoOyna } from '@/components/InfoOyna'
 import { Xarita, type XaritaAPI } from '@/components/Xarita'
 import { StatPanel } from '@/components/StatPanel'
 import { KonturKarta } from '@/components/KonturKarta'
@@ -18,6 +19,7 @@ const TUMANLAR = [
 export default function App() {
   const { xaritaTayyor, setTayyor, hisobla } = useApp()
   const [tuman, setTuman] = useState(TUMANLAR[0].id)
+  const [info, setInfo] = useState(false)
   const xarita = useRef<XaritaAPI | null>(null)
 
   useEffect(() => {
@@ -67,8 +69,16 @@ export default function App() {
             </div>
           </div>
 
+          <button
+            onClick={() => setInfo(true)}
+            className="ml-auto flex h-10 items-center gap-2 rounded-card border border-line px-3.5 text-[13px] font-medium text-ink transition-colors hover:border-line-strong hover:bg-sunken"
+          >
+            <Info className="size-4 text-leaf" />
+            Loyiha haqida
+          </button>
+
           {/* Hozircha faqat ko'rinish uchun — Farg'ona ma'lumotlari hali yo'q */}
-          <div className="relative ml-auto">
+          <div className="relative">
             <MapPin className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-leaf" />
             <select
               value={tuman}
@@ -85,6 +95,7 @@ export default function App() {
             <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-ink" />
           </div>
         </header>
+        <InfoOyna ochiq={info} onYop={() => setInfo(false)} />
 
         <main className="relative min-h-0 flex-1">
           <Xarita apiRef={xarita} />

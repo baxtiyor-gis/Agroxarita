@@ -97,6 +97,14 @@ const TEMATIK: { id: Qatlam; guruh: string }[] = [
   { id: 'kaliy', guruh: 'Agrokimyo' },
   { id: 'balandlik', guruh: 'Relyef' },
   { id: 'qiyalik', guruh: 'Relyef' },
+  { id: 'fah', guruh: 'Iqlim' },
+  { id: 'sovuqsiz', guruh: 'Iqlim' },
+  { id: 'bahorgiSovuq', guruh: 'Iqlim' },
+  { id: 'issiqKun', guruh: 'Iqlim' },
+  { id: 'yillikYogin', guruh: 'Iqlim' },
+  { id: 'suvTanqislik', guruh: 'Iqlim' },
+  { id: 'oyHarorat', guruh: 'Iqlim' },
+  { id: 'oyYogin', guruh: 'Iqlim' },
 ]
 
 /** Asos xarita uchun preview — hudud markazidagi haqiqiy plitka */

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { setJoriyOy } from '@/lib/iqlim'
 import { attrs, yerTuri } from '@/lib/data'
 
 export type Qatlam =
@@ -18,6 +19,14 @@ export type Qatlam =
   | 'ekin24'
   | 'ekin25'
   | 'ekin26'
+  | 'fah'
+  | 'sovuqsiz'
+  | 'bahorgiSovuq'
+  | 'issiqKun'
+  | 'yillikYogin'
+  | 'suvTanqislik'
+  | 'oyHarorat'
+  | 'oyYogin'
 
 export interface Filtr {
   qidiruv: string
@@ -63,6 +72,9 @@ interface App {
 
   qatlam: Qatlam
   setQatlam: (q: Qatlam) => void
+  /** Oylik iqlim qatlamlari uchun tanlangan oy, 0 = yanvar */
+  iqlimOy: number
+  setIqlimOy: (oy: number) => void
   /** Tavsiya qatlami qaysi ekin bo'yicha ranglanadi */
   tavsiyaEkin: string | null
   setTavsiyaEkin: (id: string | null) => void
@@ -170,6 +182,11 @@ export const useApp = create<App>((set, get) => ({
 
   // Boshlang'ich holat: asl konturlar, tematik ranglashsiz
   qatlam: 'yoq',
+  iqlimOy: 6,
+  setIqlimOy: (iqlimOy) => {
+    setJoriyOy(iqlimOy)
+    set({ iqlimOy, klassFiltr: null })
+  },
   // Qatlam almashsa legenda klasslari boshqacha — eski tanlov ma'nosini yo'qotadi
   setQatlam: (qatlam) =>
     set((s) => ({

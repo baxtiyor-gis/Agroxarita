@@ -1,5 +1,6 @@
 import type { FeatureCollection } from 'geojson'
 import type { AttrPack, Crop, Kontur } from './types'
+import { IQLIM_QATLAMLAR, iqlimTavsiya, iqlimUstun, iqlimYukla, type IqlimKorsatkich } from './iqlim'
 
 let pack: AttrPack | null = null
 let cropList: Crop[] = []
@@ -18,6 +19,8 @@ export async function yukla() {
   pack = a
   cropList = c
   geomFC = g
+  // Iqlim (ERA5-Land) — tavsiya va xarita uni ishlatadi; fayl bo'lmasa namuna rejimi
+  await iqlimYukla()
   bbox = hisoblaBbox(g)
   yerTuriCol = hisoblaYerTuri(a)
   for (const y of EKIN_YILLAR) {
@@ -145,7 +148,8 @@ export function almashlabOgoh(i: number): { ekin: string; yillar: [number, numbe
 }
 
 /** Tematik qatlam uchun kontur qiymatlari ustuni (-1 = ma'lumot yo'q) */
-export function ustun(qatlam: string): number[] | null {
+export function ustun(qatlam: string, oy = 0): number[] | null {
+  if ((IQLIM_QATLAMLAR as string[]).includes(qatlam)) return iqlimUstun(qatlam as IqlimKorsatkich, oy)
   const c = pack!.col
   const map: Record<string, number[]> = {
     bonitet: c.bonitet,
@@ -233,6 +237,8 @@ export function kontur(i: number): Kontur {
     qiyalik: q.qiyalik[i],
     yonalish: q.yonalish[i],
     ekin: Object.fromEntries(EKIN_YILLAR.map((y) => [y, ekinRoyxat(ekinUstun(p, y)[i], lug.ekin)])) as Kontur['ekin'],
+    // Faqat haqiqiy ERA5 ma'lumoti — namuna tavsiyaga ta'sir qilmaydi
+    iqlim: iqlimTavsiya(i),
   }
 }
 

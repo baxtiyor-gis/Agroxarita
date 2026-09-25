@@ -1,4 +1,5 @@
 import type { Qatlam } from '@/store/useApp'
+import { oylikKlasslar } from './iqlim'
 import { YER_TURLARI, ekinlar, EKIN_YILLAR, type EkinYil } from './data'
 
 /**
@@ -118,8 +119,50 @@ export function ekinYili(q: Qatlam): EkinYil | null {
   return EKIN_YILLAR.find((y) => ekinQatlamId(y) === q) ?? null
 }
 
+// ---------------------------------------------------------------- iqlim
+const k5 = (chegaralar: number[], ranglar: string[], nomlar: string[], oraliq: string[]): Klass[] =>
+  ranglar.map((rang, i) => ({
+    min: i === 0 ? -Infinity : chegaralar[i - 1],
+    max: i === ranglar.length - 1 ? Infinity : chegaralar[i],
+    rang,
+    nom: nomlar[i],
+    oraliq: oraliq[i],
+  }))
+
+const ISSIQLIK = ['#ffffb2', '#fed976', '#feb24c', '#fd8d3c', '#e31a1c']
+const SOVUQSIZ_R = ['#c6dbef', '#9ecae1', '#6baed6', '#74c476', '#238b45']
+const YOGIN_R = ['#f7fbff', '#c6dbef', '#6baed6', '#2171b5', '#08306b']
+
+const FAH = k5([3800, 4000, 4200, 4400], ISSIQLIK, ['Salqin', "Mo'tadil", 'Iliq', 'Issiq', 'Juda issiq'], ['< 3 800', '3 800–4 000', '4 000–4 200', '4 200–4 400', '4 400+'])
+const SOVUQSIZ = k5([190, 200, 210, 220], SOVUQSIZ_R, ['Qisqa', "O'rtachadan past", "O'rtacha", 'Uzun', 'Juda uzun'], ['< 190 kun', '190–199', '200–209', '210–219', '220+'])
+// Bahorgi oxirgi sovuq — kechroq = xavfliroq (yil kuni: 80 = 21-mar, 100 = 10-apr)
+const BAHORGI = k5([85, 90, 95, 100], ['#238b45', '#74c476', '#fed976', '#fd8d3c', '#bd0026'], ['Erta', 'Mart oxiri', 'Aprel boshi', 'Aprel', 'Kech'], ['26-mar gacha', '26–30 mar', '31 mar–4 apr', '5–9 apr', '10-apr dan'])
+const ISSIQ_KUN = k5([10, 20, 30, 40], ISSIQLIK, ['Kam', "O'rtacha", "Ko'p", 'Juda ko\'p', 'Jazirama'], ['< 10 kun', '10–19', '20–29', '30–39', '40+'])
+const YILLIK_YOGIN = k5([320, 350, 380, 420], YOGIN_R, ['Juda kam', 'Kam', "O'rtacha", "Ko'p", "Juda ko'p"], ['< 320 mm', '320–349', '350–379', '380–419', '420+'])
+const TANQISLIK = k5([600, 700, 800, 900], ['#fff5eb', '#fdd0a2', '#fd8d3c', '#d94801', '#7f2704'], ['Kam', "O'rtacha", 'Yuqori', 'Juda yuqori', 'Keskin'], ['< 600 mm', '600–699', '700–799', '800–899', '900+'])
 export const SHKALA: Record<Qatlam, Shkala> = {
   yoq: { nom: 'Konturlar', izoh: 'tematik ranglashsiz', klasslar: [] },
+  fah: { nom: "Faol haroratlar yig'indisi", izoh: '>10 °C kunlar, °C', klasslar: FAH },
+  sovuqsiz: { nom: 'Sovuqsiz davr', izoh: 'kun, 10 yillik o\'rtacha', klasslar: SOVUQSIZ },
+  bahorgiSovuq: { nom: 'Bahorgi oxirgi sovuq', izoh: "o'rtacha sana", klasslar: BAHORGI },
+  issiqKun: { nom: 'Issiq kunlar', izoh: 'Tmax ≥ 35 °C, kun/yil', klasslar: ISSIQ_KUN },
+  yillikYogin: { nom: "Yillik yog'in", izoh: 'mm', klasslar: YILLIK_YOGIN },
+  suvTanqislik: { nom: 'Suv tanqisligi', izoh: "ET₀ − yog'in, mm/yil", klasslar: TANQISLIK },
+  // Oylik — klasslar tanlangan oyga moslab hisoblanadi (iqlim.ts oylikKlasslar)
+  oyHarorat: {
+    nom: 'Oylik harorat',
+    izoh: "o'rtacha, °C",
+    get klasslar() {
+      return oylikKlasslar('oyHarorat')
+    },
+  },
+  oyYogin: {
+    nom: "Oylik yog'in",
+    izoh: 'mm',
+    get klasslar() {
+      return oylikKlasslar('oyYogin')
+    },
+  },
   bonitet: { nom: 'Tuproq boniteti', izoh: 'ball', klasslar: BONITET },
   gumus: { nom: 'Gumus', izoh: 'chirindi miqdori', klasslar: DARAJA },
   fosfor: { nom: 'Fosfor', izoh: 'P₂O₅', klasslar: DARAJA },
