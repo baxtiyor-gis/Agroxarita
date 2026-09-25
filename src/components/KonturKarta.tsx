@@ -22,7 +22,6 @@ import {
   MEX_NOM,
   SHOR_NOM,
   YER_TURLARI,
-  EKIN_MIN_ULUSH,
   gradFmt,
   yerTuri,
   yonalishNom,
@@ -143,7 +142,6 @@ export function KonturKarta() {
 
   const ytIdx = yerTuri()[k.i]
   const yt = ytIdx >= 0 ? YER_TURLARI[ytIdx] : null
-  const asosiyEkin = k.ekin[2026][0]?.ulush >= EKIN_MIN_ULUSH ? k.ekin[2026][0] : null
   const mos = tav.filter((t) => t.ball >= 25)
   const nomos = tav.filter((t) => t.ball < 25)
 
@@ -153,8 +151,7 @@ export function KonturKarta() {
       <div className="shrink-0 bg-surface px-4 pt-3.5 pb-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-[11px] font-medium text-muted">Kontur</div>
-            <div className="nums text-[18px] leading-tight font-semibold tracking-tight text-navy">{k.kod}</div>
+            <div className="nums text-[18px] leading-tight font-semibold tracking-tight text-navy">Kontur {k.id}</div>
             <div className="mt-0.5 truncate text-[12px] text-muted">
               {k.massiv} massivi{k.mfy ? ` · ${k.mfy} MFY` : ''}
             </div>
@@ -173,23 +170,6 @@ export function KonturKarta() {
             <span className="flex items-center gap-1.5 rounded-full bg-sunken px-2.5 py-[3px] text-body">
               <span className="size-2.5 rounded-full ring-1 ring-black/10" style={{ background: yt.rang }} />
               {yt.nom}
-            </span>
-          )}
-          {asosiyEkin && (
-            <span
-              className="flex items-center gap-1.5 rounded-full bg-leaf-soft px-2.5 py-[3px] font-medium text-leaf-dark"
-              title="2026-yilda ekilgan asosiy ekin"
-            >
-              <Sprout className="size-3" strokeWidth={2.2} />
-              {asosiyEkin.nom} · 2026
-            </span>
-          )}
-          {k.sifat < 2 && (
-            <span
-              className="rounded-full bg-wheat-soft px-2.5 py-[3px] font-medium text-wheat"
-              title="Tuproq va agrokimyo poligoni konturni qisman qoplaydi — ko'rsatkichlar taxminiy"
-            >
-              Tuproq taxminiy
             </span>
           )}
         </div>

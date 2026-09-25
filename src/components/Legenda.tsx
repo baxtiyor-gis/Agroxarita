@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Pause, Play } from 'lucide-react'
-import { iqlimHaqiqiy, oylikmi, IQLIM_QATLAMLAR, OYLAR } from '@/lib/iqlim'
+import { oylikmi, OYLAR } from '@/lib/iqlim'
 import { useApp } from '@/store/useApp'
 import { attrs, crops, ustun } from '@/lib/data'
 import { SHKALA, klassOl, YOQ_RANG, ekinQatlami } from '@/lib/ranglar'
@@ -14,7 +14,6 @@ import { kontur } from '@/lib/data'
 export function Legenda() {
   const { qatlam, tavsiyaEkin, tayyor, klassFiltr, setKlassFiltr, iqlimOy, setIqlimOy } = useApp()
   const oylik = oylikmi(qatlam)
-  const iqlimQ = (IQLIM_QATLAMLAR as string[]).includes(qatlam)
   // Oylar animatsiyasi — ▶ bosilsa har 1,2 s da keyingi oy
   const [oynat, setOynat] = useState(false)
   useEffect(() => {
@@ -67,11 +66,6 @@ export function Legenda() {
         <div className="mt-0.5 text-[11px] text-muted">
           {qatlam === 'tavsiya' ? 'moslik bali, 0–100' : sh.izoh} · bosib filtrlash
         </div>
-        {iqlimQ && !iqlimHaqiqiy() && (
-          <div className="mt-1.5 rounded-md border border-dashed border-line-strong px-2 py-1 text-[10.5px] text-muted">
-            Namuna ma'lumot — ERA5-Land hisobi tugagach almashtiriladi
-          </div>
-        )}
         {oylik && (
           <div className="mt-2.5 flex items-center gap-2">
             <button

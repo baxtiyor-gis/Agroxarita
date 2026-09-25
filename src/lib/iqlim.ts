@@ -160,8 +160,8 @@ export const setJoriyOy = (oy: number) => {
 
 const OY_HARORAT_R = ['#4575b4', '#91bfdb', '#e0f3f8', '#fee090', '#fc8d59', '#d73027']
 const OY_YOGIN_R = ['#f7fbff', '#c6dbef', '#6baed6', '#3182bd', '#08519c', '#08306b']
-const HARORAT_NOM = ['Eng salqin', 'Salqin', "O'rtachadan past", "O'rtachadan yuqori", 'Iliq', 'Eng issiq']
-const YOGIN_NOM = ['Eng kam', 'Kam', "O'rtachadan kam", "O'rtachadan ko'p", "Ko'p", "Eng ko'p"]
+const HARORAT_NOM = ['Eng salqin', 'Salqin', 'Salqinroq', 'Iliqroq', 'Iliq', 'Eng issiq']
+const YOGIN_NOM = ['Eng kam', 'Kam', 'Kamroq', "Ko'proq", "Ko'p", "Eng ko'p"]
 const klassKesh = new Map<string, { min: number; max: number; rang: string; nom: string; oraliq: string }[]>()
 
 /**

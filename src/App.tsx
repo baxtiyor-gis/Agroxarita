@@ -72,19 +72,8 @@ export default function App() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="z-30 flex h-[68px] shrink-0 items-center gap-3 border-b border-line bg-surface px-6">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="truncate text-[15px] font-semibold text-navy">
-                Raqamli agroxarita
-                <span className="font-normal text-muted"> · {joriy.nom}</span>
-              </span>
-              <span className="shrink-0 rounded-full bg-leaf-soft px-2 py-px text-[10.5px] font-medium text-leaf-dark">
-                Tajriba-sinov
-              </span>
-            </div>
-            <div className="truncate text-[12px] text-muted">
-              {joriy.viloyat}, {joriy.nom}: qishloq xo'jaligi yerlariga eng maqbul ekin turlarini joylashtirish
-            </div>
+          <div className="min-w-0 truncate text-[15px] font-semibold text-navy">
+            Qishloq xo'jaligi yerlariga eng maqbul ekin turlarini joylashtirish
           </div>
 
           <button

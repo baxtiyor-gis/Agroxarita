@@ -1,6 +1,6 @@
 import type { Qatlam } from '@/store/useApp'
 import { oylikKlasslar } from './iqlim'
-import { YER_TURLARI, ekinlar, EKIN_YILLAR, type EkinYil } from './data'
+import { YER_TURLARI, ekinlar, EKIN_YILLAR, ustun, type EkinYil } from './data'
 
 /**
  * Klasslangan (classified) shkala — cho'zilgan gradient emas.
@@ -120,34 +120,64 @@ export function ekinYili(q: Qatlam): EkinYil | null {
 }
 
 // ---------------------------------------------------------------- iqlim
-const k5 = (chegaralar: number[], ranglar: string[], nomlar: string[], oraliq: string[]): Klass[] =>
-  ranglar.map((rang, i) => ({
-    min: i === 0 ? -Infinity : chegaralar[i - 1],
-    max: i === ranglar.length - 1 ? Infinity : chegaralar[i],
-    rang,
-    nom: nomlar[i],
-    oraliq: oraliq[i],
-  }))
-
 const ISSIQLIK = ['#ffffb2', '#fed976', '#feb24c', '#fd8d3c', '#e31a1c']
 const SOVUQSIZ_R = ['#c6dbef', '#9ecae1', '#6baed6', '#74c476', '#238b45']
 const YOGIN_R = ['#f7fbff', '#c6dbef', '#6baed6', '#2171b5', '#08306b']
 
-const FAH = k5([4200, 4350, 4450, 4550], ISSIQLIK, ['Salqinroq', "O'rtachadan past", "O'rtacha", "O'rtachadan yuqori", 'Eng issiq'], ['< 4 200', '4 200–4 349', '4 350–4 449', '4 450–4 549', '4 550+'])
-const SOVUQSIZ = k5([190, 200, 210, 220], SOVUQSIZ_R, ['Qisqa', "O'rtachadan past", "O'rtacha", 'Uzun', 'Juda uzun'], ['< 190 kun', '190–199', '200–209', '210–219', '220+'])
-// Bahorgi oxirgi sovuq — kechroq = xavfliroq (yil kuni: 80 = 21-mar, 100 = 10-apr)
-const BAHORGI = k5([85, 90, 95, 100], ['#238b45', '#74c476', '#fed976', '#fd8d3c', '#bd0026'], ['Erta', 'Mart oxiri', 'Aprel boshi', 'Aprel', 'Kech'], ['26-mar gacha', '26–30 mar', '31 mar–4 apr', '5–9 apr', '10-apr dan'])
-const ISSIQ_KUN = k5([8, 12, 16, 20], ISSIQLIK, ['Kam', "O'rtacha", "Ko'p", "Juda ko'p", 'Jazirama'], ['< 8 kun', '8–11', '12–15', '16–19', '20+'])
-const YILLIK_YOGIN = k5([430, 435, 440, 450], YOGIN_R, ['Kamroq', "O'rtachadan kam", "O'rtacha", "O'rtachadan ko'p", "Ko'proq"], ['< 430 mm', '430–434', '435–439', '440–449', '450+'])
-const TANQISLIK = k5([760, 780, 790, 800], ['#fff5eb', '#fdd0a2', '#fd8d3c', '#d94801', '#7f2704'], ['Kam', "O'rtacha", 'Yuqori', 'Juda yuqori', 'Keskin'], ['< 760 mm', '760–779', '780–789', '790–799', '800+'])
+// ------------------------------------------------ tumanga moslashuvchi shkala
+/**
+ * Klass chegaralari joriy tuman qiymatlaridan (kvantillar, yumaloqlangan).
+ * Qat'iy chegaralar bitta tumanga moslangan edi — boshqasida hamma kontur
+ * bitta klassga tushardi. Ustun massivi tuman almashganda yangilanadi,
+ * shuning uchun kesh massiv bo'yicha.
+ */
+const dinKesh = new WeakMap<number[], Klass[]>()
+function dinamik(qatlam: string, ranglar: string[], nomlar: string[], qadam: number, fmt: (v: number) => string): Klass[] {
+  const arr = ustun(qatlam)
+  if (!arr) return []
+  const bor = dinKesh.get(arr)
+  if (bor) return bor
+  const v = arr.filter((x) => x >= 0).sort((a, b) => a - b)
+  if (!v.length) return []
+  const k = ranglar.length
+  const ch: number[] = []
+  for (let i = 1; i < k; i++) {
+    const q = Math.round(v[Math.floor((v.length * i) / k)] / qadam) * qadam
+    if (!ch.length || q > ch[ch.length - 1]) ch.push(q)
+  }
+  const n = ch.length + 1
+  const tanla = (i: number) => Math.round((i * (k - 1)) / Math.max(1, n - 1))
+  const out: Klass[] = Array.from({ length: n }, (_, i) => ({
+    min: i === 0 ? -Infinity : ch[i - 1],
+    max: i === n - 1 ? Infinity : ch[i],
+    rang: ranglar[tanla(i)],
+    nom: nomlar[tanla(i)],
+    oraliq: i === 0 ? `< ${fmt(ch[0])}` : i === n - 1 ? `${fmt(ch[i - 1])}+` : `${fmt(ch[i - 1])}–${fmt(ch[i])}`,
+  }))
+  dinKesh.set(arr, out)
+  return out
+}
+const son = (v: number) => Math.round(v).toLocaleString('ru')
+const OY_Q = ['yan', 'fev', 'mar', 'apr', 'may', 'iyun', 'iyul', 'avg', 'sen', 'okt', 'noy', 'dek']
+const OY_K = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+const sana = (doy: number) => {
+  let d = Math.round(doy)
+  for (let m = 0; m < 12; m++) {
+    if (d <= OY_K[m]) return `${d}-${OY_Q[m]}`
+    d -= OY_K[m]
+  }
+  return '—'
+}
+const D5 = ['Eng past', 'Past', "O'rtacha", 'Yuqori', 'Eng yuqori']
+
 export const SHKALA: Record<Qatlam, Shkala> = {
   yoq: { nom: 'Konturlar', izoh: 'tematik ranglashsiz', klasslar: [] },
-  fah: { nom: "Faol haroratlar yig'indisi", izoh: '>10 °C kunlar, °C', klasslar: FAH },
-  sovuqsiz: { nom: 'Sovuqsiz davr', izoh: 'kun, 10 yillik o\'rtacha', klasslar: SOVUQSIZ },
-  bahorgiSovuq: { nom: 'Bahorgi oxirgi sovuq', izoh: "o'rtacha sana", klasslar: BAHORGI },
-  issiqKun: { nom: 'Issiq kunlar', izoh: 'Tmax ≥ 35 °C, kun/yil', klasslar: ISSIQ_KUN },
-  yillikYogin: { nom: "Yillik yog'in", izoh: 'mm', klasslar: YILLIK_YOGIN },
-  suvTanqislik: { nom: 'Suv tanqisligi', izoh: "ET₀ − yog'in, mm/yil", klasslar: TANQISLIK },
+  fah: { nom: "Faol haroratlar yig'indisi", izoh: '>10 °C kunlar, °C', get klasslar() { return dinamik('fah', ISSIQLIK, ['Salqinroq', "O'rtachadan past", "O'rtacha", "O'rtachadan yuqori", 'Eng issiq'], 50, son) } },
+  sovuqsiz: { nom: 'Sovuqsiz davr', izoh: "kun, 10 yillik o'rtacha", get klasslar() { return dinamik('sovuqsiz', SOVUQSIZ_R, ['Eng qisqa', 'Qisqa', "O'rtacha", 'Uzun', 'Eng uzun'], 2, son) } },
+  bahorgiSovuq: { nom: 'Bahorgi oxirgi sovuq', izoh: "o'rtacha sana", get klasslar() { return dinamik('bahorgiSovuq', ['#238b45', '#74c476', '#fed976', '#fd8d3c', '#bd0026'], ['Eng erta', 'Erta', "O'rtacha", 'Kech', 'Eng kech'], 1, sana) } },
+  issiqKun: { nom: 'Issiq kunlar', izoh: 'Tmax ≥ 35 °C, kun/yil', get klasslar() { return dinamik('issiqKun', ISSIQLIK, D5, 1, son) } },
+  yillikYogin: { nom: "Yillik yog'in", izoh: 'mm', get klasslar() { return dinamik('yillikYogin', YOGIN_R, ['Eng kam', 'Kam', "O'rtacha", "Ko'p", "Eng ko'p"], 2, son) } },
+  suvTanqislik: { nom: 'Suv tanqisligi', izoh: "ET₀ − yog'in, mm/yil", get klasslar() { return dinamik('suvTanqislik', ['#fff5eb', '#fdd0a2', '#fd8d3c', '#d94801', '#7f2704'], D5, 5, son) } },
   // Oylik — klasslar tanlangan oyga moslab hisoblanadi (iqlim.ts oylikKlasslar)
   oyHarorat: {
     nom: 'Oylik harorat',
@@ -168,7 +198,7 @@ export const SHKALA: Record<Qatlam, Shkala> = {
   fosfor: { nom: 'Fosfor', izoh: 'P₂O₅', klasslar: DARAJA },
   kaliy: { nom: 'Kaliy', izoh: 'K₂O', klasslar: DARAJA },
   shor: { nom: "Sho'rlanish", izoh: 'daraja', klasslar: SHOR },
-  balandlik: { nom: 'Balandlik', izoh: 'dengiz sathidan', klasslar: BALANDLIK },
+  balandlik: { nom: 'Balandlik', izoh: 'dengiz sathidan, m', get klasslar() { return dinamik('balandlik', BALANDLIK.map((k) => k.rang), ['Eng past', 'Past', "O'rtacha", 'Baland', 'Eng baland'], 10, son) } },
   qiyalik: { nom: 'Qiyalik', izoh: 'nishablik', klasslar: QIYALIK },
   tavsiya: { nom: 'Moslik bali', izoh: 'tanlangan ekin uchun', klasslar: TAVSIYA },
   foyd: { nom: 'Yer turi', izoh: 'hozirgi foydalanish', klasslar: FOYD, kategoriyami: true },
