@@ -227,15 +227,6 @@ export function InfoOyna({ ochiq, onYop }: { ochiq: boolean; onYop: () => void }
                 </p>
               </div>
               <div>
-                <Sarlavha>Sun'iy intellekt</Sarlavha>
-                <p>
-                  Loyiha sun'iy intellekt vositalari yordamida ishlab chiqilgan: ma'lumotlarni fazoviy bog'lash va
-                  qayta ishlash, agronomik me'yorlarni tizimlashtirish, dasturiy ta'minot va tahlil. Keyingi
-                  bosqichda sun'iy yo'ldosh tasvirlari (Sentinel-2) asosida ekin turlarini avtomatik aniqlash
-                  rejalashtirilgan.
-                </p>
-              </div>
-              <div>
                 <Sarlavha>Jahon tajribasi</Sarlavha>
                 <div className="overflow-hidden rounded-lg border border-line">
                   {TAJRIBA.map((t, i) => (
