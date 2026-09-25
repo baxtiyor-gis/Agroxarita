@@ -304,7 +304,7 @@ export function XaritaBoshqaruv({
               />
               <Switch
                 nom="Gorizontallar"
-                izoh="har 10 m, asosiy — 50 m"
+                izoh="har 10 m (1100 m gacha), asosiy — 50 m"
                 yoqilgan={gorizontalKorinsin}
                 onToggle={toggleGorizontal}
               />

@@ -459,7 +459,7 @@ export function ballRang(ball: number): string {
   if (ball >= 85) return 'var(--color-score-90)'
   if (ball >= 70) return 'var(--color-score-70)'
   if (ball >= 50) return 'var(--color-score-50)'
-  if (ball >= 30) return 'var(--color-score-30)'
+  if (ball >= 25) return 'var(--color-score-30)'
   return 'var(--color-score-0)'
 }
 
@@ -467,6 +467,6 @@ export function ballNom(ball: number): string {
   if (ball >= 85) return "A'lo"
   if (ball >= 70) return 'Yaxshi'
   if (ball >= 50) return "O'rtacha"
-  if (ball >= 30) return 'Zaif'
+  if (ball >= 25) return 'Zaif'
   return 'Mos emas'
 }
