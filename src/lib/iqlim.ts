@@ -40,23 +40,39 @@ export interface Iqlim {
 export const OYLAR = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek']
 const OY_KUN = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
-interface IqlimFayl {
+/**
+ * public/data/iqlim.json — balandlik zonalari bo'yicha (ERA5-Land, 2016–2025).
+ * Oylik qiymatlar zona × yil × oy; kontur — zona, harorat tuzatmasi (dT,
+ * −0,65 °C/100 m) va 10 yillik yillik ko'rsatkichlar.
+ */
+export interface IqlimZona {
+  oraliq: [number, number]
+  katak: [number, number]
+  balandlik: number
+  /** [yil][oy] */
+  harorat: number[][]
+  yogin: number[][]
+  et0: number[][]
+  /** 10 yillik o'rtacha, 12 oy */
+  tuproqT: number[]
+  namlik: number[]
+}
+export interface IqlimFayl {
+  manba: string
+  yillar: number[]
+  zona: IqlimZona[]
   kontur: {
     id: number[]
-    harorat: number[][]
-    yogin: number[][]
-    et0: number[][]
-    tuproqT: number[][]
+    zona: number[]
+    dT: number[]
     fah: number[]
+    gdd10: number[]
     sovuqsiz: number[]
     bahorgiSovuq: number[]
     kuzgiSovuq: number[]
     kechSovuqYil: number[]
     issiqKun: number[]
     minT: number[]
-    yillikYogin: number[]
-    yillikEt0: number[]
-    suvTanqislik: number[]
   }
 }
 
@@ -191,12 +207,20 @@ export function iqlim(i: number): Iqlim {
   const j = fayl && idIdx ? idIdx.get(p.col.id[i]) : undefined
   if (fayl && j !== undefined) {
     const k = fayl.kontur
+    const z = fayl.zona[k.zona[j]]
+    const dT = k.dT[j]
+    const ortacha = (m: number[][]) => m[0].map((_, oy) => m.reduce((s, y) => s + y[oy], 0) / m.length)
+    const harorat = ortacha(z.harorat).map((t) => Math.round((t + dT) * 10) / 10)
+    const yogin = ortacha(z.yogin).map(Math.round)
+    const et0 = ortacha(z.et0).map(Math.round)
+    const yillikYogin = yogin.reduce((a, b) => a + b, 0)
+    const yillikEt0 = et0.reduce((a, b) => a + b, 0)
     return {
       namuna: false,
-      harorat: k.harorat[j],
-      yogin: k.yogin[j],
-      et0: k.et0[j],
-      tuproqT: k.tuproqT[j],
+      harorat,
+      yogin,
+      et0,
+      tuproqT: z.tuproqT.map((t) => Math.round((t + dT) * 10) / 10),
       fah: k.fah[j],
       sovuqsiz: k.sovuqsiz[j],
       bahorgiSovuq: k.bahorgiSovuq[j],
@@ -204,12 +228,25 @@ export function iqlim(i: number): Iqlim {
       kechSovuqYil: k.kechSovuqYil[j],
       issiqKun: k.issiqKun[j],
       minT: k.minT[j],
-      yillikYogin: k.yillikYogin[j],
-      yillikEt0: k.yillikEt0[j],
-      suvTanqislik: k.suvTanqislik[j],
+      yillikYogin,
+      yillikEt0,
+      suvTanqislik: yillikEt0 - yillikYogin,
     }
   }
   return namuna(p.col.balandlik[i])
+}
+
+/** Yillar × oylar (heatmap uchun): kontur zonasi, harorat balandlik bo'yicha tuzatilgan */
+export function iqlimYillar(i: number): { yillar: number[]; harorat: number[][]; yogin: number[][] } | null {
+  const j = fayl && idIdx ? idIdx.get(attrs().col.id[i]) : undefined
+  if (!fayl || j === undefined) return null
+  const z = fayl.zona[fayl.kontur.zona[j]]
+  const dT = fayl.kontur.dT[j]
+  return {
+    yillar: fayl.yillar,
+    harorat: z.harorat.map((y) => y.map((t) => Math.round((t + dT) * 10) / 10)),
+    yogin: z.yogin,
+  }
 }
 
 // --------------------------------------------------------------- namuna
