@@ -122,6 +122,10 @@ export function XaritaBoshqaruv({
     setAsos,
     konturKorinsin,
     toggleKonturKorinsin,
+    relyefKorinsin,
+    toggleRelyef,
+    gorizontalKorinsin,
+    toggleGorizontal,
     qatlam,
     setQatlam,
     tavsiyaEkin,
@@ -291,6 +295,18 @@ export function XaritaBoshqaruv({
                 izoh="Kadastr konturlari"
                 yoqilgan={konturKorinsin}
                 onToggle={toggleKonturKorinsin}
+              />
+              <Switch
+                nom="Relyef (DEM)"
+                izoh="Copernicus DEM 30 m"
+                yoqilgan={relyefKorinsin}
+                onToggle={toggleRelyef}
+              />
+              <Switch
+                nom="Gorizontallar"
+                izoh="har 10 m, asosiy — 50 m"
+                yoqilgan={gorizontalKorinsin}
+                onToggle={toggleGorizontal}
               />
             </div>
           </div>

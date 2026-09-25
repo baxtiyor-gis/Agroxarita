@@ -12,6 +12,8 @@ import { useApp, type Qatlam } from '@/store/useApp'
 import { attrs, crops, extent, geom, kontur, ustun } from '@/lib/data'
 import { SHKALA, YOQ_RANG, KONTUR_CHEGARA, ekinQatlami } from '@/lib/ranglar'
 import { baholash } from '@/lib/tavsiya'
+import { useRelyef } from '@/lib/relyef'
+import { RelyefLegenda } from '@/components/RelyefLegenda'
 
 /** Extentga moslashda chetdan bo'sh joy, px */
 const CHET = 20
@@ -93,6 +95,9 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
     tayyor,
     klassFiltr,
   } = useApp()
+
+  // Relyef (DEM) va gorizontallar — o'z modulida
+  const relyef = useRelyef(map, stylTayyor)
 
   // Tashqi boshqaruv uchun API
   useEffect(() => {
@@ -422,6 +427,7 @@ export function Xarita({ apiRef }: { apiRef?: React.RefObject<XaritaAPI | null> 
   return (
     <div className="relative size-full">
       <div ref={box} className="size-full" />
+      {relyef && <RelyefLegenda meta={relyef} />}
       <XaritaLoader />
     </div>
   )
