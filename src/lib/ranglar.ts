@@ -133,13 +133,13 @@ const ISSIQLIK = ['#ffffb2', '#fed976', '#feb24c', '#fd8d3c', '#e31a1c']
 const SOVUQSIZ_R = ['#c6dbef', '#9ecae1', '#6baed6', '#74c476', '#238b45']
 const YOGIN_R = ['#f7fbff', '#c6dbef', '#6baed6', '#2171b5', '#08306b']
 
-const FAH = k5([3800, 4000, 4200, 4400], ISSIQLIK, ['Salqin', "Mo'tadil", 'Iliq', 'Issiq', 'Juda issiq'], ['< 3 800', '3 800–4 000', '4 000–4 200', '4 200–4 400', '4 400+'])
+const FAH = k5([4200, 4350, 4450, 4550], ISSIQLIK, ['Salqinroq', "O'rtachadan past", "O'rtacha", "O'rtachadan yuqori", 'Eng issiq'], ['< 4 200', '4 200–4 349', '4 350–4 449', '4 450–4 549', '4 550+'])
 const SOVUQSIZ = k5([190, 200, 210, 220], SOVUQSIZ_R, ['Qisqa', "O'rtachadan past", "O'rtacha", 'Uzun', 'Juda uzun'], ['< 190 kun', '190–199', '200–209', '210–219', '220+'])
 // Bahorgi oxirgi sovuq — kechroq = xavfliroq (yil kuni: 80 = 21-mar, 100 = 10-apr)
 const BAHORGI = k5([85, 90, 95, 100], ['#238b45', '#74c476', '#fed976', '#fd8d3c', '#bd0026'], ['Erta', 'Mart oxiri', 'Aprel boshi', 'Aprel', 'Kech'], ['26-mar gacha', '26–30 mar', '31 mar–4 apr', '5–9 apr', '10-apr dan'])
-const ISSIQ_KUN = k5([10, 20, 30, 40], ISSIQLIK, ['Kam', "O'rtacha", "Ko'p", 'Juda ko\'p', 'Jazirama'], ['< 10 kun', '10–19', '20–29', '30–39', '40+'])
-const YILLIK_YOGIN = k5([320, 350, 380, 420], YOGIN_R, ['Juda kam', 'Kam', "O'rtacha", "Ko'p", "Juda ko'p"], ['< 320 mm', '320–349', '350–379', '380–419', '420+'])
-const TANQISLIK = k5([600, 700, 800, 900], ['#fff5eb', '#fdd0a2', '#fd8d3c', '#d94801', '#7f2704'], ['Kam', "O'rtacha", 'Yuqori', 'Juda yuqori', 'Keskin'], ['< 600 mm', '600–699', '700–799', '800–899', '900+'])
+const ISSIQ_KUN = k5([8, 12, 16, 20], ISSIQLIK, ['Kam', "O'rtacha", "Ko'p", "Juda ko'p", 'Jazirama'], ['< 8 kun', '8–11', '12–15', '16–19', '20+'])
+const YILLIK_YOGIN = k5([430, 435, 440, 450], YOGIN_R, ['Kamroq', "O'rtachadan kam", "O'rtacha", "O'rtachadan ko'p", "Ko'proq"], ['< 430 mm', '430–434', '435–439', '440–449', '450+'])
+const TANQISLIK = k5([760, 780, 790, 800], ['#fff5eb', '#fdd0a2', '#fd8d3c', '#d94801', '#7f2704'], ['Kam', "O'rtacha", 'Yuqori', 'Juda yuqori', 'Keskin'], ['< 760 mm', '760–779', '780–789', '790–799', '800+'])
 export const SHKALA: Record<Qatlam, Shkala> = {
   yoq: { nom: 'Konturlar', izoh: 'tematik ranglashsiz', klasslar: [] },
   fah: { nom: "Faol haroratlar yig'indisi", izoh: '>10 °C kunlar, °C', klasslar: FAH },
