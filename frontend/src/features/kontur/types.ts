@@ -21,6 +21,17 @@ export interface Tuproq {
   qoplanish: number
 }
 
+/** Agrokimyo ko'rsatkichi (kontur bilan eng so'nggi yil ichida eng katta kesishuv) */
+export interface AgrokimyoQiymat {
+  /** 1 juda kam … 5 juda ko'p */
+  daraja: number | null
+  daraja_nom: string | null
+  /** masalan "101-200" (mg/kg) */
+  gradatsiya: string | null
+  yil: number
+  qoplanish: number
+}
+
 /** GET /api/konturlar/{id}/ */
 export interface Kontur {
   id: number
@@ -34,5 +45,6 @@ export interface Kontur {
   mfy: string | null
   yer_turlari: YerTuri[]
   tuproq: Tuproq | null
+  agrokimyo?: { kaliy: AgrokimyoQiymat | null }
   bbox: [number, number, number, number]
 }

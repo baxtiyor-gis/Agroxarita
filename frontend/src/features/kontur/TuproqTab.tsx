@@ -6,11 +6,12 @@ import { bosh } from './format'
 import { Darajalar, Satr, Shkala } from './ui'
 
 /** V1 tuzilishi: Bonitet, Gumus, Fosfor, Kaliy, Mexanika, Sho'rlanish, Yer osti suvi.
- *  Bonitet/mexanika/sho'rlanish/yer osti suvi — API; gumus/fosfor/kaliy — namuna. */
+ *  Bonitet/mexanika/sho'rlanish/yer osti suvi va kaliy — API; gumus/fosfor — namuna. */
 export function TuproqTab({ k }: { k: Kontur }) {
   const t = k.tuproq
   const ishonchsiz = t != null && t.qoplanish < 0.1
   const agro = agrokimyoMock(k.id)
+  const kaliy = k.agrokimyo?.kaliy ?? null
   const yoq = "Ma'lumot yo'q"
 
   return (
@@ -45,7 +46,6 @@ export function TuproqTab({ k }: { k: Kontur }) {
           [
             ['Gumus', agro.gumus],
             ['Fosfor', agro.fosfor],
-            ['Kaliy', agro.kaliy],
           ] as const
         ).map(([nom, a]) => (
           <Satr key={nom} nom={nom} qiymat={`${DARAJA_NOM[a.daraja]} · ${a.grad}`} namuna>
@@ -54,6 +54,24 @@ export function TuproqTab({ k }: { k: Kontur }) {
             </div>
           </Satr>
         ))}
+
+        {/* Kaliy — haqiqiy (Agrokimyo, eng so'nggi yil); qoplanish past bo'lsa xira */}
+        <div className={cn(kaliy != null && kaliy.qoplanish < 0.1 && 'opacity-50')}>
+          <Satr
+            nom="Kaliy"
+            qiymat={
+              kaliy?.daraja != null
+                ? `${kaliy.daraja_nom ?? DARAJA_NOM[kaliy.daraja]} · ${kaliy.gradatsiya ?? '—'} mg/kg · ${kaliy.yil}`
+                : yoq
+            }
+          >
+            {kaliy?.daraja != null && (
+              <div className="mt-1.5">
+                <Darajalar daraja={kaliy.daraja} />
+              </div>
+            )}
+          </Satr>
+        </div>
 
         <div className={cn('divide-y divide-line', ishonchsiz && 'opacity-50')}>
           <Satr nom="Mexanika" qiymat={bosh(t?.mexanika) ?? yoq} />
