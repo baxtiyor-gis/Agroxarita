@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import connection
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import NotFound
@@ -62,6 +63,20 @@ def agrokimyo_malumoti(kontur_id, korsatkich):
     }
 
 
+def relyef_malumoti(kontur):
+    try:
+        r = kontur.relyef  # select_related("relyef") — qo'shimcha so'rovsiz
+    except ObjectDoesNotExist:
+        return None
+    if r.balandlik_ortacha is None:
+        return None
+    return {
+        "balandlik": {"min": r.balandlik_min, "ortacha": r.balandlik_ortacha, "max": r.balandlik_max},
+        "qiyalik": {"ortacha": r.qiyalik_ortacha, "sinf": r.qiyalik_sinfi, "sinf_nom": r.get_qiyalik_sinfi_display()},
+        "yonalish": {"kod": r.yonalish, "nom": r.get_yonalish_display(), "gradus": r.yonalish_gradus},
+    }
+
+
 def tuproq_malumoti(kontur_id):
     with connection.cursor() as cursor:
         cursor.execute(TUPROQ_SQL, [kontur_id])
@@ -85,11 +100,13 @@ def tuproq_malumoti(kontur_id):
 def kontur_batafsil(request, id):
     try:
         kontur = (
-            Kontur.objects.select_related("tuman__viloyat", "tuman_geo__viloyat")
+            Kontur.objects.select_related("tuman__viloyat", "tuman_geo__viloyat", "relyef")
             .only(
                 "kontur_raqami", "yagona_kontur", "umumiy_maydoni", "tur", "mfy", "massiv", "geom",
                 "tuman__kod", "tuman__nom", "tuman__viloyat__region_id", "tuman__viloyat__nom",
                 "tuman_geo__kod", "tuman_geo__nom", "tuman_geo__viloyat__region_id", "tuman_geo__viloyat__nom",
+                "relyef__balandlik_min", "relyef__balandlik_ortacha", "relyef__balandlik_max", "relyef__qiyalik_ortacha",
+                "relyef__qiyalik_sinfi", "relyef__yonalish", "relyef__yonalish_gradus",
                 *USTUNLAR,
             )
             .get(pk=id)
@@ -119,6 +136,7 @@ def kontur_batafsil(request, id):
             "yer_turlari": yer_turlari,
             "tuproq": tuproq_malumoti(kontur.pk),
             "agrokimyo": {"kaliy": agrokimyo_malumoti(kontur.pk, "kaliy")},
+            "relyef": relyef_malumoti(kontur),
             "bbox": list(kontur.geom.extent),
         }
     )

@@ -1,4 +1,4 @@
-﻿django>=5.2,<5.3
+django>=5.2,<5.3
 djangorestframework
 djangorestframework-gis
 psycopg[binary]
@@ -6,3 +6,6 @@ django-environ
 django-cors-headers
 pytest
 pytest-django
+numpy>=2,<2.3
+cdsapi
+netCDF4

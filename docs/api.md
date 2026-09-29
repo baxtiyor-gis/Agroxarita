@@ -53,6 +53,9 @@ Faqat atributlar (geometriya yo'q; xarita — MVT). Javob:
  "tuproq": {"bonitet": 52, "mexanika": "O'rta qumoqli", "shorlanish": "...", "yuvilish": "...",
             "toshlanish": "...", "klass": "V", "yer_osti_suvi": "1-2", "qoplanish": 0.93},
  "agrokimyo": {"kaliy": {"daraja": 2, "daraja_nom": "Kam", "gradatsiya": "101-200", "yil": 2025, "qoplanish": 0.87}},
+ "relyef": {"balandlik": {"min": 810.5, "ortacha": 815.2, "max": 821.0},
+            "qiyalik": {"ortacha": 1.88, "sinf": "yengil", "sinf_nom": "Yengil (1-3°)"},
+            "yonalish": {"kod": "ShSh", "nom": "Shimoli-sharq", "gradus": 38.5}},
  "bbox": [minLon, minLat, maxLon, maxLat]}
 ```
 - `tuman`/`viloyat` — geometrik tuman (`tuman_geo`) bo'yicha; u yo'q bo'lsa manba `tuman`.
@@ -61,6 +64,7 @@ Faqat atributlar (geometriya yo'q; xarita — MVT). Javob:
 - `tuproq` — kontur bilan eng katta kesishuvli tuproq poligoni; kesishuv yo'q bo'lsa `null`. `qoplanish` — kontur maydonining tuproq bilan qoplangan ulushi (0..1, 2 xona, barcha kesishgan poligonlar bo'yicha). Lug'at maydonlari topilmasa `null`.
 - `agrokimyo.kaliy` — kontur kesishgan poligonlarning **eng so'nggi yili** ichida eng katta kesishuvli poligon; kesishuv yo'q bo'lsa `null`. `daraja` 1..5 (1 juda kam, 2 kam, 3 o'rtacha, 4 ko'p, 5 juda ko'p; noma'lum bo'lsa `null`), `gradatsiya` — manba matni (mg/kg), `qoplanish` — shu yil poligonlarining kontur ulushi (0..1). Keyin `fosfor`, `gumus` shu obyektga qo'shiladi.
 - `massiv`, `mfy` — bazada kirill bo'lsa ham javobda lotinga o'giriladi.
+- `relyef` — Copernicus DEM GLO-30 (30 m) dan kontur ichidagi piksellar statistikasi; faqat sug'oriladigan konturlar uchun hisoblangan, aks holda (yoki DEM bo'lmasa) `null`. `balandlik` — dengiz sathidan, m. `qiyalik.ortacha` — gradus (metrik proyeksiyada), `sinf`: `tekis` (<1°), `yengil` (1-3°), `orta` (3-7°), `tik` (>7°). `yonalish` — nishab qaragan tomon (aspect doiraviy o'rtacha): `Sh`, `ShSh`, `Sq`, `JSq`, `J`, `JG`, `G`, `ShG`; `gradus` — azimut (0=shimol, soat yo'nalishida); butunlay tekis konturda `null` bo'lishi mumkin.
 - `id` mavjud emas -> `404` `{"detail": ...}`.
 
 ## Vektor tile (MVT)

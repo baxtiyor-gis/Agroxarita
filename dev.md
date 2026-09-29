@@ -52,7 +52,9 @@ Talablar: Windows, Python 3.11, Node.js, PostgreSQL 17 + PostGIS.
    ```
    Qayta hisoblash (import qilmasdan), shu tartibda: `kontur_tuman [--tuman KOD]` → `kontur_tur [--tuman KOD]` →
    `kontur_tuproq [--tuman KOD] [--chegara 0.5]` (qolgan yerlar tuproq bilan ≥50% qoplansa → `sugoriladigan`;
-   `kontur_tur` uni qayta `aniqlanmagan` qiladi, shuning uchun doim undan keyin). Hozircha faqat Bulung'ur (1401) da qo'llangan.
+   `kontur_tur` uni qayta `aniqlanmagan` qiladi, shuning uchun doim undan keyin). Respublika bo'yicha qo'llangan.
+   **Relyef:** `yukla_dem` (Copernicus DEM → `data/dem/`), `hisobla_relyef` — `import_kontur` dan keyin qayta ishga tushiriladi.
+   **Agrokimyo:** `import_agrokimyo --qatlam Kaliy --korsatkich kaliy`. **Iqlim:** `katak_yarat` → `yukla_era5` → `import_iqlim` (CDS kaliti `.env` da).
 5. **Tile keshi:** `.env` da `TILE_CACHE_MAX_AGE=0` (dev — kesh yo'q); productionda `3600`.
 
 ## Testlar haqida

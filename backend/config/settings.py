@@ -40,7 +40,9 @@ INSTALLED_APPS = [
     "corsheaders",
     "apps.border",
     "apps.land",
+    "apps.relief",
     "apps.soil",
+    "apps.climate",
     "apps.tiles",
 ]
 
@@ -84,6 +86,11 @@ DATABASES = {
         "PORT": env("DB_PORT", default="5432"),
     }
 }
+
+# Copernicus CDS (Task 9); kalit .env da, git'da yo'q
+CDS_API_URL = env("CDS_API_URL", default="https://cds.climate.copernicus.eu/api")
+CDS_API_KEY = env("CDS_API_KEY", default="")
+ERA5_DIR = DATA_DIR / "era5"
 
 # Tile keshi (soniya). Dev'da 0 — ma'lumot qayta hisoblanganda brauzer eski tile'ni ko'rsatmasin
 TILE_CACHE_MAX_AGE = env.int("TILE_CACHE_MAX_AGE", default=3600)
