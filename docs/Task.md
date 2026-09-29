@@ -568,3 +568,46 @@ boshqa tumanga yozilgan — ya'ni ~530 kontur Kogon chegarasidan tashqarida.
 `tur = aniqlanmagan` konturlar: tuproq poligonlari bilan qoplanishi ≥ 50% → yangi tur `qx_tuproq`
 ("Qishloq xo'jaligi yeri (tuproq bo'yicha)"); frontend QX qatlami `sugoriladigan` + `qx_tuproq` ni ko'rsatadi.
 Avval hisobot (son, ga), keyin yangilash.
+
+---
+
+## Task 7 — Kontur bosilganda chap panel (V1 kabi)
+
+**Maqsad:** kontur bosilganda chapda 400px panel ochiladi: sarlavha + tablar. Mavjud ma'lumot — haqiqiy
+(kontur atributlari, tuproq), qolgan tablar — mock.
+
+### 1. Backend — `backend-dev`
+
+`GET /api/konturlar/{id}/` (faqat atributlar, geometriya yo'q):
+
+```json
+{
+  "id": 965892, "kontur_raqami": 8744, "yagona_kontur": "14:01:08744", "maydon": 18.61,
+  "tur": "sugoriladigan", "tuman": {"kod": 1401, "nom": "Bulung‘ur tumani"},
+  "viloyat": {"region_id": 14, "nom": "Samarqand"}, "massiv": "...", "mfy": "...",
+  "yer_turlari": [{"kod": "haydalma_lalmi", "nom": "Haydalma (lalmi)", "maydon": 18.29}],
+  "tuproq": {"bonitet": 52, "mexanika": "O‘rta qumoqli", "shorlanish": "...", "yuvilish": "...",
+             "toshlanish": "...", "klass": "V", "yer_osti_suvi": "1–2", "qoplanish": 0.93} | null,
+  "bbox": [..]
+}
+```
+
+- `yer_turlari` — faqat 0 dan katta ustunlar, kamayish tartibida; o'qiladigan nomlar lug'ati.
+- `tuproq` — kontur bilan eng katta kesishuvli tuproq poligoni (bazada, bitta so'rov); yo'q bo'lsa `null`.
+- Mavjud bo'lmagan id → 404. Test + `docs/api.md`.
+
+### 2. Frontend — `frontend-dev`
+
+- Kontur bosilganda (popup o'rniga) `?kontur={id}` URL'ga yoziladi va chapda panel ochiladi (sidebar ustida,
+  `left-3 top-3 bottom-3`, 400px, oq, `rounded-card`, soya); X yoki Esc bilan yopiladi.
+- Xaritada tanlangan kontur — oq qalin chegara (`kontur-tanlangan`, filter id bo'yicha).
+- Sarlavha: "Kontur {kontur_raqami}", massiv · MFY; badge'lar: maydon (ga), tur.
+- Tablar (V1 tartibi, lucide ikonalar): **Ma'lumot** (haqiqiy: identifikatorlar, tuman, yer turlari jadvali),
+  **Tuproq** (haqiqiy: bonitet shkalasi, mexanika, sho'rlanish, yuvilish, toshlanish, klass, yer osti suvi;
+  agrokimyo — mock), **Tavsiya**, **Ekinlar**, **Iqlim**, **Relyef** — mock (aniq "Namuna ma'lumot" belgisi bilan).
+- V1 komponentlari uslubida: `Satr` (100px label + qiymat), badge, shkala (h-4px).
+- Default ochiq tab — Ma'lumot.
+
+### Ijro tartibi
+
+1. `backend-dev` (border refaktori tugagach) → tekshiruv. 2. `frontend-dev` → skrinshot tekshiruvi. 3. Commit.

@@ -1,4 +1,4 @@
-"""import_border: normalizatsiya (sof Python), quruq rejim (bazasiz) va bazaga yuklash testlari.
+"""import_border: normallashtirish (sof Python), quruq rejim (bazasiz) va bazaga yuklash testlari.
 
 Manba fayllari test ichida GDAL bilan tmp_path da yaratiladi (haqiqiy data/ ga bog'liq emas).
 """
@@ -9,14 +9,14 @@ from django.contrib.gis.geos import GEOSGeometry
 from django.core.management import call_command
 from osgeo import ogr, osr
 
-from apps.border import normalizatsiya
+from apps.border.management.commands.import_border import kod_ajrat, nom_tozala, tip_aniqla
 from apps.border.models import Massiv, Tuman, Viloyat
 from conftest import kvadrat
 
 ogr.UseExceptions()
 
 
-# --------------------------------------------------------------------------- normalizatsiya
+# --------------------------------------------------------------------------- normallashtirish
 
 @pytest.mark.parametrize(
     "kirish, kutilgan",
@@ -36,7 +36,7 @@ ogr.UseExceptions()
     ],
 )
 def test_nom(kirish, kutilgan):
-    assert normalizatsiya.nom(kirish) == kutilgan
+    assert nom_tozala(kirish) == kutilgan
 
 
 @pytest.mark.parametrize(
@@ -45,23 +45,23 @@ def test_nom(kirish, kutilgan):
      ("X", None), ("", None), (None, None)],
 )
 def test_tip(kirish, kutilgan):
-    assert normalizatsiya.tip(kirish) == kutilgan
+    assert tip_aniqla(kirish) == kutilgan
 
 
 def test_tip_lotin_va_kirill_t_farqli_belgilar():
     assert "T" != "Т"
-    assert normalizatsiya.tip("T") == normalizatsiya.tip("Т") == "tuman"
+    assert tip_aniqla("T") == tip_aniqla("Т") == "tuman"
 
 
 @pytest.mark.parametrize("kirish, kutilgan", [("12:01", 1201), ("09:15", 915), ("1:05", 105), (" 22:12 ", 2212)])
 def test_kod(kirish, kutilgan):
-    assert normalizatsiya.kod(kirish) == kutilgan
+    assert kod_ajrat(kirish) == kutilgan
 
 
 @pytest.mark.parametrize("noto_g_ri", ["1201", "12-01", "", None, "12:1", "ab:cd"])
 def test_kod_xato(noto_g_ri):
     with pytest.raises(ValueError):
-        normalizatsiya.kod(noto_g_ri)
+        kod_ajrat(noto_g_ri)
 
 
 # --------------------------------------------------------------------------- manba yaratish
@@ -121,7 +121,7 @@ def manba_yarat(papka, tumanlar=None, massivlar=None):
     """regions/, districts/, GIS.gdb yaratadi. Standart to'plam:
 
     viloyat 12 (mhobt 1712, nom apostrofli), 13; tuman 12:01 (lotin/kirill `T`), 12:02 (`Ш`),
-    12:03 (invalid bowtie), 99:01 (viloyat yo'q). massiv (kalit globalid): A1 (1201), A2 (1202, massiv_id takror), A3 (massiv_id=0),
+    12:03 (invalid bowtie), 99:01 (viloyat yo'q). massiv (kaliti yo'q, fid): A1 (1201), A2 (1202), A3,
     A4 (hech qaysi tumanda emas), A5 (1201 25% / 1202 75%).
     """
     _shp(
@@ -183,11 +183,11 @@ def test_quruq_hisobot(manba):
     # 99:01 uchun viloyat yo'q -> o'tkazildi; invalid bowtie tuzatildi
     assert "tuman: manba 4, yuklanadi 3, o'tkazildi 1, geometriyasi tuzatildi 1" in chiqish
     assert "viloyat topilmadi: region_id=99" in chiqish
-    # takror massiv_id va massiv_id=0 saqlanadi; faqat tumansiz A4 o'tkazildi
+    # faqat tumansiz A4 o'tkazildi
     assert "massiv: manba 5, yuklanadi 4, o'tkazildi 1" in chiqish
     assert "(a) hech bir tuman bilan kesishmaydi (o'tkazildi): 1" in chiqish
     assert "ikkinchi tuman ulushi >5%: 1" in chiqish
-    assert "{A5} | Ikki tumanli | tuman 1202 75.0%, tuman 1201 25.0%" in chiqish
+    assert "fid=5 | Ikki tumanli | tuman 1202 75.0%, tuman 1201 25.0%" in chiqish
 
 
 def test_quruq_nomlar_normallashgan(manba):
@@ -269,15 +269,11 @@ def test_import_hammasi(manba):
     assert not Tuman.objects.filter(kod=9901).exists()
     assert "viloyat topilmadi" in chiqish
 
-    assert Massiv.objects.get(globalid="{A1}").tuman.kod == 1201
-    assert Massiv.objects.get(globalid="{A1}").nom == "O‘rta massiv"
-    assert Massiv.objects.get(globalid="{A2}").tuman.kod == 1202
-    # takror massiv_id va 0 saqlanadi (unique emas)
-    assert Massiv.objects.filter(massiv_id=1).count() == 2
-    assert Massiv.objects.filter(massiv_id=0).count() == 1
+    assert Massiv.objects.get(nom="O‘rta massiv").tuman.kod == 1201
+    assert Massiv.objects.get(nom="Takror id").tuman.kod == 1202
     # 2 tumanli massiv - eng katta kesishuvli tumanga (1202, 75%)
-    assert Massiv.objects.get(globalid="{A5}").tuman.kod == 1202
-    assert not Massiv.objects.filter(globalid="{A4}").exists()
+    assert Massiv.objects.get(nom="Ikki tumanli").tuman.kod == 1202
+    assert not Massiv.objects.filter(nom="Tashqarida").exists()
     assert "ikkinchi tuman ulushi >5%: 1" in chiqish
 
 
@@ -290,6 +286,8 @@ def test_import_idempotent(manba):
     assert (Viloyat.objects.count(), Tuman.objects.count(), Massiv.objects.count()) == holat
     assert set(Tuman.objects.values_list("id", flat=True)) == ids
     assert "yuklandi 0, yangilandi 2" in chiqish  # viloyat
+    assert "massiv: manba 5, yuklandi 4, yangilandi 0" in chiqish  # massivlar to'liq almashtiriladi
+    assert "o'chirildi 4" in chiqish
 
 
 @pytest.mark.django_db
@@ -332,4 +330,4 @@ def test_tozala(tmp_path, manba):
     assert list(Tuman.objects.values_list("kod", flat=True)) == [1201]
     assert "o'chirildi 2" in chiqish
     # o'chirilgan tumanning massivlari (CASCADE) ham ketadi, 1201 niki qoladi
-    assert set(Massiv.objects.values_list("globalid", flat=True)) == {"{A1}", "{A3}"}
+    assert set(Massiv.objects.values_list("nom", flat=True)) == {"O‘rta massiv", "Nol id"}

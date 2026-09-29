@@ -1,7 +1,7 @@
 from django.db import connection
 from django.db.utils import Error as DBError
 from rest_framework.decorators import api_view
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, ParseError
 from rest_framework.response import Response
 
 from .models import Tuman, Viloyat
@@ -11,7 +11,14 @@ from .serializers import (
     ViloyatRoyxatSerializer,
     ViloyatSerializer,
 )
-from .validatsiya import butun_son
+
+
+def butun_son(qiymat, nom):
+    """Query parametrini butun songa aylantiradi; bo'lmasa 400."""
+    try:
+        return int(str(qiymat).strip())
+    except (TypeError, ValueError):
+        raise ParseError(f"'{nom}' parametri butun son bo'lishi kerak.") from None
 
 
 @api_view(["GET"])

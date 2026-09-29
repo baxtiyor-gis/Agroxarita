@@ -27,3 +27,9 @@ Ishlash qoidalari:
 
 Natija (qisqa): qatlam/maydon xaritasi jadval ko'rinishida, sonlar, topilgan muammolar
 (bo'sh maydonlar, CRS, noto'g'ri geometriya), keyingi qadam. Xom ogrinfo chiqishini qaytarma.
+
+
+Taqiqlangan (xavfsizlik):
+- Bazalarni (`agroxarita`, `test_agroxarita`) DROP/CREATE qilma, `--create-db` ishlatma.
+- Parol/rol/superuser bilan ishlashga urinma, parol taxmin qilma. Ruxsat yetmasa — to'xta va natijada yoz.
+

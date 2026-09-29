@@ -4,6 +4,7 @@
 
 Flag berilmasa - hammasi. `--quruq` - o'qiydi, normallashtiradi, hisobot beradi, bazaga yozmaydi.
 """
+import re
 from pathlib import Path
 
 from django.conf import settings
@@ -12,7 +13,6 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from osgeo import ogr
 
-from apps.border import normalizatsiya
 from apps.border.models import Massiv, Tuman, Viloyat
 
 ogr.UseExceptions()
@@ -21,6 +21,55 @@ SODDALASH_METR = 250  # geom_mvt_s uchun (EPSG:3857 birligida)
 NAMUNA_SONI = 10
 KESISHUV_ESHIGI = 0.001  # massiv maydonining 0.1% dan kichik kesishuv hisobga olinmaydi
 KATTA_ULUSH = 0.05  # ikkinchi tumanga tushgan ulush hisobotda 'katta' hisoblanadi
+
+
+# --------------------------------------------------------------------------- normallashtirish
+
+# manbada aralash uchraydigan apostrof belgilari
+_APOSTROFLAR = "‘’'`ʻʼ´′"
+_APOSTROF_RE = re.compile(f"[{re.escape(_APOSTROFLAR)}]")
+O_G_APOSTROF = "‘"  # o' / g' (oz, gz)
+BOSHQA_APOSTROF = "’"  # tutuq belgisi (ma'no, ...)
+
+_TIP_XARITA = {
+    "t": "tuman",  # lotin T
+    "т": "tuman",  # kirill т
+    "ш": "shahar",  # kirill Ш
+    "s": "shahar",
+    "sh": "shahar",
+}
+
+
+def apostrof(matn):
+    """`o`/`g` dan keyin ‘ (U+2018), boshqa joyda ’ (U+2019)."""
+
+    def almashtir(m):
+        oldingi = m.string[m.start() - 1] if m.start() > 0 else ""
+        return O_G_APOSTROF if oldingi in "oOgG" else BOSHQA_APOSTROF
+
+    return _APOSTROF_RE.sub(almashtir, matn)
+
+
+def nom_tozala(matn):
+    """Nomni tozalash: apostrof birxillashtiriladi, ortiqcha bo'shliqlar olib tashlanadi."""
+    if matn is None:
+        return ""
+    return " ".join(apostrof(str(matn)).split())
+
+
+def tip_aniqla(qiymat):
+    """`T`/`Т` -> 'tuman', `Ш` -> 'shahar'. Tanib bo'lmasa None."""
+    if qiymat is None:
+        return None
+    return _TIP_XARITA.get(str(qiymat).strip().casefold())
+
+
+def kod_ajrat(cad_raqami):
+    """'12:01' -> 1201. Noto'g'ri format bo'lsa ValueError."""
+    m = re.fullmatch(r"\s*(\d{1,2})\s*:\s*(\d{2})\s*", str(cad_raqami or ""))
+    if not m:
+        raise ValueError(f"cad_raqami formati noto'g'ri: {cad_raqami!r}")
+    return int(m.group(1)) * 100 + int(m.group(2))
 
 
 # --------------------------------------------------------------------------- geometriya
@@ -122,7 +171,7 @@ class Hisobot:
         self.manbada_yoq = 0
         self.ogohlantirish = []
         self.kesishmaydi = 0
-        self.kop_tumanli = []  # (globalid, nom, [(tuman kod, ulush)])
+        self.kop_tumanli = []  # (kalit, nom, [(tuman kod, ulush)])
 
     def qator(self, quruq):
         holat = f"yuklanadi {self.tayyor}" if quruq else f"yuklandi {self.yaratildi}, yangilandi {self.yangilandi}"
@@ -138,19 +187,20 @@ class Hisobot:
 def _tayyorla(yozuvlar, h, kalit_fn, qolgan_fn):
     """Umumiy sikl: geometriyani tayyorlaydi, takror kalitni o'tkazadi.
 
-    kalit_fn(maydonlar) -> kalit, qolgan_fn(maydonlar) -> dict; ikkalasi ham ValueError berishi mumkin.
+    kalit_fn(maydonlar) -> kalit (None bo'lsa kalit yo'q: kalit = "fid=N", takror tekshirilmaydi),
+    qolgan_fn(maydonlar) -> dict; ikkalasi ham ValueError berishi mumkin.
     Qaytaradi: [(kalit, maydonlar dict, geometriya dict)]
     """
     chiqish, korilgan = [], set()
     for fid, m, g in yozuvlar:
         h.manba += 1
         try:
-            kalit = kalit_fn(m)
+            kalit = kalit_fn(m) if kalit_fn else f"fid={fid}"
             qolgan = qolgan_fn(m)
         except (ValueError, TypeError) as xato:
             h.otkazildi.append((f"fid={fid}", str(xato)))
             continue
-        if kalit in korilgan:
+        if kalit_fn and kalit in korilgan:
             h.otkazildi.append((kalit, "manbada takror kalit"))
             continue
         korilgan.add(kalit)
@@ -167,10 +217,6 @@ def _tayyorla(yozuvlar, h, kalit_fn, qolgan_fn):
             h.tuzatildi += 1
         chiqish.append((kalit, qolgan, gm))
     return chiqish
-
-
-def _xato(sabab):
-    raise ValueError(sabab)
 
 
 class Command(BaseCommand):
@@ -211,7 +257,7 @@ class Command(BaseCommand):
         yozuvlar = _tayyorla(
             _yozuvlar(ds.GetLayer(0), h.ogohlantirish.append), h,
             kalit_fn=lambda m: int(m["region_id"]),
-            qolgan_fn=lambda m: {"soato": str(int(m["mhobt"])), "nom": normalizatsiya.nom(m["name_lot"])},
+            qolgan_fn=lambda m: {"soato": str(int(m["mhobt"])), "nom": nom_tozala(m["name_lot"])},
         )
         self._takror_soato(yozuvlar, h)
         self._viloyat_kalitlari = {k for k, _, _ in yozuvlar}
@@ -231,7 +277,7 @@ class Command(BaseCommand):
             viloyat_bor = {int(f["region_id"]) for f in _ochish(data / "regions" / "regions.shp").GetLayer(0)}
 
         def qolgan(m):
-            t = normalizatsiya.tip(m["tip"])
+            t = tip_aniqla(m["tip"])
             if t is None:
                 raise ValueError(f"tip tanib bo'lmadi: {m['tip']!r}")
             region_id = int(m["region_id"])
@@ -239,12 +285,12 @@ class Command(BaseCommand):
                 raise ValueError(f"viloyat topilmadi: region_id={region_id}")
             return {
                 "region_id": region_id, "tip": t, "soato": str(int(m["mhobt"])),
-                "nom": normalizatsiya.nom(m["name_lot"]),
+                "nom": nom_tozala(m["name_lot"]),
             }
 
         yozuvlar = _tayyorla(
             _yozuvlar(ds.GetLayer(0), h.ogohlantirish.append), h,
-            kalit_fn=lambda m: normalizatsiya.kod(m["cad_raqami"]), qolgan_fn=qolgan,
+            kalit_fn=lambda m: kod_ajrat(m["cad_raqami"]), qolgan_fn=qolgan,
         )
         self._takror_soato(yozuvlar, h)
         self._tuman_geom = [(k, gm["geom"], gm["geom_mvt"]) for k, _, gm in yozuvlar]
@@ -268,15 +314,10 @@ class Command(BaseCommand):
 
         tumanlar = self._tuman_royxati()  # [(kod, PreparedGeometry(4326), geom_mvt)]
 
-        def qolgan(m):
-            massiv_id = m["massiv_id"]
-            return {"massiv_id": int(massiv_id) if massiv_id is not None else None,
-                    "nom": normalizatsiya.nom(m["name_lot"])}
-
+        # massivlarning kaliti yo'q — har importda to'liq almashtiriladi
         yozuvlar = _tayyorla(
             _yozuvlar(qatlam, h.ogohlantirish.append), h,
-            kalit_fn=lambda m: str(m["globalid"]).strip() if m["globalid"] else _xato("globalid yo'q"),
-            qolgan_fn=qolgan,
+            kalit_fn=None, qolgan_fn=lambda m: {"nom": nom_tozala(m["name_lot"])},
         )
         boglangan, kesishmaydi, kop_tumanli = [], 0, []
         for kalit, q, gm in yozuvlar:
@@ -293,10 +334,20 @@ class Command(BaseCommand):
         h.kesishmaydi = kesishmaydi
         h.kop_tumanli = kop_tumanli
         self.namunalar["massiv"] = [(k, q["nom"], q["tuman_kod"]) for k, q, _ in boglangan]
-        self._yuklash(
-            h, Massiv, "globalid", boglangan,
-            oldindan=lambda q: {"tuman": Tuman.objects.get(kod=q.pop("tuman_kod"))},
-        )
+        self._almashtir(h, boglangan)
+
+    def _almashtir(self, h, yozuvlar):
+        """Massivlarni bitta tranzaksiyada to'liq almashtiradi (o'chirib qayta yozadi)."""
+        h.tayyor = len(yozuvlar)
+        if self.quruq:
+            return
+        tumanlar = {t.kod: t for t in Tuman.objects.only("id", "kod")}
+        yangi = [Massiv(tuman=tumanlar[q["tuman_kod"]], nom=q["nom"], **gm) for _, q, gm in yozuvlar]
+        with transaction.atomic():
+            h.ochirildi = Massiv.objects.count()
+            Massiv.objects.all().delete()
+            Massiv.objects.bulk_create(yangi, batch_size=500)
+        h.yaratildi = len(yangi)
 
     def _tuman_royxati(self):
         if self.quruq:

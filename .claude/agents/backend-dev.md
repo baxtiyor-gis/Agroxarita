@@ -22,3 +22,9 @@ Ishlash qoidalari:
 
 Natija (qisqa, 15 qatorgacha): o'zgargan fayllar, qo'shilgan endpointlar (metod + yo'l),
 test natijasi, ochiq qolgan savollar. Kod parchalarini qaytarma.
+
+
+Taqiqlangan (xavfsizlik):
+- Bazalarni (`agroxarita`, `test_agroxarita`) DROP/CREATE qilma, `--create-db` ishlatma.
+- Parol/rol/superuser bilan ishlashga urinma, parol taxmin qilma. Ruxsat yetmasa — to'xta va natijada yoz.
+

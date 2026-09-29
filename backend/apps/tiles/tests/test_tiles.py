@@ -109,7 +109,8 @@ def test_massiv_tile(client, massiv):
     x, y = _tile_koordinata(12, 69.15, 40.15)
     javob = client.get(f"/tiles/massiv/12/{x}/{y}.pbf")
     assert javob.status_code == 200
-    for kalit in (b"massiv", b"massiv_id", b"kod"):
+    assert b"massiv_id" not in javob.content
+    for kalit in (b"massiv", b"nom", b"kod"):
         assert kalit in javob.content
     assert client.get(f"/tiles/massiv/12/{x}/{y}.pbf?tuman=1201").status_code == 200
     assert client.get(f"/tiles/massiv/12/{x}/{y}.pbf?tuman=9999").status_code == 204
@@ -121,7 +122,7 @@ def test_massiv_tile_tuman_filtri_z6_dan(client, massiv):
         x, y = _tile_koordinata(z, 69.15, 40.15)
         javob = client.get(f"/tiles/massiv/{z}/{x}/{y}.pbf?tuman=1201")
         assert javob.status_code == 200, z
-        assert b"massiv_id" in javob.content
+        assert b"massiv" in javob.content
         # filtrsiz z=8 — oraliqdan tashqarida
     x, y = _tile_koordinata(8, 69.15, 40.15)
     assert client.get(f"/tiles/massiv/8/{x}/{y}.pbf").status_code == 204

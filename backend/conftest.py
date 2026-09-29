@@ -54,9 +54,9 @@ def shahar(viloyat):
 
 @pytest.fixture
 def massiv(tuman):
-    """Massiv massiv_id=120101: birinchi tuman ichida."""
+    """Massiv: birinchi tuman ichida."""
     return Massiv.objects.create(
-        tuman=tuman, globalid="{00000000-0000-0000-0000-000000120101}", massiv_id=120101, nom="Sinov massivi",
+        tuman=tuman, nom="Sinov massivi",
         **geometriya_maydonlari(kvadrat(69.1, 40.1, 69.2, 40.2)),
     )
 

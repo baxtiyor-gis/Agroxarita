@@ -50,7 +50,7 @@ Tile ichidagi qatlam nomi = URL dagi `{qatlam}`. Extent 4096, buffer 64.
 |---|---|---|---|
 | `viloyat` | 0–14 | `region_id`, `nom` | — |
 | `tuman` | 5–14 | `kod`, `nom`, `tip`, `region_id` | `?viloyat={region_id}` |
-| `massiv` | 9–16 (`?tuman=` bilan **6–16**) | `massiv_id`, `nom`, `kod` (tuman kodi) | `?tuman={kod}` |
+| `massiv` | 9–16 (`?tuman=` bilan **6–16**) | `nom`, `kod` (tuman kodi) | `?tuman={kod}` |
 | `maska` | 0–16 | — (faqat geometriya) | `?tuman={kod}` **majburiy** |
 | `kontur` | 9–18 | `id`, `kontur_raqami`, `maydon` (ga, 2 xona), `tur` (`sugoriladigan` \| `aniqlanmagan`) | `?tuman={kod}` **majburiy** (`tuman_geo` bo'yicha) |
 

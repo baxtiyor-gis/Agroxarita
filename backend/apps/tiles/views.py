@@ -34,7 +34,7 @@ QATLAMLAR = {
         "zoom": (9, 16),
         "filtr_zoom_min": 6,  # ?tuman= berilganda z >= 6 dan (z < 9 da geom_mvt_s)
         "jadval": f"{Massiv._meta.db_table} t JOIN {Tuman._meta.db_table} d ON d.id = t.tuman_id",
-        "atributlar": "t.massiv_id, t.nom, d.kod",
+        "atributlar": "t.nom, d.kod",
         "filtrlar": {"tuman": "d.kod = %s"},
     },
     # maska: tile to'rtburchagi minus tuman (alohida SQL — maska_sql); ?tuman majburiy

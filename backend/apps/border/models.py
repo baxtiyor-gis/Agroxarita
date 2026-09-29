@@ -50,8 +50,6 @@ class Tuman(GeometriyaMixin):
 
 class Massiv(GeometriyaMixin):
     tuman = models.ForeignKey(Tuman, on_delete=models.CASCADE, related_name="massivlar")
-    globalid = models.CharField(max_length=64, unique=True)  # manbadagi globalid - kalit
-    massiv_id = models.BigIntegerField(null=True, blank=True)  # unique emas: 0/NULL/takror bo'lishi mumkin
     nom = models.CharField(max_length=150, blank=True)
 
     class Meta:
@@ -59,4 +57,4 @@ class Massiv(GeometriyaMixin):
         verbose_name_plural = "massivlar"
 
     def __str__(self):
-        return self.nom or str(self.massiv_id)
+        return self.nom or f"Massiv {self.pk}"

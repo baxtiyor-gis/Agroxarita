@@ -1,7 +1,8 @@
 """Tuproq ma'lumotlarini normallashtirish (sof Python, Django/GDAL'ga bog'liq emas)."""
 import re
 
-from apps.border.normalizatsiya import BOSHQA_APOSTROF, O_G_APOSTROF
+O_G_APOSTROF = "‘"  # o' / g'
+BOSHQA_APOSTROF = "’"  # tutuq belgisi
 
 _UNLILAR = set("аеёиоуўэюяыАЕЁИОУЎЭЮЯЫ")
 
