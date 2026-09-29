@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import { BorderLayers } from '@/features/border/BorderLayers'
+import { KonturPanel } from '@/features/kontur/KonturPanel'
+import { useKontur } from '@/features/kontur/api'
 import { useTanlov } from '@/features/border/useTanlov'
 import { useUi } from '@/store/useUi'
 import { MapControls } from './MapControls'
@@ -18,6 +20,8 @@ export function MapView() {
   const oldingi = useRef<string | undefined>(undefined)
   const [zoom, setZoom] = useState(0)
   const asosiy = useUi((s) => s.asosiy)
+  const konturQ = useKontur(tanlov.kontur)
+  const konturBbox = konturQ.data?.bbox
   const kontur = useUi((s) => s.qatlamlar.qx || s.qatlamlar.qolgan)
 
   useEffect(() => {
@@ -61,11 +65,26 @@ export function MapView() {
     }
     if (oldingi.current === bboxKey) return
     oldingi.current = bboxKey
+    if (bbox && tanlov.kontur != null) return // kontur URL orqali ochilgan — kamera kontur bbox'iga
     if (bbox) tayyor.fitBounds(bbox, { padding: 48, duration: 800 })
     else if (!tanlov.viloyat && !tanlov.tuman)
       tayyor.fitBounds(UZ_BOUNDS, { padding: 20, duration: 800 })
     // bbox bboxKey orqali kuzatiladi
   }, [tayyor, bboxKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Kontur URL orqali ochilsa (yoki ko'rinishdan tashqarida bo'lsa) — kontur bbox'iga yaqinlashadi;
+  // xaritada bosilgan (ko'rinib turgan) kontur uchun kamera qimirlamaydi
+  useEffect(() => {
+    if (!tayyor || !konturBbox) return
+    const [x0, y0, x1, y1] = konturBbox
+    const markaz: [number, number] = [(x0 + x1) / 2, (y0 + y1) / 2]
+    if (tayyor.getZoom() >= 13 && tayyor.getBounds().contains(markaz)) return
+    tayyor.fitBounds(konturBbox, {
+      padding: { left: 440, top: 80, right: 80, bottom: 80 },
+      maxZoom: 17,
+      duration: 800,
+    })
+  }, [tayyor, konturBbox])
 
   return (
     <>
@@ -78,6 +97,7 @@ export function MapView() {
         </div>
       )}
       {tayyor && <BorderLayers map={tayyor} tanlov={tanlov} />}
+      <KonturPanel />
       <MapControls
         onZoomIn={() => xarita.current?.zoomIn()}
         onZoomOut={() => xarita.current?.zoomOut()}

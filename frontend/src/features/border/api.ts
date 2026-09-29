@@ -10,7 +10,7 @@ export class ApiXato extends Error {
   }
 }
 
-async function getJson<T>(url: string): Promise<T> {
+export async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url)
   if (!res.ok) {
     let xabar = res.statusText
@@ -25,7 +25,7 @@ async function getJson<T>(url: string): Promise<T> {
 }
 
 // 404 — qayta urinishning foydasi yo'q
-const retry = (n: number, e: Error) => !(e instanceof ApiXato && e.status === 404) && n < 1
+export const retry = (n: number, e: Error) => !(e instanceof ApiXato && e.status === 404) && n < 1
 
 export function useViloyatlar() {
   return useQuery({

@@ -611,3 +611,38 @@ Avval hisobot (son, ga), keyin yangilash.
 ### Ijro tartibi
 
 1. `backend-dev` (border refaktori tugagach) → tekshiruv. 2. `frontend-dev` → skrinshot tekshiruvi. 3. Commit.
+
+---
+
+## Task 8 — Agrokimyo: kaliy (`GIS.gdb` → `Kaliy`)
+
+### Manba (2026-09-29)
+
+- 103 000 poligon, EPSG:3857, MultiPolygon. Yillar: 2020 (18 973), 2022 (14 577), 2023 (24 620), 2024 (55 830) —
+  bir joy turli yillarda takrorlanishi mumkin.
+- `darajasi` / `gradatsiyasi` (mg/kg): Juda kam `<100`, Kam `101-200`, O'rtacha `201-300`, Ko'p `401-500`, Juda ko'p `>400`
+  (manbada gradatsiyalar biroz nomuvofiq — matn sifatida saqlanadi).
+- `district_cad` — tuman kodi (130 xil, `Tuman.kod`), `area` — ga (tekshiriladi), `region`/`district` — domen kodlari.
+
+### Qarorlar
+
+- Umumiy model `soil.Agrokimyo` — keyin gumus, fosfor ham shu jadvalga (`korsatkich`).
+- Daraja — tartibli kod: 1 juda kam, 2 kam, 3 o'rtacha, 4 ko'p, 5 juda ko'p.
+- Konturga: eng so'nggi yil ichida eng katta kesishuv.
+
+### 1. Backend — `backend-dev`
+
+- Model `Agrokimyo`: `korsatkich` (`kaliy`/`fosfor`/`gumus`, index), `yil` (int, index), `daraja` (1..5, null),
+  `daraja_nom`, `gradatsiya` (matn), `tuman` FK (null; `district_cad` → kod, bo'lmasa eng katta kesishuv), `maydon` (ga),
+  `manba` JSON (viloyat, tuman, region, district, region_cad), `geom` 4326 + `geom_mvt` 3857 (GiST). Admin.
+- `import_agrokimyo --qatlam Kaliy --korsatkich kaliy` — staging → INSERT…SELECT (Force2D, MakeValid, Multi),
+  shu `korsatkich` qatorlarini almashtiradi (bitta tranzaksiya). Daraja matndan: `Juda kam`→1 … `Juda ko'p`→5
+  (apostrof variantlari). Hisobot: soni, yil/daraja taqsimoti, tuman bog'lanishi, `area` birligi (mediana nisbat), invalid.
+- `GET /api/konturlar/{id}/` ga `agrokimyo`: `{"kaliy": {"daraja": 2, "daraja_nom": "Kam", "gradatsiya": "101-200",
+  "yil": 2024, "qoplanish": 0.87} | null}` (eng so'nggi yil, eng katta kesishuv). `docs/api.md`, testlar.
+- Haqiqiy import va Bulung'ur (1401) namunaviy konturlarda tekshiruv.
+
+### 2. Frontend — `frontend-dev` (Task 7 paneli tugagach)
+
+- Kontur panelidagi Tuproq tab → agrokimyo blokida **Kaliy** — haqiqiy (V1 dagi daraja ko'rinishi, yil bilan);
+  gumus, fosfor — mock qoladi.

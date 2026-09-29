@@ -1,5 +1,4 @@
-import { useEffect } from 'react'
-import * as maplibregl from 'maplibre-gl'
+import { useEffect, useRef } from 'react'
 import type { ExpressionSpecification, Map, MapLayerMouseEvent, VectorTileSource } from 'maplibre-gl'
 import { useUi } from '@/store/useUi'
 import type { Tanlov } from './useTanlov'
@@ -9,6 +8,8 @@ const L = {
   konturFill: 'kontur-fill',
   kontur: 'kontur-line',
   massivLine: 'massiv-line',
+  konturTanlanganHalo: 'kontur-tanlangan-halo',
+  konturTanlangan: 'kontur-tanlangan',
   tumanHalo: 'tuman-halo',
   tuman: 'tuman-line',
   viloyat: 'viloyat-line',
@@ -87,6 +88,25 @@ function qoshish(map: Map) {
       'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1.5, 14, 2.5],
       'line-dasharray': [3, 2],
     },
+  })
+  // tanlangan kontur (panel ochiq): oq qalin chegara, ostida to'q hoshiya — har qanday fonda ko'rinsin
+  map.addLayer({
+    id: L.konturTanlanganHalo,
+    type: 'line',
+    source: SRC.kontur,
+    'source-layer': 'kontur',
+    filter: ['==', ['get', 'id'], -1],
+    layout: { visibility: 'none', 'line-join': 'round' },
+    paint: { 'line-color': token('ink'), 'line-width': 5, 'line-opacity': 0.5 },
+  })
+  map.addLayer({
+    id: L.konturTanlangan,
+    type: 'line',
+    source: SRC.kontur,
+    'source-layer': 'kontur',
+    filter: ['==', ['get', 'id'], -1],
+    layout: { visibility: 'none', 'line-join': 'round' },
+    paint: { 'line-color': token('surface'), 'line-width': 3 },
   })
   // tanlangan tuman ostidagi to'q hoshiya — sariq chiziq har qanday fonda ko'rinsin
   map.addLayer({
@@ -177,33 +197,20 @@ function yangilash(
   vis(L.konturFill, tuman != null && (qat.qx || qat.qolgan))
 }
 
-const TUR_NOMI: Record<string, string> = {
-  sugoriladigan: "Qishloq xo'jaligi yeri",
-  aniqlanmagan: 'Qolgan yer',
+/** Tanlangan kontur qatlami (filter `id`); tuman tanlanmagan bo'lsa yashirin */
+function tanlanganKontur(map: Map, kontur: number | null, tuman: number | null) {
+  const korinadi = kontur != null && tuman != null
+  for (const id of [L.konturTanlangan, L.konturTanlanganHalo]) {
+    map.setFilter(id, ['==', ['get', 'id'], kontur ?? -1])
+    map.setLayoutProperty(id, 'visibility', korinadi ? 'visible' : 'none')
+  }
 }
 
-const qator = (nom: string, qiymat: string) =>
-  `<div class="flex justify-between gap-4"><span class="text-muted">${nom}</span><span class="font-medium text-ink">${qiymat}</span></div>`
-
-/** Kontur bosilganda popup: id, kontur raqami, maydon, tur. Tozalash funksiyasini qaytaradi. */
-function konturPopup(map: Map) {
-  const popup = new maplibregl.Popup({ closeButton: true, maxWidth: '240px' })
+/** Kontur bosilganda `?kontur={id}` ga yozadi (popup yo'q). Tozalash funksiyasini qaytaradi. */
+function konturBosish(map: Map, tanla: (id: number) => void) {
   const bosish = (e: MapLayerMouseEvent) => {
-    const f = e.features?.[0]
-    if (!f) return
-    const p = f.properties as { id: number; kontur_raqami?: number; maydon?: number; tur?: string }
-    const maydon = p.maydon != null ? `${p.maydon.toLocaleString('uz-UZ')} ga` : '—'
-    popup
-      .setLngLat(e.lngLat)
-      .setHTML(
-        `<div class="space-y-1 text-[12.5px]">` +
-          qator('ID', String(p.id)) +
-          qator('Kontur raqami', p.kontur_raqami != null ? String(p.kontur_raqami) : '—') +
-          qator('Maydon', maydon) +
-          qator('Tur', TUR_NOMI[p.tur ?? ''] ?? '—') +
-          `</div>`,
-      )
-      .addTo(map)
+    const id = (e.features?.[0]?.properties as { id?: number } | undefined)?.id
+    if (id != null) tanla(Number(id))
   }
   const ustida = () => (map.getCanvas().style.cursor = 'pointer')
   const tashqarida = () => (map.getCanvas().style.cursor = '')
@@ -214,7 +221,6 @@ function konturPopup(map: Map) {
     map.off('click', L.konturFill, bosish)
     map.off('mouseenter', L.konturFill, ustida)
     map.off('mouseleave', L.konturFill, tashqarida)
-    popup.remove()
   }
 }
 
@@ -224,7 +230,11 @@ export function BorderLayers({ map, tanlov }: { map: Map; tanlov: Tanlov }) {
     return () => ochirish(map)
   }, [map])
 
-  const { viloyat, tuman } = tanlov
+  const { viloyat, tuman, kontur, setKontur } = tanlov
+  const tanla = useRef(setKontur)
+  useEffect(() => {
+    tanla.current = setKontur
+  })
   const qatlamlar = useUi((s) => s.qatlamlar)
   const asosiy = useUi((s) => s.asosiy)
 
@@ -232,7 +242,11 @@ export function BorderLayers({ map, tanlov }: { map: Map; tanlov: Tanlov }) {
     tilesYangilash(map, tuman)
   }, [map, tuman])
 
-  useEffect(() => konturPopup(map), [map])
+  useEffect(() => konturBosish(map, (id) => tanla.current(id)), [map])
+
+  useEffect(() => {
+    tanlanganKontur(map, kontur, tuman)
+  }, [map, kontur, tuman])
 
   useEffect(() => {
     yangilash(map, { viloyat, tuman }, qatlamlar, asosiy === 'sputnik')
