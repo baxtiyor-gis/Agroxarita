@@ -4,7 +4,6 @@ import { useTanlov } from '@/features/border/useTanlov'
 import { cn } from '@/lib/cn'
 import { useKontur } from './api'
 import { EkinlarTab } from './EkinlarTab'
-import { TUR_NOMI, ga } from './format'
 import { IqlimTab } from './IqlimTab'
 import { MalumotTab } from './MalumotTab'
 import { RelyefTab } from './RelyefTab'
@@ -55,11 +54,6 @@ export function KonturPanel() {
             <div className="nums text-[18px] leading-tight font-semibold tracking-tight text-navy">
               Kontur {k ? k.kontur_raqami : kontur}
             </div>
-            <div className="mt-0.5 truncate text-[12px] text-muted">
-              {k
-                ? `${k.massiv ? `${k.massiv} massivi` : k.tuman.nom}${k.mfy ? ` · ${k.mfy} MFY` : ''}`
-                : ' '}
-            </div>
           </div>
           <button
             onClick={() => setKontur(null)}
@@ -70,22 +64,6 @@ export function KonturPanel() {
             <X className="size-4" />
           </button>
         </div>
-        {k && (
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11.5px]">
-            <span className="nums rounded-full bg-sunken px-2.5 py-[3px] font-semibold text-ink">
-              {ga(k.maydon)} ga
-            </span>
-            <span className="flex items-center gap-1.5 rounded-full bg-sunken px-2.5 py-[3px] text-body">
-              <span
-                className={cn(
-                  'size-2.5 rounded-full ring-1 ring-black/10',
-                  k.tur === 'sugoriladigan' ? 'bg-clay' : 'bg-water',
-                )}
-              />
-              {TUR_NOMI[k.tur] ?? k.tur}
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Tablar */}
