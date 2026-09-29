@@ -27,14 +27,19 @@ function Belgi({ id, sputnik }: { id: QatlamId; sputnik: boolean }) {
     viloyat: chiziq({ borderTop: `2px solid ${chegara}` }),
     tuman: chiziq({ borderTop: `3px solid ${v('sun')}`, boxShadow: `0 0 0 1px rgb(17 24 39 / 0.55)` }),
     // massiv: xaritadagidek — sputnikda oq punktir (oq panelda ko'rinsin: to'q chiziq ustida), OSMda navy
-    massiv: chiziq(
-      sputnik
-        ? {
-            borderTop: `2px dashed ${v('surface')}`,
-            backgroundColor: 'rgb(55 65 81)',
-            boxShadow: '0 0 0 1px rgb(55 65 81)',
-          }
-        : { borderTop: `2px dashed ${chegara}` },
+    massiv: (
+      <svg width="24" height="8" viewBox="0 0 24 8" className="block">
+        {sputnik && <line x1="0" y1="4" x2="24" y2="4" stroke="rgb(17 24 39 / 0.75)" strokeWidth="4.4" />}
+        <line
+          x1="1"
+          y1="4"
+          x2="23"
+          y2="4"
+          stroke={sputnik ? v('surface') : chegara}
+          strokeWidth="2.2"
+          strokeDasharray="5 3"
+        />
+      </svg>
     ),
     qx: (
       <span
