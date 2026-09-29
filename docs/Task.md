@@ -646,3 +646,35 @@ Avval hisobot (son, ga), keyin yangilash.
 
 - Kontur panelidagi Tuproq tab → agrokimyo blokida **Kaliy** — haqiqiy (V1 dagi daraja ko'rinishi, yil bilan);
   gumus, fosfor — mock qoladi.
+
+---
+
+## Task 9 — `climate` app: 10 yillik ob-havo (sug'oriladigan yerlar, 0.1° grid)
+
+**Qarorlar:** manba — Copernicus CDS, ERA5-Land (API kalit foydalanuvchidan); grid 0.1° — sug'oriladigan konturlar
+tushgan **1 448 katak**; davr — 2016-01-01…2025-12-31 (10 yil).
+
+- **Modellar:** `IqlimKatak` (katak kodi, `geom` 0.1° to'rtburchak 4326 + `geom_mvt`, markaz, sug'oriladigan maydon ga,
+  tuman — eng katta ulush); `IqlimKunlik` (katak FK, sana; t_min, t_max, t_ort, yog'in mm, ET0 mm, radiatsiya,
+  shamol, nisbiy namlik — unique katak+sana; ~5.3 mln qator); `IqlimOylik` (katak, yil, oy — agregatlar);
+  `IqlimYillik` (katak, yil: FAH >10°C, sovuqsiz kunlar, oxirgi bahorgi / birinchi kuzgi sovuq, yillik yog'in, ET0).
+- **Yuklash:** `cdsapi` bilan O'zbekiston bbox bo'yicha oylik NetCDF (`reanalysis-era5-land`, kunlik agregat yoki soatlik→kunlik),
+  `data/era5/` ga (git'da yo'q); `import_iqlim` — NetCDF → katak markazidagi qiymatlar → `IqlimKunlik`, keyin oylik/yillik.
+  Qayta ishga tushirsa davom etadi (yuklangan oylar o'tkaziladi).
+- **API:** `GET /api/konturlar/{id}/` ga `iqlim` (kontur tushgan katak: yillik ko'rsatkichlar + 12 oylik o'rtacha).
+- **Frontend (keyin):** kontur panelidagi Iqlim tab — haqiqiy (V1 tuzilishida).
+- **Kerak:** CDS akkaunt + API kalit (`~/.cdsapirc`), ERA5-Land litsenziyasini akkauntda qabul qilish.
+
+---
+
+## Task 10 — `relief` app: balandlik (Copernicus DEM GLO-30)
+
+**Qarorlar:** manba — Copernicus DEM GLO-30 (AWS open data, kalitsiz); faqat **sug'oriladigan** konturlar (~730 ming).
+
+- DEM tile'lar (1°×1°, `s3://copernicus-dem-30m` / HTTPS) sug'oriladigan konturlar bbox bo'yicha `data/dem/` ga,
+  VRT mozaika. Qiyalik va yo'nalish (`gdal.DEMProcessing`, metrik proyeksiyada).
+- **Model:** `KonturRelyef` (OneToOne `land.Kontur`): balandlik min / o'rtacha / max (m), qiyalik o'rtacha (°),
+  qiyalik sinfi (tekis <1°, yengil 1–3°, o'rta 3–7°, tik >7°), yo'nalish (asosiy tomon: Sh, ShSh, …), hisoblangan sana.
+- **Hisoblash:** `hisobla_relyef [--tuman KOD]` — zonal statistika (tuman bo'yicha bo'laklarda, parallel ishchilar mumkin),
+  qayta ishga tushirsa davom etadi.
+- **API:** `GET /api/konturlar/{id}/` ga `relyef`. **Frontend (keyin):** Relyef tab — haqiqiy.

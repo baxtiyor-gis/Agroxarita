@@ -62,3 +62,33 @@ class Tuproq(models.Model):
 
     def __str__(self):
         return self.globalid
+
+
+class Agrokimyo(models.Model):
+    """Agrokimyo poligoni (GIS.gdb `Kaliy` va h.k.). Import — `import_agrokimyo`."""
+
+    KALIY = "kaliy"
+    FOSFOR = "fosfor"
+    GUMUS = "gumus"
+    KORSATKICH_TANLOV = [(KALIY, "Kaliy"), (FOSFOR, "Fosfor"), (GUMUS, "Gumus")]
+
+    korsatkich = models.CharField(max_length=16, choices=KORSATKICH_TANLOV, db_index=True)
+    yil = models.IntegerField(null=True, blank=True, db_index=True)
+    daraja = models.PositiveSmallIntegerField(null=True, blank=True)  # 1 juda kam .. 5 juda ko'p
+    daraja_nom = models.CharField(max_length=32, blank=True, default="")
+    gradatsiya = models.CharField(max_length=32, blank=True, default="")
+    tuman = models.ForeignKey(
+        "border.Tuman", on_delete=models.SET_NULL, null=True, blank=True, related_name="agrokimyolar", db_index=True
+    )
+    maydon = models.FloatField(null=True, blank=True)  # ga (manba `area`)
+    manba = models.JSONField(default=dict, blank=True)  # viloyat, tuman, region, district, region_cad
+
+    geom = models.MultiPolygonField(srid=4326, spatial_index=True)
+    geom_mvt = models.MultiPolygonField(srid=3857, spatial_index=True)
+
+    class Meta:
+        verbose_name_plural = "agrokimyolar"
+        indexes = [models.Index(fields=["korsatkich", "yil"], name="agrokimyo_kors_yil_idx")]
+
+    def __str__(self):
+        return f"{self.korsatkich} {self.yil} {self.daraja_nom}"

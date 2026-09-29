@@ -2,7 +2,7 @@ import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
-from apps.soil.models import Tuproq, TuproqLugat
+from apps.soil.models import Agrokimyo, Tuproq, TuproqLugat
 from conftest import kontur_yarat, kvadrat
 
 
@@ -60,3 +60,35 @@ def test_kontur_tuman_geo_va_404(client, tuman, shahar):
     assert d["tuman"]["kod"] == 1202
     r = client.get("/api/konturlar/99999999/", HTTP_HOST="localhost")
     assert r.status_code == 404 and "detail" in r.json()
+
+
+def _agro(geom, yil, daraja, korsatkich="kaliy", tuman=None):
+    nomlar = {1: "Juda kam", 2: "Kam", 3: "O'rtacha"}
+    return Agrokimyo.objects.create(
+        korsatkich=korsatkich, yil=yil, daraja=daraja, daraja_nom=nomlar[daraja], gradatsiya="101-200",
+        geom=geom, geom_mvt=geom.transform(3857, clone=True), tuman=tuman,
+    )
+
+
+@pytest.mark.django_db
+def test_kontur_agrokimyo_kaliy_oxirgi_yil(client, tuman):
+    # kontur x 69.10..69.20. 2022 da katta (100%), 2024 da: A 69.10..69.15 (50%), B 69.15..69.17 (20%)
+    _agro(kvadrat(69.10, 40.1, 69.20, 40.2), 2022, 1)
+    _agro(kvadrat(69.10, 40.1, 69.15, 40.2), 2024, 2)
+    _agro(kvadrat(69.15, 40.1, 69.17, 40.2), 2024, 3)
+    _agro(kvadrat(69.10, 40.1, 69.20, 40.2), 2025, 3, korsatkich="fosfor")  # boshqa ko'rsatkich
+    k = kontur_yarat(tuman, 13, kvadrat(69.10, 40.1, 69.20, 40.2), umumiy_maydoni=1.0)
+    with CaptureQueriesContext(connection) as sorovlar:
+        d = client.get(f"/api/konturlar/{k.pk}/", HTTP_HOST="localhost").json()
+    assert len(sorovlar) <= 4
+    assert d["agrokimyo"] == {
+        "kaliy": {"daraja": 2, "daraja_nom": "Kam", "gradatsiya": "101-200", "yil": 2024, "qoplanish": 0.7}
+    }
+
+
+@pytest.mark.django_db
+def test_kontur_agrokimyo_yoq_va_kirill_lotin(client, tuman):
+    k = kontur_yarat(tuman, 14, kvadrat(69.1, 40.1, 69.2, 40.2), massiv="М.Улуғбек", mfy="Булунгурарик МФ")
+    d = client.get(f"/api/konturlar/{k.pk}/", HTTP_HOST="localhost").json()
+    assert d["agrokimyo"] == {"kaliy": None}
+    assert d["massiv"] == "M.Ulug‘bek" and d["mfy"] == "Bulungurarik MF"
