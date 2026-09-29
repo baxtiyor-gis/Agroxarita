@@ -6,12 +6,7 @@ class Kontur(models.Model):
 
     SUGORILADIGAN = "sugoriladigan"
     ANIQLANMAGAN = "aniqlanmagan"
-    QX_TUPROQ = "qx_tuproq"  # atribut bo'yicha aniqlanmagan, lekin tuproq poligoni bilan qoplangan (`kontur_tuproq`)
-    TUR_TANLOV = [
-        (SUGORILADIGAN, "Sug'oriladigan"),
-        (QX_TUPROQ, "QX yeri (tuproq bo'yicha)"),
-        (ANIQLANMAGAN, "Aniqlanmagan"),
-    ]
+    TUR_TANLOV = [(SUGORILADIGAN, "Sug'oriladigan"), (ANIQLANMAGAN, "Aniqlanmagan")]
 
     manba_fid = models.BigIntegerField(unique=True)  # GDB OBJECTID
     tuman = models.ForeignKey("border.Tuman", on_delete=models.PROTECT, related_name="konturlar", db_index=True)

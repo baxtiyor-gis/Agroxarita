@@ -5,7 +5,7 @@ from apps.land.bog_lash import kontur_tuproq_hisobla
 
 
 class Command(BaseCommand):
-    help = "aniqlanmagan konturlar: tuproq bilan qoplanish >= chegara bo'lsa -> qx_tuproq (kontur_tur dan keyin)."
+    help = "aniqlanmagan konturlar: tuproq bilan qoplanish >= chegara bo'lsa -> sugoriladigan (kontur_tur dan keyin)."
 
     def add_arguments(self, parser):
         parser.add_argument("--tuman", type=int, default=None, help="faqat shu tuman (tuman_geo) konturlari")

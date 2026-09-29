@@ -28,7 +28,7 @@ const qolganRang = (sputnik: boolean) => (sputnik ? token('sky') : token('water'
 const konturRang = (sputnik: boolean): ExpressionSpecification => [
   'match',
   ['get', 'tur'],
-  ['sugoriladigan', 'qx_tuproq'],
+  'sugoriladigan',
   qxRang(sputnik),
   qolganRang(sputnik),
 ]
@@ -168,7 +168,7 @@ function yangilash(
   map.setPaintProperty(L.massivLine, 'line-color', chegara)
   vis(L.massivLine, tuman != null && qat.massiv)
   map.setPaintProperty(L.kontur, 'line-color', konturRang(sputnik))  // kontur: QX yerlari va qolgan yerlar alohida yoqiladi (filtr tur bo'yicha)
-  const qx: ExpressionSpecification = ['in', ['get', 'tur'], ['literal', ['sugoriladigan', 'qx_tuproq']]]
+  const qx: ExpressionSpecification = ['==', ['get', 'tur'], 'sugoriladigan']
   const qolgan: ExpressionSpecification = ['!', qx]
   const konturFiltr = qat.qx && qat.qolgan ? null : qat.qx ? qx : qolgan
   map.setFilter(L.kontur, konturFiltr)
@@ -179,7 +179,6 @@ function yangilash(
 
 const TUR_NOMI: Record<string, string> = {
   sugoriladigan: "Qishloq xo'jaligi yeri",
-  qx_tuproq: "Qishloq xo'jaligi yeri (tuproq bo'yicha)",
   aniqlanmagan: 'Qolgan yer',
 }
 

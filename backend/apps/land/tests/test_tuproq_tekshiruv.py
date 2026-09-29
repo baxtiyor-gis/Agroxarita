@@ -1,4 +1,4 @@
-"""kontur_tuproq: aniqlanmagan konturlar tuproq bilan >= chegara qoplansa -> qx_tuproq."""
+"""kontur_tuproq: aniqlanmagan konturlar tuproq bilan >= chegara qoplansa -> sugoriladigan."""
 import pytest
 
 from apps.land.bog_lash import kontur_tuproq_hisobla
@@ -12,7 +12,7 @@ def _tuproq(globalid, geom):
 
 
 @pytest.mark.django_db
-def test_qoplanish_boyicha_qx_tuproq(tuman):
+def test_qoplanish_boyicha_sugoriladigan(tuman):
     # tuproq poligoni: x 69.100..69.106
     _tuproq("t1", kvadrat(69.100, 40.100, 69.106, 40.110))
     toliq = kontur_yarat(tuman, 1, kvadrat(69.101, 40.101, 69.103, 40.103), tur=Kontur.ANIQLANMAGAN)  # 100%
@@ -24,7 +24,7 @@ def test_qoplanish_boyicha_qx_tuproq(tuman):
 
     assert natija["yangilandi"] == 1
     turlar = dict(Kontur.objects.filter(pk__in=[toliq.pk, yarim_kam.pk, tashqarida.pk, sug.pk]).values_list("pk", "tur"))
-    assert turlar[toliq.pk] == Kontur.QX_TUPROQ
+    assert turlar[toliq.pk] == Kontur.SUGORILADIGAN
     assert turlar[yarim_kam.pk] == Kontur.ANIQLANMAGAN
     assert turlar[tashqarida.pk] == Kontur.ANIQLANMAGAN
     assert turlar[sug.pk] == Kontur.SUGORILADIGAN  # sug'oriladigan tegilmaydi

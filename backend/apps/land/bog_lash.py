@@ -100,8 +100,8 @@ def kontur_tur_hisobla(tuman_kod=None, yoz=lambda s: None):
 
 
 def kontur_tuproq_hisobla(tuman_kod=None, chegara=0.5, yoz=lambda s: None):
-    """`aniqlanmagan` konturlar: tuproq poligonlari bilan qoplanish ulushi >= `chegara` bo'lsa -> `qx_tuproq`.
-    `kontur_tur_hisobla` dan KEYIN ishga tushiriladi (u `qx_tuproq` ni qayta `aniqlanmagan` qiladi).
+    """`aniqlanmagan` konturlar: tuproq poligonlari bilan qoplanish ulushi >= `chegara` bo'lsa -> `sugoriladigan`.
+    `kontur_tur_hisobla` dan KEYIN ishga tushiriladi (u bularni qayta `aniqlanmagan` qiladi).
     `tuman_kod` — `tuman_geo` bo'yicha."""
     t0 = time.perf_counter()
     with connection.cursor() as c:
@@ -120,7 +120,7 @@ def kontur_tuproq_hisobla(tuman_kod=None, chegara=0.5, yoz=lambda s: None):
                 WHERE {shart} AND k.tur = 'aniqlanmagan'
                 GROUP BY k.id, k.geom
             )
-            UPDATE land_kontur k SET tur = 'qx_tuproq' FROM q
+            UPDATE land_kontur k SET tur = 'sugoriladigan' FROM q
             WHERE k.id = q.id AND q.ulush >= %s
             """,
             [*p, chegara],
@@ -130,7 +130,7 @@ def kontur_tuproq_hisobla(tuman_kod=None, chegara=0.5, yoz=lambda s: None):
                       WHERE {shart} GROUP BY k.tur ORDER BY k.tur""", p)
         turlar = c.fetchall()
     vaqt = time.perf_counter() - t0
-    yoz(f"kontur_tuproq: qx_tuproq ga o'tdi {yangilandi} (chegara {chegara:.0%}); {vaqt:.1f}s")
+    yoz(f"kontur_tuproq: sugoriladigan ga o'tdi {yangilandi} (chegara {chegara:.0%}); {vaqt:.1f}s")
     for tur, n, ga in turlar:
         yoz(f"  {tur}: {n} kontur, {ga:,.1f} ga")
     return {"yangilandi": yangilandi, "turlar": turlar, "vaqt": vaqt}
