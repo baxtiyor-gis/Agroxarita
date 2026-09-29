@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="uz">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bulung'ur — AI model natijalari</title>
+    <style>
+      :root {
+        --ink: #10251b;
+        --muted: #64736c;
+        --paper: #f5f7f2;
+        --surface: #ffffff;
+        --line: #dce5dc;
+        --leaf: #258648;
+        --leaf-dark: #166438;
+        --leaf-soft: #e5f2e7;
+        --sky: #d9edf1;
+        --sky-strong: #3f90a2;
+        --wheat: #e0a12e;
+        --navy: #123a39;
+        --clay: #b9613f;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--paper);
+      }
+      .page { max-width: 1180px; margin: 0 auto; padding: 42px 28px 54px; }
+      .hero {
+        position: relative;
+        overflow: hidden;
+        min-height: 285px;
+        padding: 36px 42px;
+        border-radius: 28px;
+        color: white;
+        background: linear-gradient(122deg, #103c2b 0%, #176b3a 55%, #299a61 100%);
+      }
+      .hero::after, .hero::before {
+        position: absolute; border-radius: 50%; content: ""; opacity: .18;
+      }
+      .hero::before { width: 400px; height: 400px; top: -230px; right: -90px; border: 52px solid #b7e4bf; }
+      .hero::after { width: 255px; height: 255px; bottom: -170px; right: 230px; background: #d8f1cc; }
+      .eyebrow { position: relative; z-index: 1; color: #c5ecd0; font-size: 12px; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }
+      h1 { position: relative; z-index: 1; max-width: 620px; margin: 14px 0 10px; font-size: clamp(30px, 5vw, 52px); line-height: 1.04; letter-spacing: -.045em; }
+      .hero p { position: relative; z-index: 1; max-width: 685px; margin: 0; color: #e0f5e4; font-size: 17px; line-height: 1.5; }
+      .model-pill { position: relative; z-index: 1; display: inline-flex; margin-top: 24px; padding: 8px 12px; border: 1px solid rgb(255 255 255 / .25); border-radius: 999px; background: rgb(7 54 29 / .22); font-size: 13px; }
+      .section-title { margin: 38px 0 16px; font-size: 13px; font-weight: 800; letter-spacing: .1em; color: var(--leaf-dark); text-transform: uppercase; }
+      .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+      .metric, .card { border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: 0 7px 22px rgb(37 75 46 / .045); }
+      .metric { padding: 20px; }
+      .metric-value { font-size: 31px; line-height: 1; font-weight: 800; letter-spacing: -.045em; color: var(--navy); }
+      .metric-label { margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.35; }
+      .two-col { display: grid; grid-template-columns: 1.18fr .82fr; gap: 16px; }
+      .card { padding: 24px; }
+      .card h2 { margin: 0; color: var(--navy); font-size: 20px; letter-spacing: -.03em; }
+      .card-intro { margin: 7px 0 20px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+      .year-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+      .year { padding: 16px; border-radius: 14px; background: #f7faf7; }
+      .year-name { margin-bottom: 12px; color: var(--navy); font-size: 14px; font-weight: 800; }
+      .bar-line { margin: 10px 0; }
+      .bar-top { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; }
+      .track { height: 9px; overflow: hidden; border-radius: 99px; background: #deeadf; }
+      .fill { height: 100%; border-radius: inherit; background: var(--leaf); }
+      .fill.base { background: #a8c4ad; }
+      .gain { margin-top: 12px; color: var(--leaf-dark); font-size: 12px; font-weight: 800; }
+      .donut-layout { display: grid; grid-template-columns: 160px 1fr; align-items: center; gap: 6px; }
+      .donut { width: 140px; height: 140px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--leaf) 0 75.36%, #e1ece3 75.36% 100%); }
+      .donut-inner { display: grid; width: 104px; height: 104px; place-content: center; border-radius: 50%; background: white; text-align: center; }
+      .donut-value { font-size: 25px; font-weight: 800; letter-spacing: -.04em; color: var(--navy); }
+      .donut-label { margin-top: 2px; color: var(--muted); font-size: 10px; }
+      .key-list { padding: 0; margin: 0; list-style: none; }
+      .key-list li { display: flex; gap: 9px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #edf1ed; color: var(--muted); font-size: 12px; line-height: 1.35; }
+      .key-list li:last-child { border: 0; }
+      .dot { flex: 0 0 auto; width: 9px; height: 9px; margin-top: 4px; border-radius: 50%; background: var(--leaf); }
+      .dot.gray { background: #b5c9b7; }
+      .prediction { display: grid; grid-template-columns: .85fr 1.15fr; gap: 16px; }
+      .prediction-lead { min-height: 250px; padding: 28px; border-radius: 18px; color: white; background: linear-gradient(155deg, #164e4b, #247d55); }
+      .prediction-lead h2 { color: white; font-size: 24px; }
+      .prediction-lead p { color: #d6f0dd; font-size: 13px; line-height: 1.5; }
+      .big-number { margin: 24px 0 3px; font-size: 48px; line-height: 1; font-weight: 850; letter-spacing: -.055em; }
+      .crop-list { display: flex; flex-direction: column; gap: 13px; padding-top: 6px; }
+      .crop-row { display: grid; grid-template-columns: minmax(110px, 1fr) 52px; align-items: center; gap: 14px; }
+      .crop-row-name { font-size: 13px; font-weight: 700; }
+      .crop-row-value { color: var(--muted); font-size: 12px; text-align: right; }
+      .crop-row .track { grid-column: 1 / -1; height: 8px; margin-top: -7px; }
+      .crop-row:nth-child(1) .fill { background: #258648; }
+      .crop-row:nth-child(2) .fill { background: #e0a12e; }
+      .crop-row:nth-child(3) .fill { background: #c85e4b; }
+      .crop-row:nth-child(4) .fill { background: #4a9caf; }
+      .crop-row:nth-child(5) .fill { background: #7aa375; }
+      .feature-table { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 22px; margin-top: 18px; }
+      .feature { display: grid; grid-template-columns: minmax(120px, 1fr) 42px; align-items: center; gap: 10px; }
+      .feature-name { font-size: 12px; color: var(--ink); }
+      .feature-value { font-size: 11px; font-weight: 750; color: var(--leaf-dark); text-align: right; }
+      .feature .track { grid-column: 1 / -1; height: 6px; margin-top: -5px; }
+      .feature .fill { background: var(--sky-strong); }
+      .note { display: flex; gap: 12px; margin-top: 16px; padding: 14px 16px; border: 1px solid #ecd9ae; border-radius: 14px; background: #fffaf0; color: #6e5a2b; font-size: 12px; line-height: 1.5; }
+      .note-mark { font-size: 18px; line-height: 1; }
+      footer { margin-top: 26px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+      @media (max-width: 780px) {
+        .page { padding: 20px 14px 36px; }
+        .hero { padding: 28px 24px; border-radius: 20px; }
+        .metrics, .two-col, .prediction { grid-template-columns: 1fr; }
+        .metrics { grid-template-columns: repeat(2, 1fr); }
+        .year-grid, .feature-table { grid-template-columns: 1fr; }
+        .donut-layout { grid-template-columns: 140px 1fr; }
+      }
+      @media print { body { background: white; } .page { max-width: none; padding: 0; } .hero, .card, .metric { box-shadow: none; } }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div class="eyebrow">Raqamli agroxarita · Bulung'ur tumani</div>
+        <h1>Tarixiy ekinlar AI modeli natijalari</h1>
+        <p>Model konturdagi tuproq, relyef, iqlim va oldingi ekin ma’lumotlarini o‘rganib, keyingi yil xaritada qayd etilishi mumkin bo‘lgan asosiy ekin turini bashorat qildi.</p>
+        <div class="model-pill">CatBoostClassifier · MultiClass · 2022–2026</div>
+      </section>
+
+      <div class="section-title">O‘qitish ma’lumotlari</div>
+      <section class="metrics">
+        <article class="metric"><div class="metric-value">18 082</div><div class="metric-label">kontur-yil o‘qitish yozuvi</div></article>
+        <article class="metric"><div class="metric-value">23</div><div class="metric-label">model o‘rgangan ekin sinfi</div></article>
+        <article class="metric"><div class="metric-value">66</div><div class="metric-label">tuproq, relyef, iqlim va tarixiy belgi</div></article>
+        <article class="metric"><div class="metric-value">9 257</div><div class="metric-label">Bulung‘ur konturi tahlil qilindi</div></article>
+      </section>
+
+      <div class="section-title">Yil bo‘yicha mustaqil tekshiruv</div>
+      <section class="two-col">
+        <article class="card">
+          <h2>Model bazaviy usuldan yuqori natija berdi</h2>
+          <p class="card-intro">Har tekshiruv yilida model faqat undan oldingi yillardagi ma’lumotlar bilan o‘qitildi. Bazaviy usul esa doim eng ko‘p uchragan ekinni tanlaydi.</p>
+          <div class="year-grid">
+            <div class="year">
+              <div class="year-name">2025-yil tekshiruvi</div>
+              <div class="bar-line"><div class="bar-top"><span>AI top-1 aniqligi</span><b>39,2%</b></div><div class="track"><div class="fill" style="width:39.22%"></div></div></div>
+              <div class="bar-line"><div class="bar-top"><span>Bazaviy usul</span><b>31,1%</b></div><div class="track"><div class="fill base" style="width:31.13%"></div></div></div>
+              <div class="gain">+8,1 foiz punkt ustunlik</div>
+            </div>
+            <div class="year">
+              <div class="year-name">2026-yil tekshiruvi</div>
+              <div class="bar-line"><div class="bar-top"><span>AI top-1 aniqligi</span><b>46,9%</b></div><div class="track"><div class="fill" style="width:46.87%"></div></div></div>
+              <div class="bar-line"><div class="bar-top"><span>Bazaviy usul</span><b>21,8%</b></div><div class="track"><div class="fill base" style="width:21.82%"></div></div></div>
+              <div class="gain">+25,1 foiz punkt ustunlik</div>
+            </div>
+          </div>
+        </article>
+        <article class="card">
+          <h2>Top-3 natijasi</h2>
+          <p class="card-intro">Haqiqiy ekin model taklif qilgan uchta ehtimolli ekin ichida bo‘lgan holatlar ulushi.</p>
+          <div class="donut-layout">
+            <div class="donut"><div class="donut-inner"><div class="donut-value">75,4%</div><div class="donut-label">2026 top-3</div></div></div>
+            <ul class="key-list">
+              <li><span class="dot"></span><span><b>2025:</b> top-3 aniqligi 71,5%</span></li>
+              <li><span class="dot"></span><span><b>2026:</b> top-3 aniqligi 75,4%</span></li>
+              <li><span class="dot gray"></span><span>Tekshiruvda model ilgari ko‘rgan sinflar qamrovi: 98% va 94%</span></li>
+            </ul>
+          </div>
+        </article>
+      </section>
+
+      <div class="section-title">2027 uchun bashorat</div>
+      <section class="prediction">
+        <article class="prediction-lead">
+          <h2>4 919 kontur</h2>
+          <p>Haydalma, lalmi va bo‘sh yer turidagi konturlar uchun 2027-yilga top-3 tarixiy ekin ehtimoli hisoblandi.</p>
+          <div class="big-number">53%</div>
+          <p>tumandagi barcha konturlarning bashoratga yaroqli qismi</p>
+        </article>
+        <article class="card">
+          <h2>Eng ko‘p bashorat qilingan asosiy ekinlar</h2>
+          <p class="card-intro">Quyidagi sonlar kontur uchun eng yuqori ehtimolli ekin sinfiga asoslangan.</p>
+          <div class="crop-list">
+            <div class="crop-row"><span class="crop-row-name">Kartoshka</span><span class="crop-row-value">2 550 · 51,8%</span><div class="track"><div class="fill" style="width:100%"></div></div></div>
+            <div class="crop-row"><span class="crop-row-name">G‘alla</span><span class="crop-row-value">2 038 · 41,4%</span><div class="track"><div class="fill" style="width:79.9%"></div></div></div>
+            <div class="crop-row"><span class="crop-row-name">Shirin qalampir</span><span class="crop-row-value">255 · 5,2%</span><div class="track"><div class="fill" style="width:10%"></div></div></div>
+            <div class="crop-row"><span class="crop-row-name">Sabzi</span><span class="crop-row-value">50 · 1,0%</span><div class="track"><div class="fill" style="width:2%"></div></div></div>
+            <div class="crop-row"><span class="crop-row-name">Boshqa sinflar</span><span class="crop-row-value">26 · 0,5%</span><div class="track"><div class="fill" style="width:1.1%"></div></div></div>
+          </div>
+        </article>
+      </section>
+
+      <div class="section-title">Model nimaga ko‘proq qaradi?</div>
+      <section class="card">
+        <h2>SHAP tahlili: bashoratga eng kuchli ta’sir qilgan omillar</h2>
+        <p class="card-intro">Ko‘rsatkichlar tanlangan yozuvlardagi o‘rtacha mutlaq SHAP hissasidir. Katta qiymat model qaroriga kuchliroq ta’sir qilganini anglatadi.</p>
+        <div class="feature-table">
+          <div class="feature"><span class="feature-name">Tuproq yoshi klassi</span><span class="feature-value">0,312</span><div class="track"><div class="fill" style="width:100%"></div></div></div>
+          <div class="feature"><span class="feature-name">Sug‘orish belgisi</span><span class="feature-value">0,204</span><div class="track"><div class="fill" style="width:65.3%"></div></div></div>
+          <div class="feature"><span class="feature-name">Kontur maydoni</span><span class="feature-value">0,081</span><div class="track"><div class="fill" style="width:26%"></div></div></div>
+          <div class="feature"><span class="feature-name">Kaliy klassi</span><span class="feature-value">0,073</span><div class="track"><div class="fill" style="width:23.5%"></div></div></div>
+          <div class="feature"><span class="feature-name">Oldingi ekin ulushi</span><span class="feature-value">0,070</span><div class="track"><div class="fill" style="width:22.5%"></div></div></div>
+          <div class="feature"><span class="feature-name">Oldingi ekin turi</span><span class="feature-value">0,070</span><div class="track"><div class="fill" style="width:22.4%"></div></div></div>
+          <div class="feature"><span class="feature-name">Bonitet</span><span class="feature-value">0,049</span><div class="track"><div class="fill" style="width:15.7%"></div></div></div>
+          <div class="feature"><span class="feature-name">Tuproq mexanikasi</span><span class="feature-value">0,046</span><div class="track"><div class="fill" style="width:14.8%"></div></div></div>
+        </div>
+        <div class="note"><span class="note-mark">!</span><span><b>To‘g‘ri talqin:</b> model hosildorlikni yoki eng foydali ekinni prognoz qilmaydi. U mavjud tarixiy xaritalardan konturda qayd etilishi ehtimoli yuqori bo‘lgan ekin sinfini o‘rganadi. Natija agronom tekshiruvi va amaldagi qoidaviy tavsiya bilan birga ishlatiladi.</span></div>
+      </section>
+      <footer>Manba: Agroxarita loyiha ma’lumotlari · Bulung‘ur tumani · CatBoost 1.2.10 · Model parametrlari: 180 iteratsiya, depth 5, learning rate 0,05 · Natija yaratilgan sana: 2026-yil 25-sentabr</footer>
+    </main>
+  </body>
+</html>
