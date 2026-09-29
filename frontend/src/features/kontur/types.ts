@@ -32,6 +32,13 @@ export interface AgrokimyoQiymat {
   qoplanish: number
 }
 
+/** Copernicus DEM bo'yicha (faqat sug'oriladigan konturlar uchun hisoblangan) */
+export interface Relyef {
+  balandlik: { min: number | null; ortacha: number | null; max: number | null }
+  qiyalik: { ortacha: number | null; sinf: 'tekis' | 'yengil' | 'orta' | 'tik' | null; sinf_nom: string | null }
+  yonalish: { kod: string | null; nom: string | null; gradus: number | null }
+}
+
 /** GET /api/konturlar/{id}/ */
 export interface Kontur {
   id: number
@@ -46,5 +53,6 @@ export interface Kontur {
   yer_turlari: YerTuri[]
   tuproq: Tuproq | null
   agrokimyo?: { kaliy: AgrokimyoQiymat | null }
+  relyef?: Relyef | null
   bbox: [number, number, number, number]
 }
