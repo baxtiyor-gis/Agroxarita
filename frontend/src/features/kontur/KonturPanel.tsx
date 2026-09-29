@@ -4,6 +4,7 @@ import { useTanlov } from '@/features/border/useTanlov'
 import { cn } from '@/lib/cn'
 import { useKontur } from './api'
 import { EkinlarTab } from './EkinlarTab'
+import { ga } from './format'
 import { IqlimTab } from './IqlimTab'
 import { MalumotTab } from './MalumotTab'
 import { RelyefTab } from './RelyefTab'
@@ -53,6 +54,7 @@ export function KonturPanel() {
           <div className="min-w-0">
             <div className="nums text-[18px] leading-tight font-semibold tracking-tight text-navy">
               Kontur {k ? k.kontur_raqami : kontur}
+              {k && <span className="font-medium text-muted">, {ga(k.maydon)} ga</span>}
             </div>
           </div>
           <button
