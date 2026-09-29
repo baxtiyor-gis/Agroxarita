@@ -50,7 +50,9 @@ Talablar: Windows, Python 3.11, Node.js, PostgreSQL 17 + PostGIS.
    .venv\Scripts\python.exe manage.py import_kontur    # 948 ming kontur + tuman_geo + tur (~12 daq)
    .venv\Scripts\python.exe manage.py import_tuproq    # 75 ming tuproq poligoni + lug'atlar
    ```
-   Qayta hisoblash (import qilmasdan): `kontur_tuman [--tuman KOD]`, `kontur_tur [--tuman KOD]`.
+   Qayta hisoblash (import qilmasdan), shu tartibda: `kontur_tuman [--tuman KOD]` → `kontur_tur [--tuman KOD]` →
+   `kontur_tuproq [--tuman KOD] [--chegara 0.5]` (qolgan yerlar tuproq bilan ≥50% qoplansa → `qx_tuproq`;
+   `kontur_tur` uni qayta `aniqlanmagan` qiladi, shuning uchun doim undan keyin). Hozircha faqat Bulung'ur (1401) da qo'llangan.
 5. **Tile keshi:** `.env` da `TILE_CACHE_MAX_AGE=0` (dev — kesh yo'q); productionda `3600`.
 
 ## Testlar haqida
