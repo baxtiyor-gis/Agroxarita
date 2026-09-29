@@ -1,17 +1,20 @@
 import { AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { DARAJA_NOM, agrokimyoMock } from './mock'
 import type { Kontur } from './types'
 import { bosh } from './format'
 import { Darajalar, Satr, Shkala } from './ui'
 
+const AGRO = [
+  { nom: 'Gumus', kalit: 'gumus', birlik: '%', soni: 6 },
+  { nom: 'Fosfor', kalit: 'fosfor', birlik: 'mg/kg', soni: 5 },
+  { nom: 'Kaliy', kalit: 'kaliy', birlik: 'mg/kg', soni: 5 },
+] as const
+
 /** V1 tuzilishi: Bonitet, Gumus, Fosfor, Kaliy, Mexanika, Sho'rlanish, Yer osti suvi.
- *  Bonitet/mexanika/sho'rlanish/yer osti suvi va kaliy — API; gumus/fosfor — namuna. */
+ *  Hammasi API: tuproq (bonitet, mexanika, …) va agrokimyo (gumus, fosfor, kaliy). */
 export function TuproqTab({ k }: { k: Kontur }) {
   const t = k.tuproq
   const ishonchsiz = t != null && t.qoplanish < 0.1
-  const agro = agrokimyoMock(k.id)
-  const kaliy = k.agrokimyo?.kaliy ?? null
   const yoq = "Ma'lumot yo'q"
 
   return (
@@ -42,36 +45,29 @@ export function TuproqTab({ k }: { k: Kontur }) {
           </Satr>
         </div>
 
-        {(
-          [
-            ['Gumus', agro.gumus],
-            ['Fosfor', agro.fosfor],
-          ] as const
-        ).map(([nom, a]) => (
-          <Satr key={nom} nom={nom} qiymat={`${DARAJA_NOM[a.daraja]} · ${a.grad}`} namuna>
-            <div className="mt-1.5">
-              <Darajalar daraja={a.daraja} />
+        {/* Agrokimyo — haqiqiy (eng so'nggi yil, eng katta kesishuv); qoplanish past bo'lsa xira.
+            API darajasi 1 dan (gumus 1..6, fosfor/kaliy 1..5), Darajalar — 0 dan */}
+        {AGRO.map(({ nom, kalit, birlik, soni }) => {
+          const a = k.agrokimyo?.[kalit] ?? null
+          return (
+            <div key={kalit} className={cn(a != null && a.qoplanish < 0.1 && 'opacity-50')}>
+              <Satr
+                nom={nom}
+                qiymat={
+                  a?.daraja != null
+                    ? [a.daraja_nom, a.gradatsiya && `${a.gradatsiya} ${birlik}`, a.yil].filter(Boolean).join(' · ')
+                    : yoq
+                }
+              >
+                {a?.daraja != null && (
+                  <div className="mt-1.5">
+                    <Darajalar daraja={a.daraja - 1} soni={soni} />
+                  </div>
+                )}
+              </Satr>
             </div>
-          </Satr>
-        ))}
-
-        {/* Kaliy — haqiqiy (Agrokimyo, eng so'nggi yil); qoplanish past bo'lsa xira */}
-        <div className={cn(kaliy != null && kaliy.qoplanish < 0.1 && 'opacity-50')}>
-          <Satr
-            nom="Kaliy"
-            qiymat={
-              kaliy?.daraja != null
-                ? `${kaliy.daraja_nom ?? DARAJA_NOM[kaliy.daraja]} · ${kaliy.gradatsiya ?? '—'} mg/kg · ${kaliy.yil}`
-                : yoq
-            }
-          >
-            {kaliy?.daraja != null && (
-              <div className="mt-1.5">
-                <Darajalar daraja={kaliy.daraja} />
-              </div>
-            )}
-          </Satr>
-        </div>
+          )
+        })}
 
         <div className={cn('divide-y divide-line', ishonchsiz && 'opacity-50')}>
           <Satr nom="Mexanika" qiymat={bosh(t?.mexanika) ?? yoq} />

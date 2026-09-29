@@ -75,11 +75,11 @@ export function Shkala({
   )
 }
 
-/** V1 `Darajalar`: diskret daraja, juda kam → juda ko'p */
-export function Darajalar({ daraja }: { daraja: number }) {
+/** V1 `Darajalar`: diskret daraja (0 dan), juda kam → juda ko'p; `soni` — bo'laklar (gumus — 6) */
+export function Darajalar({ daraja, soni = 5 }: { daraja: number; soni?: number }) {
   return (
     <div className="flex gap-[3px]">
-      {[0, 1, 2, 3, 4].map((i) => {
+      {Array.from({ length: soni }, (_, i) => i).map((i) => {
         const faol = daraja >= 0 && i <= daraja
         const yomon = daraja <= 1
         return (

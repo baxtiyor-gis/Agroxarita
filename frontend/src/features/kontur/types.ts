@@ -28,7 +28,8 @@ export interface AgrokimyoQiymat {
   daraja_nom: string | null
   /** masalan "101-200" (mg/kg) */
   gradatsiya: string | null
-  yil: number
+  /** fosfor — yilsiz (null) */
+  yil: number | null
   qoplanish: number
 }
 
@@ -52,7 +53,11 @@ export interface Kontur {
   mfy: string | null
   yer_turlari: YerTuri[]
   tuproq: Tuproq | null
-  agrokimyo?: { kaliy: AgrokimyoQiymat | null }
+  agrokimyo?: {
+    kaliy: AgrokimyoQiymat | null
+    fosfor: AgrokimyoQiymat | null
+    gumus: AgrokimyoQiymat | null
+  }
   relyef?: Relyef | null
   bbox: [number, number, number, number]
 }
