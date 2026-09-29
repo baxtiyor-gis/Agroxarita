@@ -1,0 +1,105 @@
+import { useState } from 'react'
+import { Layers } from 'lucide-react'
+import { useUi, type QatlamId } from '@/store/useUi'
+import type { AsosiyXarita } from './config'
+
+const ASOSIY: { id: AsosiyXarita; nom: string }[] = [
+  { id: 'sputnik', nom: 'Sputnik' },
+  { id: 'osm', nom: 'OSM' },
+]
+const QATLAMLAR: { id: QatlamId; nom: string }[] = [
+  { id: 'viloyat', nom: 'Viloyat' },
+  { id: 'tuman', nom: 'Tuman' },
+  { id: 'massiv', nom: 'Massiv' },
+  { id: 'qx', nom: "Qishloq xo'jaligi yerlari" },
+  { id: 'qolgan', nom: 'Qolgan yerlar' },
+]
+
+const v = (nom: string) => `var(--color-${nom})`
+
+/** Shartli belgi — xaritadagi uslub bilan bir xil (BorderLayers ranglari) */
+function Belgi({ id, sputnik }: { id: QatlamId; sputnik: boolean }) {
+  const chegara = v('navy')
+  const chiziq = (style: React.CSSProperties) => (
+    <span className="block w-full" style={{ height: 0, ...style }} />
+  )
+  const ichki = {
+    viloyat: chiziq({ borderTop: `2px solid ${chegara}` }),
+    tuman: chiziq({ borderTop: `3px solid ${v('sun')}`, boxShadow: `0 0 0 1px rgb(17 24 39 / 0.55)` }),
+    // massiv: xaritadagidek — sputnikda oq punktir (oq panelda ko'rinsin: to'q chiziq ustida), OSMda navy
+    massiv: chiziq(
+      sputnik
+        ? {
+            borderTop: `2px dashed ${v('surface')}`,
+            backgroundColor: 'rgb(55 65 81)',
+            boxShadow: '0 0 0 1px rgb(55 65 81)',
+          }
+        : { borderTop: `2px dashed ${chegara}` },
+    ),
+    qx: (
+      <span
+        className="block h-3 w-5 rounded-[2px]"
+        style={{ border: `1.5px solid ${sputnik ? v('outline') : v('clay')}` }}
+      />
+    ),
+    qolgan: (
+      <span
+        className="block h-3 w-5 rounded-[2px]"
+        style={{ border: `1.5px solid ${sputnik ? v('sky') : v('water')}` }}
+      />
+    ),
+  }[id]
+  return (
+    <span aria-hidden className="flex h-4 w-7 shrink-0 items-center justify-center px-0.5">
+      {ichki}
+    </span>
+  )
+}
+
+/** Qatlamlar tugmasi (MapControls ustuni ichida) va uning paneli */
+export function LayersControl() {
+  const [ochiq, setOchiq] = useState(false)
+  const asosiy = useUi((s) => s.asosiy)
+  const qatlamlar = useUi((s) => s.qatlamlar)
+  const setAsosiy = useUi((s) => s.setAsosiy)
+  const toggleQatlam = useUi((s) => s.toggleQatlam)
+
+  return (
+    // relative yo'q: panel butun boshqaruv ustuniga nisbatan — tepadan boshlanadi
+    <div>
+      <button
+        onClick={() => setOchiq((o) => !o)}
+        aria-label="Qatlamlar"
+        aria-expanded={ochiq}
+        title="Qatlamlar"
+        className="flex size-10 items-center justify-center text-body transition-colors hover:bg-sunken hover:text-navy"
+      >
+        <Layers className="size-4" />
+      </button>
+      {ochiq && (
+        <div className="float-panel absolute top-0 right-[52px] w-64 rounded-card p-3 text-[13px] text-body">
+          <div className="eyebrow mb-1.5">Asosiy xarita</div>
+          {ASOSIY.map(({ id, nom }) => (
+            <label key={id} className="flex cursor-pointer items-center gap-2 py-1">
+              <input
+                type="radio"
+                name="asosiy-xarita"
+                checked={asosiy === id}
+                onChange={() => setAsosiy(id)}
+              />
+              {nom}
+            </label>
+          ))}
+          <div className="eyebrow mt-3 mb-1.5">Qatlamlar</div>
+          {QATLAMLAR.map(({ id, nom }) => (
+            <label key={id} className="flex cursor-pointer items-center gap-2 py-1">
+              <input type="checkbox" checked={qatlamlar[id]} onChange={() => toggleQatlam(id)} />
+              <Belgi id={id} sputnik={asosiy === 'sputnik'} />
+              {nom}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

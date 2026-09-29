@@ -1,0 +1,8 @@
+﻿django>=5.2,<5.3
+djangorestframework
+djangorestframework-gis
+psycopg[binary]
+django-environ
+django-cors-headers
+pytest
+pytest-django

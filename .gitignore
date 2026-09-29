@@ -33,4 +33,13 @@ dist-ssr
 /*.geojson
 
 # Claude Code worktree va lokal sozlamalari
-/.claude/
+/.claude/*
+!/.claude/agents/
+
+# Python / backend
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
