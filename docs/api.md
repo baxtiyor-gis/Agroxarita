@@ -52,7 +52,11 @@ Faqat atributlar (geometriya yo'q; xarita — MVT). Javob:
  "yer_turlari": [{"kod": "haydalma_lalmi", "nom": "Haydalma (lalmi)", "maydon": 18.29, "jami": false}],
  "tuproq": {"bonitet": 52, "mexanika": "O'rta qumoqli", "shorlanish": "...", "yuvilish": "...",
             "toshlanish": "...", "klass": "V", "yer_osti_suvi": "1-2", "qoplanish": 0.93},
- "agrokimyo": {"kaliy": {"daraja": 2, "daraja_nom": "Kam", "gradatsiya": "101-200", "yil": 2025, "qoplanish": 0.87}},
+ "agrokimyo": {
+    "kaliy": {"daraja": 2, "daraja_nom": "Kam", "gradatsiya": "101-200", "yil": 2025, "qoplanish": 0.87},
+    "fosfor": {"daraja": 2, "daraja_nom": "Kam", "gradatsiya": "16-30", "yil": null, "qoplanish": 1.0},
+    "gumus": {"daraja": 3, "daraja_nom": "O'rtacha", "gradatsiya": "0,81-1,20", "yil": 2025, "qoplanish": 1.0}
+  },
  "relyef": {"balandlik": {"min": 810.5, "ortacha": 815.2, "max": 821.0},
             "qiyalik": {"ortacha": 1.88, "sinf": "yengil", "sinf_nom": "Yengil (1-3°)"},
             "yonalish": {"kod": "ShSh", "nom": "Shimoli-sharq", "gradus": 38.5}},
@@ -62,7 +66,7 @@ Faqat atributlar (geometriya yo'q; xarita — MVT). Javob:
 - `maydon` — `umumiy_maydoni` (ga, 2 xona).
 - `yer_turlari` — faqat 0 dan katta ustunlar, `maydon` (ga) kamayish tartibida; `jami: true` — yig'indi ustunlar (`jami_qx_yeri`, `jami_qx_sug_yeri`), ular boshqa turlarning yig'indisi (qo'shib hisoblanmasin).
 - `tuproq` — kontur bilan eng katta kesishuvli tuproq poligoni; kesishuv yo'q bo'lsa `null`. `qoplanish` — kontur maydonining tuproq bilan qoplangan ulushi (0..1, 2 xona, barcha kesishgan poligonlar bo'yicha). Lug'at maydonlari topilmasa `null`.
-- `agrokimyo.kaliy` — kontur kesishgan poligonlarning **eng so'nggi yili** ichida eng katta kesishuvli poligon; kesishuv yo'q bo'lsa `null`. `daraja` 1..5 (1 juda kam, 2 kam, 3 o'rtacha, 4 ko'p, 5 juda ko'p; noma'lum bo'lsa `null`), `gradatsiya` — manba matni (mg/kg), `qoplanish` — shu yil poligonlarining kontur ulushi (0..1). Keyin `fosfor`, `gumus` shu obyektga qo'shiladi.
+- `agrokimyo.kaliy` — kontur kesishgan poligonlarning **eng so'nggi yili** ichida eng katta kesishuvli poligon; kesishuv yo'q bo'lsa `null`. `daraja` 1..5 (1 juda kam, 2 kam, 3 o'rtacha, 4 ko'p, 5 juda ko'p; noma'lum bo'lsa `null`), `gradatsiya` — manba matni (mg/kg), `qoplanish` — shu yil poligonlarining kontur ulushi (0..1). `agrokimyo.fosfor` — xuddi shunday tuzilma; manbada yil yo'q, shuning uchun `yil` doim `null` (eng katta kesishuvli poligon olinadi). Fosfor gradatsiyalari mg/kg: `<15`/`0-15` (1), `16-30` (2), `31-45` (3), `46-60` (4), `>60`/`60<` (5) — manba matni o'zgartirilmaydi. `agrokimyo.gumus` — xuddi shunday, lekin 6 daraja (foiz): 1 juda kam (<0,40), 2 kam, 3 o'rtacha (0,81-1,20), 4 ko'proq (1,21-1,60), 5 ko'p (1,61-2,0), 6 yuqori (>2,01); yillar 2020-2025. `maydon` gumus uchun ST_Area(geography) dan hisoblangan (manbada `area` yo'q).
 - `massiv`, `mfy` — bazada kirill bo'lsa ham javobda lotinga o'giriladi.
 - `relyef` — Copernicus DEM GLO-30 (30 m) dan kontur ichidagi piksellar statistikasi; faqat sug'oriladigan konturlar uchun hisoblangan, aks holda (yoki DEM bo'lmasa) `null`. `balandlik` — dengiz sathidan, m. `qiyalik.ortacha` — gradus (metrik proyeksiyada), `sinf`: `tekis` (<1°), `yengil` (1-3°), `orta` (3-7°), `tik` (>7°). `yonalish` — nishab qaragan tomon (aspect doiraviy o'rtacha): `Sh`, `ShSh`, `Sq`, `JSq`, `J`, `JG`, `G`, `ShG`; `gradus` — azimut (0=shimol, soat yo'nalishida); butunlay tekis konturda `null` bo'lishi mumkin.
 - `id` mavjud emas -> `404` `{"detail": ...}`.

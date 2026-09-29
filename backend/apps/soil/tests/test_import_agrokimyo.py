@@ -11,8 +11,7 @@ from apps.soil.models import Agrokimyo
 ogr.UseExceptions()
 
 
-@pytest.fixture
-def manba(tmp_path):
+def _manba_yarat(tmp_path, qatlam="Kaliy", yil_bor=True):
     yol = tmp_path / "GIS.gpkg"
     ds = ogr.GetDriverByName("GPKG").CreateDataSource(str(yol))
     src = osr.SpatialReference()
@@ -21,9 +20,9 @@ def manba(tmp_path):
     dst = osr.SpatialReference()
     dst.ImportFromEPSG(3857)
     dst.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
-    q = ds.CreateLayer("Kaliy", dst, ogr.wkbMultiPolygon, ["FID=OBJECTID"])
-    for nom, tur in [("year", ogr.OFTInteger), ("district", ogr.OFTInteger), ("region", ogr.OFTInteger),
-                     ("area", ogr.OFTReal), ("region_cad", ogr.OFTReal), ("district_cad", ogr.OFTReal),
+    q = ds.CreateLayer(qatlam, dst, ogr.wkbMultiPolygon, ["FID=OBJECTID"])
+    maydonlar = [("year", ogr.OFTInteger), ("area", ogr.OFTReal)] if yil_bor else [("massiv", ogr.OFTString)]
+    for nom, tur in maydonlar + [("district", ogr.OFTInteger), ("region", ogr.OFTInteger), ("region_cad", ogr.OFTReal), ("district_cad", ogr.OFTReal),
                      ("darajasi", ogr.OFTString), ("gradatsiyasi", ogr.OFTString),
                      ("viloyat", ogr.OFTString), ("tuman", ogr.OFTString)]:
         q.CreateField(ogr.FieldDefn(nom, tur))
@@ -40,7 +39,11 @@ def manba(tmp_path):
     ]
     for yil, cad, daraja, grad, wkt in qatorlar:
         f = ogr.Feature(q.GetLayerDefn())
-        f["year"], f["area"], f["viloyat"] = yil, 100.0, " Sinov "
+        f["viloyat"] = " Sinov "
+        if yil_bor:
+            f["year"], f["area"] = yil, 100.0
+        else:
+            f["massiv"] = "M.Sinov"
         if cad is not None:
             f["district_cad"] = cad
         f["darajasi"] = daraja
@@ -52,6 +55,11 @@ def manba(tmp_path):
         q.CreateFeature(f)
     ds = None
     return yol
+
+
+@pytest.fixture
+def manba(tmp_path):
+    return _manba_yarat(tmp_path)
 
 
 def ishga_tushir(manba, *args):
@@ -66,6 +74,8 @@ def test_daraja_parse():
     assert daraja_parse(" o‘rtacha ") == (3, "O'rtacha")
     assert daraja_parse("Ko`p") == (4, "Ko'p")
     assert daraja_parse("JUDA KO'P") == (5, "Juda ko'p")
+    assert daraja_parse("Ko‘proq", "gumus") == (4, "Ko'proq") and daraja_parse("Ko`p", "gumus") == (5, "Ko'p")
+    assert daraja_parse("Yuqori", "gumus") == (6, "Yuqori") and daraja_parse("Yuqori") == (None, None)
     assert daraja_parse("xyz") == (None, None) and daraja_parse(None) == (None, None)
 
 
@@ -111,3 +121,18 @@ class TestImportAgrokimyo:
         chiqish = ishga_tushir(manba, "--quruq")
         assert "manba 7" in chiqish and "'Nomalum': 1" in chiqish
         assert Agrokimyo.objects.count() == 0
+
+
+@pytest.mark.django_db(transaction=True)
+def test_yilsiz_qatlam_fosfor(tmp_path, tuman, shahar):
+    yol = _manba_yarat(tmp_path, "Fosfor", yil_bor=False)
+    Agrokimyo.objects.create(korsatkich="kaliy", yil=2024, daraja=1, geom=tuman.geom, geom_mvt=tuman.geom_mvt)
+    for _ in range(2):  # idempotent
+        call_command("import_agrokimyo", "--gdb", str(yol), "--qatlam", "Fosfor", "--korsatkich", "fosfor",
+                     stdout=StringIO())
+    f = Agrokimyo.objects.filter(korsatkich="fosfor")
+    assert f.count() == 7 and set(f.values_list("yil", flat=True)) == {None}
+    assert f.filter(daraja=2).first().manba["massiv"] == "M.Sinov"
+    # area yo'q -> maydon = ST_Area(geography)/10000 (0.1x0.1 daraja ~ 9 ming ga)
+    assert all(5_000 < x.maydon < 15_000 for x in f.exclude(daraja=4))
+    assert Agrokimyo.objects.filter(korsatkich="kaliy").count() == 1

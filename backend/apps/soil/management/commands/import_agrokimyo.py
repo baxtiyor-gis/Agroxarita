@@ -22,8 +22,9 @@ ogr.UseExceptions()
 
 STAGING = "soil_agrokimyo_staging"
 NAMUNA_SONI = 1000
-USTUNLAR = ["year", "district", "region", "area", "region_cad", "district_cad", "darajasi", "gradatsiyasi",
+USTUNLAR = ["district", "region", "region_cad", "district_cad", "darajasi", "gradatsiyasi",
             "viloyat", "tuman"]
+IXTIYORIY = ["year", "massiv", "area"]  # area yo'q bo'lsa maydon = ST_Area(geography)/10000 ga; qatlamda bo'lmasligi mumkin (Fosfor'da year yo'q -> yil NULL)
 # normallashtirilgan matn (kichik harf, apostrofsiz) -> (kod, nom)
 DARAJALAR = {
     "juda kam": (1, "Juda kam"),
@@ -32,14 +33,24 @@ DARAJALAR = {
     "kop": (4, "Ko'p"),
     "juda kop": (5, "Juda ko'p"),
 }
+# gumus (%): 6 daraja — "Ko'proq" (1.21-1.60) "Ko'p" (1.61-2.0) dan past, "Yuqori" (>2.01) eng yuqori
+DARAJALAR_GUMUS = {
+    "juda kam": (1, "Juda kam"),
+    "kam": (2, "Kam"),
+    "ortacha": (3, "O'rtacha"),
+    "koproq": (4, "Ko'proq"),
+    "kop": (5, "Ko'p"),
+    "yuqori": (6, "Yuqori"),
+}
+LUGATLAR = {"gumus": DARAJALAR_GUMUS}
 
 
-def daraja_parse(matn):
+def daraja_parse(matn, korsatkich="kaliy"):
     """Apostrof variantlari bilan daraja matni -> (kod, nom); noma'lum yoki bo'sh -> (None, None)."""
     if matn is None:
         return (None, None)
     t = re.sub(r"[^a-z ]", "", " ".join(str(matn).lower().split()))
-    return DARAJALAR.get(t, (None, None))
+    return LUGATLAR.get(korsatkich, DARAJALAR).get(t, (None, None))
 
 
 def _pg_ulanish():
@@ -73,7 +84,9 @@ class Command(BaseCommand):
         q = ds.GetLayerByName(self.qatlam)
         if q is None:
             raise CommandError(f"{gdb} da '{self.qatlam}' qatlami yo'q")
-        yoq = [u for u in USTUNLAR if q.GetLayerDefn().GetFieldIndex(u) < 0]
+        defn = q.GetLayerDefn()
+        self.ustunlar = USTUNLAR + [u for u in IXTIYORIY if defn.GetFieldIndex(u) >= 0]
+        yoq = [u for u in USTUNLAR if defn.GetFieldIndex(u) < 0]
         if yoq:
             raise CommandError(f"'{self.qatlam}' da maydonlar yo'q: {', '.join(yoq)}")
         srs = q.GetSpatialRef()
@@ -99,7 +112,7 @@ class Command(BaseCommand):
             gdal.VectorTranslate(
                 _pg_ulanish(), str(self.gdb), format="PostgreSQL", layers=[self.qatlam], layerName=STAGING,
                 accessMode="overwrite", geometryType="PROMOTE_TO_MULTI", preserveFID=True,
-                selectFields=USTUNLAR,
+                selectFields=self.ustunlar,
                 layerCreationOptions=["GEOMETRY_NAME=geom_src", "FID=manba_fid", "UNLOGGED=YES", "LAUNDER=NO",
                                       "SPATIAL_INDEX=NONE", "GEOM_TYPE=geometry"],
             )
@@ -147,18 +160,21 @@ class Command(BaseCommand):
         c.execute("CREATE TEMP TABLE _daraja (src text PRIMARY KEY, kod int, nom text)")
         qatorlar, self.nomalum = [], []
         for q in qiymatlar:
-            kod, nom = daraja_parse(q)
+            kod, nom = daraja_parse(q, self.kors)
             qatorlar.append((q, kod, nom))
             if kod is None and q.strip():
                 self.nomalum.append(q)
         c.executemany("INSERT INTO _daraja VALUES (%s, %s, %s)", qatorlar)
 
     def insert_sql(self):
+        yil = "s.year" if "year" in self.ustunlar else "NULL::int"
+        maydon = "s.area" if "area" in self.ustunlar else "round((ST_Area(g.geom::geography) / 10000.0)::numeric, 4)"
+        massiv = _t("massiv") if "massiv" in self.ustunlar else "NULL::text"
         return f"""
             INSERT INTO soil_agrokimyo (korsatkich, yil, daraja, daraja_nom, gradatsiya, tuman_id, maydon,
                                         manba, geom, geom_mvt)
-            SELECT %s, s.year, d.kod, coalesce(d.nom, ''), coalesce({_t("gradatsiyasi")}, ''), bt.id, s.area,
-                   jsonb_build_object('viloyat', {_t("viloyat")}, 'tuman', {_t("tuman")},
+            SELECT %s, {yil}, d.kod, coalesce(d.nom, ''), coalesce({_t("gradatsiyasi")}, ''), bt.id, {maydon},
+                   jsonb_build_object('viloyat', {_t("viloyat")}, 'tuman', {_t("tuman")}, 'massiv', {massiv},
                        'darajasi', {_t("darajasi")}, 'region', s.region, 'district', s.district,
                        'region_cad', round(s.region_cad)::int, 'district_cad', round(s.district_cad)::int),
                    g.geom, ST_Transform(g.geom, 3857)
@@ -235,7 +251,7 @@ class Command(BaseCommand):
         t0 = time.perf_counter()
         ds = ogr.Open(str(self.gdb))
         q = ds.GetLayerByName(self.qatlam)
-        q.SetIgnoredFields(["OGR_GEOMETRY"] + [d.name for d in q.schema if d.name not in USTUNLAR])
+        q.SetIgnoredFields(["OGR_GEOMETRY"] + [d.name for d in q.schema if d.name not in self.ustunlar])
         jami = cad_bosh = 0
         yillar, matnlar = {}, {}
         for f in q:
@@ -243,7 +259,7 @@ class Command(BaseCommand):
             cad_bosh += f["district_cad"] is None
             d = f["darajasi"]
             matnlar[d] = matnlar.get(d, 0) + 1
-            kalit = (f["year"], daraja_parse(d)[0])
+            kalit = (f["year"] if "year" in self.ustunlar else None, daraja_parse(d, self.kors)[0])
             yillar[kalit] = yillar.get(kalit, 0) + 1
         self._bosqich("manbani o'qish", t0)
         w = self.w
@@ -251,6 +267,6 @@ class Command(BaseCommand):
         w(f"{self.kors}: manba {jami}, CRS EPSG:{self.epsg}, district_cad NULL: {cad_bosh}")
         w("  yil/daraja: " + "; ".join(f"{y}/{k}: {n}" for (y, k), n in sorted(
             yillar.items(), key=lambda x: (x[0][0] or 0, x[0][1] or 0))))
-        nomalum = {m: n for m, n in matnlar.items() if m and daraja_parse(m)[0] is None}
+        nomalum = {m: n for m, n in matnlar.items() if m and daraja_parse(m, self.kors)[0] is None}
         w(f"  noma'lum daraja matnlari: {nomalum or 'yoq'}")
         self._vaqtlar()

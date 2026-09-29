@@ -20,7 +20,7 @@ def test_kontur_tuzilma_va_yer_turlari(client, tuman):
     with CaptureQueriesContext(connection) as sorovlar:
         r = client.get(f"/api/konturlar/{k.pk}/", HTTP_HOST="localhost")
     assert r.status_code == 200
-    assert len(sorovlar) <= 3
+    assert len(sorovlar) <= 5
     d = r.json()
     assert d["id"] == k.pk and d["kontur_raqami"] == 5 and d["yagona_kontur"] == "12:01:00005"
     assert d["maydon"] == 18.61 and d["tur"] == "sugoriladigan"
@@ -45,7 +45,7 @@ def test_kontur_tuproq_eng_katta_kesishuv(client, tuman):
     k = kontur_yarat(tuman, 11, kvadrat(69.10, 40.1, 69.20, 40.2), umumiy_maydoni=1.0)
     with CaptureQueriesContext(connection) as sorovlar:
         d = client.get(f"/api/konturlar/{k.pk}/", HTTP_HOST="localhost").json()
-    assert len(sorovlar) <= 3
+    assert len(sorovlar) <= 5
     t = d["tuproq"]
     assert t["bonitet"] == 52 and t["mexanika"] == "O'rta qumoqli" and t["klass"] == "V"
     assert t["yer_osti_suvi"] == "1-2" and t["shorlanish"] is None
@@ -63,7 +63,7 @@ def test_kontur_tuman_geo_va_404(client, tuman, shahar):
 
 
 def _agro(geom, yil, daraja, korsatkich="kaliy", tuman=None):
-    nomlar = {1: "Juda kam", 2: "Kam", 3: "O'rtacha"}
+    nomlar = {1: "Juda kam", 2: "Kam", 3: "O'rtacha", 6: "Yuqori"}
     return Agrokimyo.objects.create(
         korsatkich=korsatkich, yil=yil, daraja=daraja, daraja_nom=nomlar[daraja], gradatsiya="101-200",
         geom=geom, geom_mvt=geom.transform(3857, clone=True), tuman=tuman,
@@ -76,19 +76,42 @@ def test_kontur_agrokimyo_kaliy_oxirgi_yil(client, tuman):
     _agro(kvadrat(69.10, 40.1, 69.20, 40.2), 2022, 1)
     _agro(kvadrat(69.10, 40.1, 69.15, 40.2), 2024, 2)
     _agro(kvadrat(69.15, 40.1, 69.17, 40.2), 2024, 3)
-    _agro(kvadrat(69.10, 40.1, 69.20, 40.2), 2025, 3, korsatkich="fosfor")  # boshqa ko'rsatkich
+    _agro(kvadrat(69.10, 40.1, 69.20, 40.2), 2025, 3, korsatkich="fosfor")  # fosfor: alohida ko'rsatkich
     k = kontur_yarat(tuman, 13, kvadrat(69.10, 40.1, 69.20, 40.2), umumiy_maydoni=1.0)
     with CaptureQueriesContext(connection) as sorovlar:
         d = client.get(f"/api/konturlar/{k.pk}/", HTTP_HOST="localhost").json()
-    assert len(sorovlar) <= 4
+    assert len(sorovlar) <= 6
     assert d["agrokimyo"] == {
-        "kaliy": {"daraja": 2, "daraja_nom": "Kam", "gradatsiya": "101-200", "yil": 2024, "qoplanish": 0.7}
+        "kaliy": {"daraja": 2, "daraja_nom": "Kam", "gradatsiya": "101-200", "yil": 2024, "qoplanish": 0.7},
+        "fosfor": {"daraja": 3, "daraja_nom": "O'rtacha", "gradatsiya": "101-200", "yil": 2025, "qoplanish": 1.0},
+        "gumus": None,
     }
+
+
+@pytest.mark.django_db
+def test_kontur_agrokimyo_gumus(client, tuman):
+    _agro(kvadrat(69.10, 40.1, 69.20, 40.2), 2024, 6, korsatkich="gumus")
+    k = kontur_yarat(tuman, 16, kvadrat(69.10, 40.1, 69.20, 40.2), umumiy_maydoni=1.0)
+    d = client.get(f"/api/konturlar/{k.pk}/", HTTP_HOST="localhost").json()
+    assert d["agrokimyo"]["gumus"] == {
+        "daraja": 6, "daraja_nom": "Yuqori", "gradatsiya": "101-200", "yil": 2024, "qoplanish": 1.0}
+
+
+@pytest.mark.django_db
+def test_kontur_agrokimyo_fosfor_yilsiz(client, tuman):
+    # yil NULL: eng katta kesishuvli poligon, qoplanish — barcha yilsiz poligonlar bo'yicha
+    _agro(kvadrat(69.10, 40.1, 69.16, 40.2), None, 1, korsatkich="fosfor")
+    _agro(kvadrat(69.16, 40.1, 69.18, 40.2), None, 3, korsatkich="fosfor")
+    k = kontur_yarat(tuman, 15, kvadrat(69.10, 40.1, 69.20, 40.2), umumiy_maydoni=1.0)
+    d = client.get(f"/api/konturlar/{k.pk}/", HTTP_HOST="localhost").json()
+    assert d["agrokimyo"]["kaliy"] is None
+    assert d["agrokimyo"]["fosfor"] == {
+        "daraja": 1, "daraja_nom": "Juda kam", "gradatsiya": "101-200", "yil": None, "qoplanish": 0.8}
 
 
 @pytest.mark.django_db
 def test_kontur_agrokimyo_yoq_va_kirill_lotin(client, tuman):
     k = kontur_yarat(tuman, 14, kvadrat(69.1, 40.1, 69.2, 40.2), massiv="М.Улуғбек", mfy="Булунгурарик МФ")
     d = client.get(f"/api/konturlar/{k.pk}/", HTTP_HOST="localhost").json()
-    assert d["agrokimyo"] == {"kaliy": None}
+    assert d["agrokimyo"] == {"kaliy": None, "fosfor": None, "gumus": None}
     assert d["massiv"] == "M.Ulug‘bek" and d["mfy"] == "Bulungurarik MF"

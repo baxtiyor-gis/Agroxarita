@@ -135,7 +135,11 @@ def kontur_batafsil(request, id):
             "mfy": kirill_lotin(kontur.mfy),
             "yer_turlari": yer_turlari,
             "tuproq": tuproq_malumoti(kontur.pk),
-            "agrokimyo": {"kaliy": agrokimyo_malumoti(kontur.pk, "kaliy")},
+            "agrokimyo": {
+                "kaliy": agrokimyo_malumoti(kontur.pk, "kaliy"),
+                "fosfor": agrokimyo_malumoti(kontur.pk, "fosfor"),
+                "gumus": agrokimyo_malumoti(kontur.pk, "gumus"),
+            },
             "relyef": relyef_malumoti(kontur),
             "bbox": list(kontur.geom.extent),
         }
