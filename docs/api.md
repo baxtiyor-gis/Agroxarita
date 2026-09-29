@@ -41,6 +41,25 @@ Parametrsiz — barcha tumanlar (206 ta). `viloyat` berilsa — shu viloyatniki.
 - `kod` mavjud emas -> `404`.
 - `kod` = `region_id` * 100 + tartib (`12:01` -> `1201`); kontur/massiv bilan bog'lanish shu kod orqali.
 
+## Kontur (Task 7)
+
+### GET `/api/konturlar/{id}/`
+Faqat atributlar (geometriya yo'q; xarita — MVT). Javob:
+```json
+{"id": 965892, "kontur_raqami": 8744, "yagona_kontur": "14:01:08744", "maydon": 18.61, "tur": "sugoriladigan",
+ "tuman": {"kod": 1401, "nom": "Bulung'ur tumani"}, "viloyat": {"region_id": 14, "nom": "Samarqand"},
+ "massiv": "...", "mfy": "...",
+ "yer_turlari": [{"kod": "haydalma_lalmi", "nom": "Haydalma (lalmi)", "maydon": 18.29, "jami": false}],
+ "tuproq": {"bonitet": 52, "mexanika": "O'rta qumoqli", "shorlanish": "...", "yuvilish": "...",
+            "toshlanish": "...", "klass": "V", "yer_osti_suvi": "1-2", "qoplanish": 0.93},
+ "bbox": [minLon, minLat, maxLon, maxLat]}
+```
+- `tuman`/`viloyat` — geometrik tuman (`tuman_geo`) bo'yicha; u yo'q bo'lsa manba `tuman`.
+- `maydon` — `umumiy_maydoni` (ga, 2 xona).
+- `yer_turlari` — faqat 0 dan katta ustunlar, `maydon` (ga) kamayish tartibida; `jami: true` — yig'indi ustunlar (`jami_qx_yeri`, `jami_qx_sug_yeri`), ular boshqa turlarning yig'indisi (qo'shib hisoblanmasin).
+- `tuproq` — kontur bilan eng katta kesishuvli tuproq poligoni; kesishuv yo'q bo'lsa `null`. `qoplanish` — kontur maydonining tuproq bilan qoplangan ulushi (0..1, 2 xona, barcha kesishgan poligonlar bo'yicha). Lug'at maydonlari topilmasa `null`.
+- `id` mavjud emas -> `404` `{"detail": ...}`.
+
 ## Vektor tile (MVT)
 
 `GET /tiles/{qatlam}/{z}/{x}/{y}.pbf` — XYZ sxema (MapLibre `tiles: ["…/tiles/viloyat/{z}/{x}/{y}.pbf"]`).
