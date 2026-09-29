@@ -32,11 +32,12 @@ def nc_yoz(yol, ozgaruvchilar, yil=2024, oy=1, kunlar=31):
             v[:] = np.full((kunlar, len(LATS), len(LONS)), qiymat)
 
 
-def oy_fayllari(papka, yil, oy, kunlar, t_min=270.0):
-    nc_yoz(papka / fayl_nomi("t_min", yil, oy), {"t2m": t_min}, yil, oy, kunlar)
-    nc_yoz(papka / fayl_nomi("t_max", yil, oy), {"t2m": 295.0}, yil, oy, kunlar)
-    nc_yoz(papka / fayl_nomi("ort", yil, oy), {"t2m": 285.0, "d2m": 280.0, "u10": 3.0, "v10": 4.0}, yil, oy, kunlar)
-    nc_yoz(papka / fayl_nomi("yigindi", yil, oy), {"tp": 0.002, "ssrd": 2.0e7}, yil, oy, kunlar)
+def yil_fayllari(papka, yil=2024, t_min=270.0):
+    kunlar = 366 if yil % 4 == 0 else 365
+    nc_yoz(papka / fayl_nomi("t_min", yil), {"t2m": t_min}, yil, 1, kunlar)
+    nc_yoz(papka / fayl_nomi("t_max", yil), {"t2m": 305.0}, yil, 1, kunlar)
+    nc_yoz(papka / fayl_nomi("tp", yil), {"tp": 0.002}, yil, 1, kunlar)
+    nc_yoz(papka / fayl_nomi("tp", yil + 1), {"tp": 0.002}, yil + 1, 1, 1)  # keyingi yil 1-yanvari
 
 
 @pytest.fixture
@@ -61,31 +62,32 @@ def test_katak_yarat(kataklar_bor, tuman):
 
 def test_import_iqlim_idempotent(kataklar_bor, tmp_path):
     call_command("katak_yarat")
-    oy_fayllari(tmp_path, 2024, 1, 31)
+    yil_fayllari(tmp_path, 2024)
     for _ in range(2):
-        call_command("import_iqlim", papka=str(tmp_path), yil=2024, oy=1)
-    assert IqlimKunlik.objects.count() == 31
+        call_command("import_iqlim", papka=str(tmp_path), yil=2024)
+    assert IqlimKunlik.objects.count() == 366
     kun = IqlimKunlik.objects.get(sana=dt.date(2024, 1, 5))
     assert kun.t_min == pytest.approx(270.0 - 273.15, abs=1e-3)
-    assert kun.t_ort == pytest.approx(11.85, abs=1e-3)
+    assert kun.t_ort == pytest.approx((270.0 + 305.0) / 2 - 273.15, abs=1e-3)
     assert kun.yogin == pytest.approx(2.0, abs=1e-4)
-    assert kun.radiatsiya == pytest.approx(20.0, abs=1e-4)
-    assert kun.shamol == pytest.approx(5.0, abs=1e-4)
-    assert 0 < kun.namlik < 100
+    assert kun.radiatsiya is None and kun.shamol is None and kun.namlik is None
     assert kun.et0 > 0
-    oy = IqlimOylik.objects.get()
-    assert (oy.yil, oy.oy, oy.kunlar) == (2024, 1, 31)
+    assert IqlimKunlik.objects.get(sana=dt.date(2024, 12, 31)).yogin == pytest.approx(2.0, abs=1e-4)
+    assert IqlimOylik.objects.count() == 12
+    oy = IqlimOylik.objects.get(oy=1)
+    assert (oy.yil, oy.kunlar) == (2024, 31)
     assert oy.yogin == pytest.approx(62.0, abs=1e-3)
     yil = IqlimYillik.objects.get()
-    assert yil.fah == pytest.approx(31 * 11.85, abs=1e-2)
-    assert yil.oxirgi_bahorgi_sovuq == dt.date(2024, 1, 31)  # butun oy sovuq
-    assert yil.birinchi_kuzgi_sovuq is None
+    assert yil.fah == pytest.approx(366 * 14.35, abs=1e-1)
+    assert yil.yogin == pytest.approx(732.0, abs=1e-2)
+    assert yil.oxirgi_bahorgi_sovuq == dt.date(2024, 6, 30)  # butun yil sovuq (sintetik)
+    assert yil.birinchi_kuzgi_sovuq == dt.date(2024, 7, 1)
 
 
-def test_import_oy_toliq_emas_otkaziladi(kataklar_bor, tmp_path):
+def test_import_yil_toliq_emas_otkaziladi(kataklar_bor, tmp_path):
     call_command("katak_yarat")
-    oy_fayllari(tmp_path, 2024, 1, 31)
-    (tmp_path / fayl_nomi("yigindi", 2024, 1)).unlink()
+    yil_fayllari(tmp_path, 2024)
+    (tmp_path / fayl_nomi("tp", 2024)).unlink()
     call_command("import_iqlim", papka=str(tmp_path))
     assert IqlimKunlik.objects.count() == 0
 
@@ -109,6 +111,8 @@ def test_hargreaves_va_namlik():
 
 
 def test_sorov_shakli():
-    s = sorov("yigindi", 2024, 2)
-    assert len(s["day"]) == 29 and s["daily_statistic"] == "daily_sum" and s["area"] == [45.6, 55.9, 37.1, 73.2]
-    assert set(GURUHLAR) == {"t_min", "t_max", "ort", "yigindi"}
+    s = sorov("tp", 2024)
+    assert s["time"] == ["00:00"] and s["area"] == [45.6, 55.9, 37.1, 73.2] and len(s["month"]) == 12
+    assert sorov("tp", 2026)["day"] == ["01"]
+    assert sorov("t_min", 2024)["daily_statistic"] == "daily_minimum"
+    assert set(GURUHLAR) == {"t_min", "t_max", "tp"}

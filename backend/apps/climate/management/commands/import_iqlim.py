@@ -33,37 +33,33 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--yil", type=int)
-        parser.add_argument("--oy", type=int)
         parser.add_argument("--papka", default=None)
 
-    def handle(self, *args, yil=None, oy=None, papka=None, **opts):
+    def handle(self, *args, yil=None, papka=None, **opts):
         papka = Path(papka) if papka else settings.ERA5_DIR
         kataklar = list(IqlimKatak.objects.order_by("id"))
         nuqtalar = [(k.markaz_lon, k.markaz_lat) for k in kataklar]
-        yillar = [yil] if yil else range(2016, 2026)
-        oylar = [oy] if oy else range(1, 13)
-        tegilgan, jami = set(), 0
-        for y in yillar:
-            for m in oylar:
-                yolar = hisob.fayllar_oy(papka, y, m)
-                if not yolar:
-                    continue
-                sanalar, q = hisob.oy_kunlik(yolar, nuqtalar)
-                jami += self.saqla_oy(kataklar, sanalar, q, y, m)
-                tegilgan.add(y)
-                self.stdout.write(f"{y}-{m:02d}: {len(sanalar)} kun")
-        for y in sorted(tegilgan):
+        jami, tegilgan = 0, []
+        for y in [yil] if yil else range(2016, 2026):
+            if not hisob.fayllar_yil(papka, y):
+                continue
+            sanalar, q = hisob.yil_kunlik(papka, y, nuqtalar)
+            with transaction.atomic():
+                IqlimKunlik.objects.filter(sana__gte=dt.date(y, 1, 1), sana__lte=dt.date(y, 12, 31)).delete()
+                for m in range(1, 13):
+                    jami += self.saqla_oy(kataklar, sanalar, q, y, m)
             self.yillik(y)
-        self.stdout.write(f"kunlik qatorlar: {jami}; yillar: {sorted(tegilgan)}")
+            tegilgan.append(y)
+            self.stdout.write(f"{y}: {len(sanalar)} kun")
+        self.stdout.write(f"kunlik qatorlar: {jami}; yillar: {tegilgan}")
 
-    @transaction.atomic
     def saqla_oy(self, kataklar, sanalar, q, y, m):
         boshi = dt.date(y, m, 1)
         oxiri = dt.date(y + (m == 12), m % 12 + 1, 1)
-        IqlimKunlik.objects.filter(sana__gte=boshi, sana__lt=oxiri).delete()
+        indekslar = [i for i, s in enumerate(sanalar) if boshi <= s < oxiri]
         qatorlar = [
-            IqlimKunlik(katak_id=k.id, sana=sana, **{f: _float(q[f][ti, ki]) for f in MAYDONLAR})
-            for ti, sana in enumerate(sanalar)
+            IqlimKunlik(katak_id=k.id, sana=sanalar[ti], **{f: _float(q[f][ti, ki]) for f in MAYDONLAR})
+            for ti in indekslar
             for ki, k in enumerate(kataklar)
         ]
         IqlimKunlik.objects.bulk_create(qatorlar, batch_size=5000)

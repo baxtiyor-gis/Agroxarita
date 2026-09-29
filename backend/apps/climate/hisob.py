@@ -4,7 +4,7 @@ import math
 
 import numpy as np
 
-from .era5 import GURUHLAR, fayl_nomi
+from .era5 import fayl_nomi
 
 
 def _o(ds, nom):
@@ -72,34 +72,46 @@ def hargreaves(t_min, t_max, t_ort, lat_grad, kun_yil):
     return np.maximum(0.0023 * (t_ort + 17.8) * np.sqrt(np.maximum(t_max - t_min, 0)) * ra_mm(lat_grad, kun_yil), 0)
 
 
-def oy_kunlik(yolar, kataklar):
-    """Bir oy uchun kunlik ko'rsatkichlar: (sanalar, {maydon: array[vaqt, katak]}).
+def yil_kunlik(papka, yil, kataklar):
+    """Bir yil uchun kunlik ko'rsatkichlar: (sanalar, {maydon: array[vaqt, katak]}).
 
-    Birliklar: K->°C, m->mm, J/m2->MJ/m2. yolar: {guruh: fayl yo'li}.
+    K->°C, m->mm; t_ort=(t_min+t_max)/2; radiatsiya/shamol/namlik - NaN.
+    tp: soatlik fayldagi 00 UTC qiymati = oldingi kun yig'indisi, shuning uchun kun D uchun (D+1) dagi qiymat olinadi.
     """
-    sanalar, a = oqi_guruh(yolar["t_min"], ["t2m"], kataklar)
-    _, b = oqi_guruh(yolar["t_max"], ["t2m"], kataklar)
-    _, c = oqi_guruh(yolar["ort"], ["t2m", "d2m", "u10", "v10"], kataklar)
-    _, d = oqi_guruh(yolar["yigindi"], ["tp", "ssrd"], kataklar)
-    t_min, t_max, t_ort = a["t2m"] - 273.15, b["t2m"] - 273.15, c["t2m"] - 273.15
+    sanalar, a = oqi_guruh(papka / fayl_nomi("t_min", yil), ["t2m"], kataklar)
+    _, b = oqi_guruh(papka / fayl_nomi("t_max", yil), ["t2m"], kataklar)
+    t_min, t_max = a["t2m"] - 273.15, b["t2m"] - 273.15
+    t_ort = (t_min + t_max) / 2
+
+    tp_kunlar = {}
+    for y in (yil, yil + 1):
+        yol = papka / fayl_nomi("tp", y)
+        if yol.exists():
+            s_tp, q = oqi_guruh(yol, ["tp"], kataklar)
+            for i, sana in enumerate(s_tp):
+                tp_kunlar[sana] = q["tp"][i]
+    bosh = np.full(t_min.shape[1], np.nan)
+    yogin = np.array([tp_kunlar.get(x + dt.timedelta(days=1), bosh) for x in sanalar]) * 1000.0
+    yogin = np.maximum(yogin, 0)
+
     kun_yil = np.array([x.timetuple().tm_yday for x in sanalar])[:, None]
     lat = np.array([k[1] for k in kataklar])[None, :]
+    nan = np.full_like(t_min, np.nan)
     return sanalar, {
         "t_min": t_min,
         "t_max": t_max,
         "t_ort": t_ort,
-        "yogin": np.maximum(d["tp"] * 1000.0, 0),
-        "radiatsiya": d["ssrd"] / 1e6,
-        "shamol": np.hypot(c["u10"], c["v10"]),
-        "namlik": nisbiy_namlik(t_ort, c["d2m"] - 273.15),
+        "yogin": yogin,
+        "radiatsiya": nan,
+        "shamol": nan,
+        "namlik": nan,
         "et0": hargreaves(t_min, t_max, t_ort, lat, kun_yil),
     }
 
 
-def fayllar_oy(papka, yil, oy):
-    """Oyning barcha guruh fayllari bor bo'lsa {guruh: yo'l}, aks holda None."""
-    yolar = {g: papka / fayl_nomi(g, yil, oy) for g in GURUHLAR}
-    return yolar if all(p.exists() for p in yolar.values()) else None
+def fayllar_yil(papka, yil):
+    """Yil uchun t_min, t_max, tp fayllari va keyingi yil tp si (31-dekabr yog'ini uchun) bor bo'lsa True."""
+    return all((papka / fayl_nomi(g, y)).exists() for g, y in (("t_min", yil), ("t_max", yil), ("tp", yil), ("tp", yil + 1)))
 
 
 def yillik_hisob(sanalar, t_min, t_ort, yogin, et0):
