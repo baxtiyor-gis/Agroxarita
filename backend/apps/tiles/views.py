@@ -1,5 +1,6 @@
 """Vektor tile'lar: ST_AsMVT + ST_AsMVTGeom. Qatlam nomi — oq ro'yxatdan, qiymatlar — parametrlar bilan."""
 from django.conf import settings
+from django.core.cache import cache
 from django.db import connection
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_GET
@@ -170,6 +171,14 @@ def tile(request, qatlam, z, x, y):
     if not min_z <= z <= max_z:
         return HttpResponse(status=204)
 
+    # chegara qatlamlari deyarli o'zgarmaydi — server xotirasida keshlanadi (kontur — yo'q, `tur` o'zgaradi)
+    kesh_kalit = None
+    if qatlam in STATIK_QATLAMLAR:
+        kesh_kalit = f"tile:{qatlam}:{z}:{x}:{y}:" + ",".join(f"{k}={v}" for k, v in sorted(filtrlar.items()))
+        saqlangan = cache.get(kesh_kalit)
+        if saqlangan is not None:
+            return _mvt_javob(saqlangan, qatlam)
+
     if qatlam == "maska":
         sql, params = maska_sql(z), [qatlam, z, x, y, z, x, y, filtrlar["tuman"]]
     elif qatlam == "kontur":
@@ -182,14 +191,23 @@ def tile(request, qatlam, z, x, y):
         cursor.execute(sql, params)
         mvt = cursor.fetchone()[0]
     mvt = bytes(mvt) if mvt else b""
+    if kesh_kalit:
+        cache.set(kesh_kalit, mvt, timeout=None)
+    return _mvt_javob(mvt, qatlam)
+
+
+def _mvt_javob(mvt, qatlam):
     if not mvt:
         return HttpResponse(status=204)
     javob = HttpResponse(mvt, content_type=MVT_TURI)
-    javob["Cache-Control"] = kesh_sarlavhasi()
+    javob["Cache-Control"] = kesh_sarlavhasi(qatlam)
     return javob
 
 
-def kesh_sarlavhasi():
-    """`TILE_CACHE_MAX_AGE` (settings) bo'yicha; 0 — kesh yo'q (dev)."""
-    soniya = settings.TILE_CACHE_MAX_AGE
+STATIK_QATLAMLAR = ("viloyat", "tuman", "massiv", "maska")
+
+
+def kesh_sarlavhasi(qatlam="kontur"):
+    """Chegara qatlamlari — `TILE_STATIK_MAX_AGE` (uzoq); kontur — `TILE_CACHE_MAX_AGE` (dev'da 0 — kesh yo'q)."""
+    soniya = settings.TILE_STATIK_MAX_AGE if qatlam in STATIK_QATLAMLAR else settings.TILE_CACHE_MAX_AGE
     return f"public, max-age={soniya}" if soniya > 0 else "no-cache"

@@ -1,5 +1,6 @@
 """Umumiy fixture'lar: kichik sun'iy Viloyat/Tuman/Massiv (haqiqiy data/ ga bog'liq emas)."""
 import pytest
+from django.core.cache import cache
 from django.contrib.gis.geos import MultiPolygon, Polygon
 
 from apps.border.models import Massiv, Tuman, Viloyat
@@ -81,3 +82,11 @@ def kontur(tuman):
 def kontur_shahar(shahar):
     """Boshqa tuman (shahar kod=1202) konturi."""
     return kontur_yarat(shahar, 2, kvadrat(69.6, 40.1, 69.61, 40.11), kontur_raqami=8, umumiy_maydoni=50.0)
+
+
+@pytest.fixture(autouse=True)
+def _tile_kesh_tozala():
+    """Server tile keshi testlar orasida o'tib qolmasin."""
+    cache.clear()
+    yield
+    cache.clear()

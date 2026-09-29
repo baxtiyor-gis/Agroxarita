@@ -37,20 +37,20 @@ function qoshish(map: Map) {
   if (map.getSource(SRC.viloyat)) return // StrictMode'da ikki marta qo'shilmasin
   const navy = token('navy')
 
-  map.addSource(SRC.viloyat, { type: 'vector', tiles: [tileUrl('viloyat')], minzoom: 0, maxzoom: 14 })
-  map.addSource(SRC.tuman, { type: 'vector', tiles: [tileUrl('tuman')], minzoom: 5, maxzoom: 14 })
+  map.addSource(SRC.viloyat, { type: 'vector', tiles: [tileUrl('viloyat')], minzoom: 0, maxzoom: 10 })
+  map.addSource(SRC.tuman, { type: 'vector', tiles: [tileUrl('tuman')], minzoom: 5, maxzoom: 12 })
   // tuman kodi 0 — hech narsa topilmaydi; qatlamlar yashirin bo'lgani uchun so'ralmaydi
   map.addSource(SRC.massiv, {
     type: 'vector',
     tiles: [tileUrl('massiv', 0)],
     minzoom: 6,
-    maxzoom: 16,
+    maxzoom: 14,
   })
   map.addSource(SRC.kontur, {
     type: 'vector',
     tiles: [tileUrl('kontur', 0)],
     minzoom: 9,
-    maxzoom: 18,
+    maxzoom: 16,
   })
 
   // kontur to'ldirishi: ichki rang yo'q — shaffof qatlam faqat bosish (popup) uchun

@@ -88,7 +88,7 @@ def test_viloyat_tile(client, viloyat):
         javob = client.get(f"/tiles/viloyat/{z}/{x}/{y}.pbf")
         assert javob.status_code == 200, z
         assert javob["Content-Type"] == MVT
-        assert javob["Cache-Control"] == kesh_sarlavhasi()
+        assert javob["Cache-Control"] == kesh_sarlavhasi("viloyat")
         assert b"viloyat" in javob.content and b"region_id" in javob.content and b"nom" in javob.content
 
 
@@ -152,7 +152,7 @@ def test_maska_tile(client, tuman):
         tashqari = client.get(f"/tiles/maska/{z}/{x}/{y}.pbf?tuman=1201")
         assert tashqari.status_code == 200, z
         assert tashqari["Content-Type"] == MVT
-        assert tashqari["Cache-Control"] == kesh_sarlavhasi()
+        assert tashqari["Cache-Control"] == kesh_sarlavhasi("maska")
         assert b"maska" in tashqari.content
     # chegara kesib o'tgan tile
     x, y = _tile_koordinata(12, 69.5, 40.5)
@@ -190,3 +190,14 @@ def test_obyektsiz_joyda_204(client, viloyat):
     # Yer sharining narigi tomoni (Tinch okeani)
     x, y = _tile_koordinata(8, -150, 0)
     assert client.get(f"/tiles/viloyat/8/{x}/{y}.pbf").status_code == 204
+
+
+@pytest.mark.django_db
+def test_chegara_tile_serverda_keshlanadi(client, viloyat, django_assert_num_queries):
+    url = "/tiles/viloyat/5/21/12.pbf"
+    birinchi = client.get(url)
+    with django_assert_num_queries(0):  # ikkinchi so'rov bazaga bormaydi
+        ikkinchi = client.get(url)
+    assert ikkinchi.status_code == birinchi.status_code
+    assert ikkinchi.content == birinchi.content
+    assert ikkinchi["Cache-Control"] == kesh_sarlavhasi("viloyat") if ikkinchi.status_code == 200 else True

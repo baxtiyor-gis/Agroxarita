@@ -87,6 +87,16 @@ DATABASES = {
 
 # Tile keshi (soniya). Dev'da 0 — ma'lumot qayta hisoblanganda brauzer eski tile'ni ko'rsatmasin
 TILE_CACHE_MAX_AGE = env.int("TILE_CACHE_MAX_AGE", default=3600)
+# Chegara tile'lari (viloyat/tuman/massiv/maska) — brauzer keshi (soniya); server xotirasida ham keshlanadi
+TILE_STATIK_MAX_AGE = env.int("TILE_STATIK_MAX_AGE", default=86400)
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "tile",
+        "OPTIONS": {"MAX_ENTRIES": 20000},
+    }
+}
 
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=["http://localhost:5173"])
 
