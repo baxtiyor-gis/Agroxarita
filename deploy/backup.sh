@@ -3,7 +3,7 @@
 # systemd timer (agroxarita-backup.timer) har kuni ishga tushiradi. Qo'lda: sudo /opt/agroxarita/deploy/backup.sh
 set -euo pipefail
 
-ILDIZ="${ILDIZ:-/opt/agroxarita}"
+ILDIZ="${ILDIZ:-$(cd "$(dirname "$0")/.." && pwd)}"
 cd "$ILDIZ"
 set -a; . ./.env; set +a
 PAPKA="${BACKUP_PATH:-$ILDIZ/backups}"

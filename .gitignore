@@ -1,6 +1,7 @@
 # Xom manba ma'lumotlar (GDB, shp, DEM, ERA5, backup) — repoda emas, alohida saqlanadi
 /data/
 /backups/
+/dem/
 *.gdb/
 /*.geojson
 *.dump

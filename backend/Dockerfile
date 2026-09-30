@@ -17,12 +17,18 @@ RUN python3 -m venv --system-site-packages /opt/venv
 
 WORKDIR /app
 COPY requirements.txt requirements-prod.txt ./
-RUN pip install -r requirements-prod.txt \
+# numpy pip'dan o'rnatilmaydi: obrazdagi osgeo.gdal_array tizim numpy'si (1.26) bilan yig'ilgan, numpy 2 bilan yuklanmaydi
+# (requirements.txt dagi numpy>=2 — Windows'dagi GDAL wheel uchun)
+RUN sed -i '/^numpy/d' requirements.txt \
+ && echo 'numpy<2' > /tmp/cheklov.txt \
+ && pip install -c /tmp/cheklov.txt -r requirements-prod.txt \
  && python -c "from osgeo import gdal, gdal_array; import numpy; print('GDAL', gdal.__version__, 'numpy', numpy.__version__)"
 
 COPY . .
+# uid 1000 bazaviy obrazda band (ubuntu). Serverda data/ egasining uid'i beriladi (.env: AGRO_UID) — /data ga yozish uchun
+ARG AGRO_UID=10001
 RUN chmod +x docker-entrypoint.sh \
- && useradd --system --uid 1000 --home /app agro \
+ && useradd --system --uid ${AGRO_UID} --home /app agro \
  && mkdir -p /app/staticfiles /data \
  && chown -R agro /app/staticfiles
 

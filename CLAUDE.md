@@ -65,7 +65,7 @@ o'zgartir. Har task tugagach commit qilinadi, shunda yo'qolgan o'zgarish git'dan
 Ishga tushirish (alohida terminallarda):
 - Backend: `cd backend; .venv\Scripts\python.exe manage.py runserver 8000`; testlar — `.venv\Scripts\python.exe -m pytest -q`.
 - Frontend: `cd frontend; npm run dev` (5173, `/api` va `/tiles` 8000 ga proksi); tekshiruv — `npm run lint; npm run build`.
-- Production (docker, CI/CD, backup): [docs/DEPLOY.md](docs/DEPLOY.md).
+- Production (umumiy server, docker compose, CI/CD siz — qo'lda `./deploy/deploy.sh`): [docs/DEPLOY.md](docs/DEPLOY.md).
 
 Import tartibi (`backend/`, `.venv\Scripts\python.exe manage.py ...`):
 `import_border` → `import_kontur` (oxirida `kontur_tuman` + `kontur_tur`) → `kontur_tuproq` → `import_tuproq` →

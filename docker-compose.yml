@@ -1,10 +1,26 @@
-# Agroxarita V2 — production (serverda /opt/agroxarita). Batafsil: docs/DEPLOY.md
-# Obrazlar GitLab registry'dan (CI build qiladi); lokal build: `docker compose build`.
+# Agroxarita V2 — production (umumiy server, repo katalogidan). Batafsil: docs/DEPLOY.md
+# Obrazlar serverda yig'iladi: `docker compose build` (registry ishlatilsa — REGISTRY_IMAGE + `pull`).
+# Umumiy server qoidalari: tashqariga faqat web (127.0.0.1), har servisda xotira/CPU chegarasi,
+# log hajmi cheklangan, tarmoq subneti aniq — boshqa loyihalar bilan to'qnashmasin.
 name: agroxarita
 
+x-umumiy: &umumiy
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+
 x-backend: &backend
+  <<: *umumiy
   image: ${REGISTRY_IMAGE:-agroxarita}/backend:${TAG:-latest}
-  build: ./backend
+  build:
+    context: ./backend
+    args:
+      AGRO_UID: ${AGRO_UID:-10001}
   env_file: .env
   environment:
     DB_HOST: db
@@ -19,10 +35,12 @@ x-backend: &backend
       condition: service_healthy
     redis:
       condition: service_started
-  restart: unless-stopped
+  mem_limit: ${BACKEND_MEM:-2500m}
+  cpus: ${BACKEND_CPUS:-4}
 
 services:
   db:
+    <<: *umumiy
     image: postgis/postgis:17-3.5
     environment:
       POSTGRES_DB: ${DB_NAME}
@@ -30,27 +48,30 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     command: >
       postgres
-      -c shared_buffers=${PG_SHARED_BUFFERS:-2GB}
-      -c effective_cache_size=${PG_EFFECTIVE_CACHE:-6GB}
-      -c work_mem=${PG_WORK_MEM:-64MB}
-      -c maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-1GB}
-      -c max_connections=100
+      -c shared_buffers=${PG_SHARED_BUFFERS:-1GB}
+      -c effective_cache_size=${PG_EFFECTIVE_CACHE:-3GB}
+      -c work_mem=${PG_WORK_MEM:-32MB}
+      -c maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-512MB}
+      -c max_connections=50
       -c random_page_cost=1.1
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ${BACKUP_PATH:-./backups}:/backups
     shm_size: 1g
+    mem_limit: ${DB_MEM:-4g}
+    cpus: ${DB_CPUS:-4}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 10
-    restart: unless-stopped
 
   redis:
+    <<: *umumiy
     image: redis:7-alpine
-    command: redis-server --maxmemory ${REDIS_MAXMEMORY:-1gb} --maxmemory-policy allkeys-lru --save ""
-    restart: unless-stopped
+    command: redis-server --maxmemory ${REDIS_MAXMEMORY:-512mb} --maxmemory-policy allkeys-lru --save ""
+    mem_limit: ${REDIS_MEM:-640m}
+    cpus: 1
 
   backend:
     <<: *backend
@@ -76,15 +97,24 @@ services:
     profiles: ["tools"]
 
   web:
+    <<: *umumiy
     image: ${REGISTRY_IMAGE:-agroxarita}/frontend:${TAG:-latest}
     build: ./frontend
     ports:
-      - "${HTTP_BIND:-80}:80"
+      # faqat localhost — tashqariga host nginx chiqaradi. 8080 band (jenkins), 80/443 — host nginx
+      - "${HTTP_BIND:-127.0.0.1:8090}:80"
     volumes:
       - static:/static:ro
     depends_on:
       - backend
-    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 1
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${DOCKER_SUBNET:-172.30.0.0/24}
 
 volumes:
   pgdata:

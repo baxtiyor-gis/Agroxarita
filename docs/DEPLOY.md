@@ -1,5 +1,64 @@
 # Agroxarita V2 — production va birinchi ishga tushirish
 
+## Joriy production: umumiy server, CI/CD siz
+
+Server boshqa ilovalar bilan umumiy (host nginx ~20 sayt, host PostgreSQL 12 va redis, begona docker loyihalar).
+Agroxarita `docker compose` bilan, **repo katalogidan** (`~/Agroxarita`) ishlaydi; obrazlar **serverning o'zida**
+yig'iladi — registry, GitLab CI va GitHub Actions deploy'i ishlatilmaydi.
+
+Boshqa ilovalarga ta'sir qilmaslik uchun (`docker-compose.yml`):
+- tashqariga faqat `web`, faqat `127.0.0.1:8090` (`HTTP_BIND`); **8080 band** (host nginx → jenkins), 80/443 — host nginx.
+  `db` va `redis` port ochmaydi — host PostgreSQL (5432) va redis (6379) bilan to'qnashmaydi;
+- har servisda `mem_limit`/`cpus` (db 4 GB, backend 2.5 GB, redis 640 MB, web 256 MB) — serverda swap yo'q;
+- tarmoq subneti aniq `172.30.0.0/24` (`DOCKER_SUBNET`), log hajmi cheklangan (10 MB × 5);
+- **global docker buyruqlari ishlatilmaydi**: `docker image prune`, `docker system prune`, `docker volume prune` —
+  boshqa loyihalarning obraz/volume'larini o'chiradi. Faqat `docker compose ...` (loyiha `agroxarita`).
+
+### Yangi versiyani chiqarish (qo'lda)
+```bash
+cd ~/Agroxarita
+git pull --ff-only
+./deploy/deploy.sh                      # build (nice), teg = commit SHA, up, /api/health/ tekshiruvi
+./deploy/deploy.sh "$(cat .tag_oldingi)"   # oldingi versiyaga qaytish — obraz serverda saqlangan, build yo'q
+docker images 'agroxarita/*'            # eski teglarni qo'lda: docker rmi agroxarita/backend:<sha> ...
+```
+Health o'tmasa skript o'zi oldingi tegga qaytadi. Build muvaffaqiyatsiz bo'lsa ishlab turgan stekka tegilmaydi.
+
+### Birinchi ko'tarish
+```bash
+cd ~/Agroxarita
+cp .env.example .env && chmod 600 .env      # SECRET_KEY, DB_PASSWORD, ALLOWED_HOSTS, CSRF_TRUSTED_ORIGINS
+mkdir -p data/dem backups                   # DEM: data/dem/dem.vrt + Copernicus_DSM_*.tif; dump: backups/
+./deploy/deploy.sh                          # bo'sh baza + migratsiyalar bilan ko'tariladi
+# tayyor bazani tiklash (past prioritet, -j 2):
+docker compose stop backend web
+docker compose exec -T db sh -c 'nice -n 10 pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner -j 2 /backups/agroxarita_YYYYmmdd.dump'
+docker compose up -d backend web
+docker compose run --rm manage createsuperuser
+curl -s http://127.0.0.1:8090/api/health/
+```
+
+### Host nginx (sudo; faqat yangi fayl qo'shiladi)
+```bash
+sudo cp deploy/nginx/agro-xarita.conf /etc/nginx/sites-available/agro-xarita
+sudo ln -s /etc/nginx/sites-available/agro-xarita /etc/nginx/sites-enabled/agro-xarita
+sudo nginx -t && sudo systemctl reload nginx      # restart EMAS; -t o'tmasa reload qilinmaydi
+```
+Qaytarish: `sudo rm /etc/nginx/sites-enabled/agro-xarita && sudo nginx -t && sudo systemctl reload nginx`.
+
+### Qayta yuklash va backup (sudo'siz)
+- Server qayta yuklanganda konteynerlar `restart: unless-stopped` bilan o'zi ko'tariladi (systemd unit shart emas).
+- Backup — foydalanuvchi crontab'i (`crontab -e`):
+  `30 2 * * * cd $HOME/Agroxarita && sg docker -c ./deploy/backup.sh >> backups/backup.log 2>&1`
+- To'liq to'xtatish: `docker compose down` (faqat shu loyiha; `pgdata` volume saqlanadi). **`down -v` — bazani o'chiradi.**
+
+---
+
+## Umumiy sxema (alohida server + CI/CD varianti — hozir ishlatilmaydi)
+
+Quyidagi bo'limlar alohida server (`/opt/agroxarita`), registry va CI/CD bilan ishlash uchun yozilgan; servislar
+tarkibi va kundalik amallar umumiy serverda ham bir xil.
+
 Stek (bitta Linux server, `docker compose`, katalog `/opt/agroxarita`):
 
 | Servis | Obraz | Vazifa |
