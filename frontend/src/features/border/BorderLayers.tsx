@@ -202,7 +202,7 @@ function yangilash(
   const qx: ExpressionSpecification = ['==', ['get', 'tur'], 'sugoriladigan']
   const qolgan: ExpressionSpecification = ['!', qx]
   const turFiltr = qat.qx && qat.qolgan ? null : qat.qx ? qx : qolgan
-  // tematik ranglash (V1): fill atribut bo'yicha, chiziq ingichka; balandlikda fill shaffof (raster ostida)
+  // tematik ranglash (V1): fill atribut bo'yicha, chiziq ingichka; balandlikda fill shaffof (raster ostida), chiziq odatiy
   const tem = tematik === 'balandlik' && tuman == null ? null : tematik
   const fillTematik = tem != null && !rasterTematikmi(tem)
   const klassF = fillTematik ? klassFiltri(tem, klassFiltr) : null
@@ -210,7 +210,8 @@ function yangilash(
     turFiltr && klassF ? ['all', turFiltr, klassF] : (turFiltr ?? klassF)
   map.setPaintProperty(L.konturFill, 'fill-color', fillTematik ? rangIfoda(tem) : '#000000')
   map.setPaintProperty(L.konturFill, 'fill-opacity', fillTematik ? 1 : 0)
-  if (tem == null) {
+  // balandlik (raster) — kontur chizig'i odatiy (QX qizil) qoladi
+  if (!fillTematik) {
     map.setPaintProperty(L.kontur, 'line-color', konturRang(sputnik))
     map.setPaintProperty(L.kontur, 'line-width', ['interpolate', ['linear'], ['zoom'], 9, 0.5, 12, 0.8, 16, 1.2])
     map.setPaintProperty(L.kontur, 'line-opacity', 1)

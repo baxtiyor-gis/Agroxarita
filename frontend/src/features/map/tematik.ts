@@ -41,23 +41,28 @@ const BONITET: Klass[] = [
   { min: 71, max: Infinity, rang: '#1c7a3e', nom: 'Yuqori', oraliq: '71+' },
 ]
 
-/** Agrokimyo darajalari (1..5) — uch ko'rsatkich uchun bir xil palitra */
-const DARAJA: Klass[] = [
-  { min: -Infinity, max: 2, rang: '#fff8d6', nom: 'Juda kam' },
-  { min: 2, max: 3, rang: '#dbeda0', nom: 'Kam' },
-  { min: 3, max: 4, rang: '#a2d47f', nom: "O'rtacha" },
-  { min: 4, max: 5, rang: '#55ab5c', nom: "Ko'p" },
-  { min: 5, max: Infinity, rang: '#1c7a3e', nom: "Juda ko'p" },
-]
+/** Agrokimyo darajalari (1..5) — har ko'rsatkichning o'z palitrasi */
+const daraja = (ranglar: string[]): Klass[] =>
+  ['Juda kam', 'Kam', "O'rtacha", "Ko'p", "Juda ko'p"].map((nom, i) => ({
+    min: i === 0 ? -Infinity : i + 1,
+    max: i === 4 ? Infinity : i + 2,
+    rang: ranglar[i],
+    nom,
+  }))
 
-/** Gumus — 6 daraja (backend: Ko'proq qo'shilgan, eng yuqorisi "Yuqori"); 6-rang V1 da yo'q — to'qroq yashil qo'shildi */
+/** Fosfor — ko'k */
+const FOSFOR = daraja(['#eef1fb', '#c7d2f0', '#93a8dc', '#5c75bd', '#2e4592'])
+/** Kaliy — binafsha (sho'rlanishning issiq palitrasidan farqlanadi) */
+const KALIY = daraja(['#f5eefa', '#dcc6ec', '#b894d6', '#8a5fb8', '#5b3a8c'])
+
+/** Gumus — 6 daraja, jigarrang (backend: Ko'proq qo'shilgan, eng yuqorisi "Yuqori") */
 const GUMUS: Klass[] = [
-  { min: -Infinity, max: 2, rang: '#fff8d6', nom: 'Juda kam' },
-  { min: 2, max: 3, rang: '#dbeda0', nom: 'Kam' },
-  { min: 3, max: 4, rang: '#a2d47f', nom: "O'rtacha" },
-  { min: 4, max: 5, rang: '#55ab5c', nom: "Ko'proq" },
-  { min: 5, max: 6, rang: '#1c7a3e', nom: "Ko'p" },
-  { min: 6, max: Infinity, rang: '#0e5028', nom: 'Yuqori' },
+  { min: -Infinity, max: 2, rang: '#f6efe2', nom: 'Juda kam' },
+  { min: 2, max: 3, rang: '#e6d3b3', nom: 'Kam' },
+  { min: 3, max: 4, rang: '#c9a877', nom: "O'rtacha" },
+  { min: 4, max: 5, rang: '#a47a48', nom: "Ko'proq" },
+  { min: 5, max: 6, rang: '#7a5230', nom: "Ko'p" },
+  { min: 6, max: Infinity, rang: '#4e3320', nom: 'Yuqori' },
 ]
 
 /** Sho'rlanish — teskari: yuqori = yomon, issiq palitra (1..5) */
@@ -84,8 +89,8 @@ export const SHKALA: Record<TematikId, Shkala> = {
   bonitet: { nom: 'Tuproq boniteti', izoh: 'ball', atribut: 'bonitet', klasslar: BONITET },
   shorlanish: { nom: "Sho'rlanish", izoh: 'daraja', atribut: 'shorlanish', klasslar: SHOR },
   gumus: { nom: 'Gumus', izoh: 'chirindi miqdori', atribut: 'gumus', klasslar: GUMUS },
-  fosfor: { nom: 'Fosfor', izoh: 'P₂O₅', atribut: 'fosfor', klasslar: DARAJA },
-  kaliy: { nom: 'Kaliy', izoh: 'K₂O', atribut: 'kaliy', klasslar: DARAJA },
+  fosfor: { nom: 'Fosfor', izoh: 'P₂O₅', atribut: 'fosfor', klasslar: FOSFOR },
+  kaliy: { nom: 'Kaliy', izoh: 'K₂O', atribut: 'kaliy', klasslar: KALIY },
   balandlik: { nom: 'Balandlik (DEM)', izoh: 'dengiz sathidan, m', atribut: 'balandlik', klasslar: BALANDLIK },
 }
 
