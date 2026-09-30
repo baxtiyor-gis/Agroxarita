@@ -110,7 +110,7 @@ export function KonturPanel() {
             </span>
           </div>
         )}
-        {k && tab === 'tavsiya' && <TavsiyaTab id={k.id} />}
+        {k && tab === 'tavsiya' && <TavsiyaTab kontur={k} />}
         {k && tab === 'ekinlar' && <EkinlarTab id={k.id} maydon={k.maydon} ekinlar={k.ekinlar ?? []} />}
         {k && tab === 'iqlim' && <IqlimTab id={k.id} />}
         {k && tab === 'tuproq' && <TuproqTab k={k} />}

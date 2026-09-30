@@ -6,13 +6,10 @@ import { YOQ } from './format'
 export function Satr({
   nom,
   qiymat,
-  namuna,
   children,
 }: {
   nom: string
   qiymat?: string | null
-  /** Qiymat namuna (mock) ekanini bildiruvchi kichik belgi */
-  namuna?: boolean
   children?: ReactNode
 }) {
   const matn = qiymat === undefined ? undefined : (qiymat ?? YOQ)
@@ -28,27 +25,11 @@ export function Satr({
             )}
           >
             {matn}
-            {namuna && <NamunaBelgi />}
           </div>
         )}
         {children}
       </div>
     </div>
-  )
-}
-
-/** Mock ma'lumot belgisi — V1 tuzilmasini buzmaydigan kichik chip */
-export function NamunaBelgi({ className }: { className?: string }) {
-  return (
-    <span
-      title="Namuna ma'lumot — backendda hali yo'q"
-      className={cn(
-        'shrink-0 rounded-full bg-wheat-soft px-1.5 py-px text-[9.5px] leading-tight font-medium text-wheat',
-        className,
-      )}
-    >
-      Namuna ma'lumot
-    </span>
   )
 }
 
