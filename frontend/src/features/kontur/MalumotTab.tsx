@@ -2,10 +2,25 @@ import type { Kontur } from './types'
 import { ga } from './format'
 import { Satr } from './ui'
 
-/** Kontur raqami, maydoni, MFY, massiv, tuman, viloyat; tagida asosiy yer ma'lumotlari (0 dan katta yer turlari) */
+/** Konturning asosiy yer turlari — doim ko'rinadi (0 bo'lsa ham); kod — API `yer_turlari[].kod` */
+const ASOSIY: { kod: string; nom: string }[] = [
+  { kod: 'jami_qx_yeri', nom: 'Jami QX yeri' },
+  { kod: 'jami_qx_sug_yeri', nom: "Jami QX sug'oriladigan yeri" },
+  { kod: 'haydalma_yer_sug', nom: "Haydalma (sug'oriladigan)" },
+  { kod: 'haydalma_lalmi', nom: 'Haydalma (lalmi)' },
+  { kod: 'boglar_sug', nom: "Bog'lar (sug'oriladigan)" },
+  { kod: 'tomarqa', nom: 'Tomorqa' },
+]
+
+/** Kontur raqami, maydoni, MFY, massiv, tuman, viloyat; tagida asosiy yer ma'lumotlari */
 export function MalumotTab({ k }: { k: Kontur }) {
-  // jami qatorlar (Jami QX yeri, Jami sug'oriladigan) — birinchi
-  const yerlar = [...k.yer_turlari.filter((y) => y.jami), ...k.yer_turlari.filter((y) => !y.jami)]
+  const bor = new Map(k.yer_turlari.map((y) => [y.kod, y]))
+  const asosiyKod = new Set(ASOSIY.map((a) => a.kod))
+  const yerlar = [
+    ...ASOSIY.map((a) => ({ kod: a.kod, nom: a.nom, maydon: bor.get(a.kod)?.maydon ?? 0 })),
+    // qolgan 0 dan katta yer turlari
+    ...k.yer_turlari.filter((y) => !asosiyKod.has(y.kod)),
+  ]
 
   return (
     <>

@@ -18,7 +18,7 @@ export function Satr({
   const matn = qiymat === undefined ? undefined : (qiymat ?? YOQ)
   return (
     <div className="flex items-start gap-3 py-2.5">
-      <span className="w-[100px] shrink-0 pt-[1px] text-[12px] text-muted">{nom}</span>
+      <span className="w-[150px] shrink-0 pt-[1px] text-[12px] text-muted">{nom}</span>
       <div className="min-w-0 flex-1">
         {matn && (
           <div

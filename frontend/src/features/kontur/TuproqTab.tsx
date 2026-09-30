@@ -5,13 +5,13 @@ import { bosh } from './format'
 import { Darajalar, Satr, Shkala } from './ui'
 
 const AGRO = [
-  { nom: 'Gumus', kalit: 'gumus', birlik: '%', soni: 6 },
-  { nom: 'Fosfor', kalit: 'fosfor', birlik: 'mg/kg', soni: 5 },
   { nom: 'Kaliy', kalit: 'kaliy', birlik: 'mg/kg', soni: 5 },
+  { nom: 'Fosfor', kalit: 'fosfor', birlik: 'mg/kg', soni: 5 },
+  { nom: 'Gumus', kalit: 'gumus', birlik: '%', soni: 6 },
 ] as const
 
-/** V1 tuzilishi: Bonitet, Gumus, Fosfor, Kaliy, Mexanika, Sho'rlanish, Yer osti suvi.
- *  Hammasi API: tuproq (bonitet, mexanika, …) va agrokimyo (gumus, fosfor, kaliy). */
+/** Avval tuproq (bonitet, mexanika, sho'rlanish, yer osti suvi, yuvilish, toshlanish, klass),
+ *  keyin agrokimyo (kaliy, fosfor, gumus). Hammasi API. */
 export function TuproqTab({ k }: { k: Kontur }) {
   const t = k.tuproq
   const ishonchsiz = t != null && t.qoplanish < 0.1
@@ -45,6 +45,15 @@ export function TuproqTab({ k }: { k: Kontur }) {
           </Satr>
         </div>
 
+        <div className={cn('divide-y divide-line', ishonchsiz && 'opacity-50')}>
+          <Satr nom="Mexanika" qiymat={bosh(t?.mexanika) ?? yoq} />
+          <Satr nom="Sho'rlanish" qiymat={bosh(t?.shorlanish) ?? yoq} />
+          <Satr nom="Yer osti suvi" qiymat={t?.yer_osti_suvi ? `${t.yer_osti_suvi} m` : yoq} />
+          <Satr nom="Yuvilish" qiymat={bosh(t?.yuvilish) ?? yoq} />
+          <Satr nom="Toshlanish" qiymat={bosh(t?.toshlanish) ?? yoq} />
+          <Satr nom="Klass" qiymat={t?.klass ?? yoq} />
+        </div>
+
         {/* Agrokimyo — haqiqiy (eng so'nggi yil, eng katta kesishuv); qoplanish past bo'lsa xira.
             API darajasi 1 dan (gumus 1..6, fosfor/kaliy 1..5), Darajalar — 0 dan */}
         {AGRO.map(({ nom, kalit, birlik, soni }) => {
@@ -68,15 +77,6 @@ export function TuproqTab({ k }: { k: Kontur }) {
             </div>
           )
         })}
-
-        <div className={cn('divide-y divide-line', ishonchsiz && 'opacity-50')}>
-          <Satr nom="Mexanika" qiymat={bosh(t?.mexanika) ?? yoq} />
-          <Satr nom="Sho'rlanish" qiymat={bosh(t?.shorlanish) ?? yoq} />
-          <Satr nom="Yer osti suvi" qiymat={t?.yer_osti_suvi ? `${t.yer_osti_suvi} m` : yoq} />
-          <Satr nom="Yuvilish" qiymat={bosh(t?.yuvilish) ?? yoq} />
-          <Satr nom="Toshlanish" qiymat={bosh(t?.toshlanish) ?? yoq} />
-          <Satr nom="Klass" qiymat={t?.klass ?? yoq} />
-        </div>
       </div>
     </>
   )
