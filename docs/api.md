@@ -93,8 +93,8 @@ butun son emas -> `400`, tuman mavjud emas -> `404`. GeoJSON ishlatilmaydi — g
 
 `kontur` — tuman konturlari (`land_kontur.geom_mvt`). `?tuman` yo'q yoki butun son emas -> `400`, tuman
 mavjud emas -> `404`, zoom 9–18 dan tashqarida -> `204`. `z < 13` da `ST_SimplifyPreserveTopology`
-(tolerantlik = piksel/2, piksel = 40075016.68 / (256 * 2^z) m) va maydoni bir piksel'dan kichik konturlar
-tashlanadi; `z >= 13` da soddalashtirishsiz. Filtr `tuman_geo_id` indeksi + `geom_mvt && ST_TileEnvelope`.
+(tolerantlik = piksel/4, piksel = 40075016.68 / (256 * 2^z) m — ekranda ≤ 1 piksel) va maydoni (piksel/4)² dan kichik
+konturlar tashlanadi (tematik bo'yash barcha zoom'larda bir xil ko'rinsin); `z >= 13` da soddalashtirishsiz. Filtr `tuman_geo_id` indeksi + `geom_mvt && ST_TileEnvelope`.
 
 `?tuman` — **geometrik** tuman (`Kontur.tuman_geo`: kontur bilan eng katta kesishuv maydoni bo'yicha; kontur
 kesilmaydi), manba `distrikt_id` (`Kontur.tuman`) emas. `tuman_geo` NULL bo'lgan (hech tumanga tushmagan)

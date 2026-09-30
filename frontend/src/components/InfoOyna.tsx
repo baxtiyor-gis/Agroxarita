@@ -14,7 +14,7 @@ const TABLAR: { id: Tab; nom: string; icon: typeof BookOpen }[] = [
 ]
 
 /** Respublika bo'yicha QX (sug'oriladigan) konturlari — bazadan (land_kontur, tur = sugoriladigan) */
-const RAQAM = { soni: '730 724', maydon: '7 534 173' }
+const RAQAM = { soni: '730 724', maydon: '3.2 mln' }
 
 /** Ma'lumot manbalari — kim tayyorlagan va nima uchun ishlatilgan */
 const MANBALAR: { nom: string; manba: string; izoh: string }[] = [
@@ -39,7 +39,7 @@ const MANBALAR: { nom: string; manba: string; izoh: string }[] = [
     izoh: "30 m: balandlik, qiyalik, yo'nalish",
   },
   {
-    nom: 'Iqlim (2022–2026)',
+    nom: 'Iqlim (2016–2026)',
     manba: 'ERA5-Land — Copernicus Climate Change Service',
     izoh: "Harorat, yog'in, bug'lanish, sovuq sanalari; 0.1° katak bo'yicha",
   },
@@ -170,8 +170,17 @@ export function InfoOyna({ ochiq, onYop }: { ochiq: boolean; onYop: () => void }
                   relyef, foydalanish) ekin talablari bilan solishtiriladi va natija sabablari bilan ko'rsatiladi.
                 </p>
               </div>
+              <div>
+                <Sarlavha>Sun'iy intellekt</Sarlavha>
+                <p>
+                  Konturlar bo‘yicha tuproq, relyef, iqlim va oldingi yillarda ekilgan ekinlar ma’lumotlari asosida
+                  CatBoost modeli va ko‘p sinfli tasniflash algoritmi qo‘llanildi. Model tarixiy ekin ma’lumotlarida
+                  o‘qitilib, har bir kontur uchun mos ekinlarni bashorat qildi. Bashoratlar amaldagi qoidaviy tavsiya
+                  ballari bilan solishtirildi, tavsiyaga ta’sir qilgan omillar esa SHAP tahlili orqali aniqlandi
+                </p>
+              </div>
               <p className="rounded-lg bg-sunken px-3.5 py-2.5 text-[12.5px] text-muted">
-                Qamrov — <b className="text-ink">respublikaning 14 viloyati</b>, <b className="text-ink">206 tuman</b>
+                Qamrov — <b className="text-ink">respublikaning 14 ta hududi</b>, <b className="text-ink">206 tuman</b>
                 . Viloyat va tumanni sarlavhadagi ro'yxatdan tanlang.
               </p>
             </div>

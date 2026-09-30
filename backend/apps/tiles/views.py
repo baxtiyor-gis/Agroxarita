@@ -47,6 +47,9 @@ QATLAMLAR = {
 }
 
 KONTUR_SODDALASH_MAX_ZOOM = 12  # z < 13 — soddalashtirish va mayda konturlarni tashlash
+# MapLibre z tile'ni 512 px da, z+1 gacha kattalashtirib chizadi: 1 ekran pikseli = 256-px "piksel" ning 1/2..1/4 qismi.
+# Chegara ekran pikselidan katta bo'lsa, tematik bo'yashda past zoom'da konturlar "yo'qoladi" (z9 da maydonning ~1/3 i).
+KONTUR_PIKSEL_BOLAK = 4
 
 
 def _xato(xabar, status):
@@ -125,11 +128,11 @@ def kontur_sql(z, yillar=()):
                         f"JOIN {EkinClass._meta.db_table} c ON c.id = e.ekin_id "
                         f"WHERE e.kontur_id = t.id AND e.asosiy) ek ON TRUE")
     if z <= KONTUR_SODDALASH_MAX_ZOOM:
-        piksel = EKVATOR_M / (256 * 2**z)  # metr
+        piksel = EKVATOR_M / (256 * 2**z) / KONTUR_PIKSEL_BOLAK  # metr (ekran pikseli, eng yomon holat)
         # oldindan soddalashtirilgan geom_mvt_s (~19 m) ustida tez ST_Simplify; NULL bo'lsa geom_mvt
         geom_ifoda = "ST_Simplify(COALESCE(t.geom_mvt_s, t.geom_mvt), %s, true)"
-        tolerantlik = [piksel / 2]
-        # piksel'dan kichik konturlar soddalashtirishdan OLDIN tashlanadi (maydon_mvt — oldindan hisoblangan)
+        tolerantlik = [piksel]
+        # ekran pikselidan kichik konturlar soddalashtirishdan OLDIN tashlanadi (maydon_mvt — oldindan hisoblangan)
         maydon_sharti = f" AND (t.maydon_mvt IS NULL OR t.maydon_mvt >= {piksel * piksel!r})"
     else:
         geom_ifoda, tolerantlik, maydon_sharti = "t.geom_mvt", [], ""

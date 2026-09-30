@@ -76,8 +76,8 @@ def test_filtr_tuman_geo_boyicha(client, tuman, shahar):
 
 @pytest.mark.django_db
 def test_past_zoomda_pikseldan_kichik_kontur_tashlanadi(client, tuman):
-    # ~55 m x 55 m kontur: z=10 piksel ~153 m (tashlanadi), z=13 da (soddalashtirishsiz) saqlanadi
-    kontur_yarat(tuman, 5, kvadrat(69.3, 40.3, 69.3005, 40.3005), kontur_raqami=1, umumiy_maydoni=0.3)
+    # ~22 m x 29 m kontur: z=10 ekran pikseli ~38 m (piksel/4) — tashlanadi, z=13 da (soddalashtirishsiz) saqlanadi
+    kontur_yarat(tuman, 5, kvadrat(69.3, 40.3, 69.3002, 40.3002), kontur_raqami=1, umumiy_maydoni=0.05)
     assert client.get(_url(10, 69.3, 40.3)).status_code == 204
     assert client.get(_url(13, 69.3, 40.3)).status_code == 200
     # katta kontur z=10 da saqlanadi
@@ -88,7 +88,7 @@ def test_past_zoomda_pikseldan_kichik_kontur_tashlanadi(client, tuman):
 def test_kontur_sql_z_bo_yicha():
     sql12, tol12 = kontur_sql(12)
     assert "ST_Simplify(" in sql12 and "maydon_mvt >=" in sql12 and len(tol12) == 1
-    assert tol12[0] == pytest.approx(40075016.68 / (256 * 2**12) / 2, rel=1e-3)
+    assert tol12[0] == pytest.approx(40075016.68 / (256 * 2**12) / 4, rel=1e-3)
     assert sql12.count("%s") == 3 + 1 + 1 + 1  # z,x,y + qatlam + tolerantlik + tuman_id
     sql13, tol13 = kontur_sql(13)
     assert "Simplify" not in sql13 and "maydon_mvt" not in sql13 and tol13 == []
