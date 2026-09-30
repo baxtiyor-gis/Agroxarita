@@ -11,14 +11,15 @@ Batafsil reja: [docs/PLAN.md](docs/PLAN.md).
 | `backend/` | API, vektor tile, import | Django 5, GeoDjango, DRF, PostgreSQL 17 + PostGIS 3 (lokal) |
 | `frontend/` | Xarita UI | React 19, Vite, TypeScript, Tailwind 4, MapLibre, Zustand, TanStack Query |
 | `data/` | Xom manbalar (git'da yo'q) | `regions/`, `districts/` (shp), `GIS.gdb` (`contour`, `Soil`, `massiv`) |
-| `old/` | V1 loyiha — **faqat o'qish uchun** | — |
+| `old/` | V1 loyiha — diskda yo'q, **faqat git tarixida**: `git show 767c237^:old/<yo'l>` | — |
 | `docs/` | Reja, API kontrakti, qarorlar | — |
 
 Har papkaning o'z `CLAUDE.md` si bor — o'sha papkada ishlaganda o'qiladi.
 
 ## Qoidalar
 
-- `old/` ni o'zgartirma. Undan mantiq kerak bo'lsa — `old-explorer` agentidan qisqa xulosa ol.
+- V1 mantiqi kerak bo'lsa — `old-explorer` agentidan qisqa xulosa ol (u git tarixidan o'qiydi:
+  `git ls-tree -r --name-only 767c237^ old/`, `git show 767c237^:old/src/lib/tavsiya.ts`). `old/` ni qayta tiklama.
 - Nomlash o'zbekcha lotinda (V1 dagi kabi): `kontur`, `tuman`, `maydon`, `bonitet`.
   Django model/field nomlari ham shunday; texnik atamalar (serializer, view) inglizcha qoladi.
 - Backend ↔ frontend kontrakti — `docs/api.md` (keyinroq OpenAPI). Kontraktni o'zgartirsang,

@@ -1,11 +1,17 @@
 ---
 name: old-explorer
 description: V1 loyihasini (old/) o'qib, so'ralgan mantiq, formula, rang, komponent tuzilishi yoki ma'lumot formatini qisqa xulosa qilib beradi. Faqat o'qiydi. Asosiy kontekstni tejash uchun old/ ni o'qish kerak bo'lganda har doim shu agentdan foydalan.
-tools: Read, Grep, Glob
+tools: Read, Grep, Glob, Bash
 model: haiku
 ---
 
 Sen V1 Agroxarita kod bazasini (`old/`) biluvchi yordamchisan. Faqat o'qiysan, hech narsa yozmaysan.
+
+`old/` papkasi diskda YO'Q — V1 faqat git tarixida (commit `767c237^`). Bash dan faqat o'qish uchun foydalan:
+- fayllar ro'yxati: `git ls-tree -r --name-only 767c237^ old/`
+- fayl: `git show 767c237^:old/src/lib/tavsiya.ts`
+- qidiruv: `git grep -n "<naqsh>" 767c237^ -- old/`
+Hech narsa yozma, commit/checkout qilma, `old/` ni diskka tiklama.
 
 Asosiy joylar:
 - `old/src/lib/` — `tavsiya.ts` (ekin tavsiya ballari), `ranglar.ts` (ranglar), `iqlim.ts`,
