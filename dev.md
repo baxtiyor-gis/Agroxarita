@@ -55,6 +55,7 @@ Talablar: Windows, Python 3.11, Node.js, PostgreSQL 17 + PostGIS.
    `kontur_tur` uni qayta `aniqlanmagan` qiladi, shuning uchun doim undan keyin). Respublika bo'yicha qo'llangan.
    **Relyef:** `yukla_dem` (Copernicus DEM → `data/dem/`), `hisobla_relyef` — `import_kontur` dan keyin qayta ishga tushiriladi.
    **Agrokimyo:** `import_agrokimyo --qatlam Kaliy --korsatkich kaliy`. **Iqlim:** `katak_yarat` → `yukla_era5` → `import_iqlim` (CDS kaliti `.env` da).
+   Joriy (to'liq bo'lmagan) yil: `yukla_era5 --joriy --import` (= `--soatlik --yil <bugungi yil>`; mavjud sana = bugun−7 kun, qayta ishga tushirilsa faqat yangi qismi; IqlimKunlik — mavjud kunlar, IqlimOylik — faqat to'liq oylar, IqlimYillik yozilmaydi).
 5. **Tile keshi:** `.env` da `TILE_CACHE_MAX_AGE=0` (dev — kesh yo'q); productionda `3600`.
 
 ## Testlar haqida

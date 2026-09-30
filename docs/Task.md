@@ -661,6 +661,9 @@ tushgan **1 448 katak**; davr — 2016-01-01…2025-12-31 (10 yil).
 - **Yuklash:** `cdsapi` bilan O'zbekiston bbox bo'yicha oylik NetCDF (`reanalysis-era5-land`, kunlik agregat yoki soatlik→kunlik),
   `data/era5/` ga (git'da yo'q); `import_iqlim` — NetCDF → katak markazidagi qiymatlar → `IqlimKunlik`, keyin oylik/yillik.
   Qayta ishga tushirsa davom etadi (yuklangan oylar o'tkaziladi).
+  **Joriy yil:** `yukla_era5 --joriy --import` — ERA5-Land kechikishi (~7 kun) hisobga olinadi: t2m/tp faqat bugun−7 kungacha
+  (oxirgi oy `..._kNN.nc`), `tp_{yil}.nc` oyma-oy fayllardan birlashtiriladi; `import_iqlim --qisman`: IqlimKunlik mavjud kunlar,
+  IqlimOylik faqat to'liq oylar, IqlimYillik yozilmaydi (FAH/sovuqsiz kunlar to'liq yilga tegishli). Idempotent.
 - **API:** `GET /api/konturlar/{id}/` ga `iqlim` (kontur tushgan katak: yillik ko'rsatkichlar + 12 oylik o'rtacha).
 - **Frontend (keyin):** kontur panelidagi Iqlim tab — haqiqiy (V1 tuzilishida).
 - **Kerak:** CDS akkaunt + API kalit (`~/.cdsapirc`), ERA5-Land litsenziyasini akkauntda qabul qilish.

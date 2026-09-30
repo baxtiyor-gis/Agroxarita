@@ -1,4 +1,5 @@
 """data/era5/ NetCDF -> IqlimKunlik (katak markazidagi eng yaqin nuqta), keyin IqlimOylik/IqlimYillik. Idempotent."""
+import calendar
 import datetime as dt
 from collections import defaultdict
 from pathlib import Path
@@ -9,7 +10,7 @@ from django.core.management.base import BaseCommand
 from django.db import connection, transaction
 
 from apps.climate import hisob
-from apps.climate.models import IqlimKatak, IqlimKunlik, IqlimYillik
+from apps.climate.models import IqlimKatak, IqlimKunlik, IqlimOylik, IqlimYillik
 
 MAYDONLAR = ["t_min", "t_max", "t_ort", "yogin", "et0", "radiatsiya", "shamol", "namlik"]
 
@@ -34,21 +35,28 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--yil", type=int)
         parser.add_argument("--papka", default=None)
+        parser.add_argument(
+            "--qisman", action="store_true",
+            help="joriy (to'liq bo'lmagan) yil: mavjud kunlar IqlimKunlik ga, faqat to'liq oylar IqlimOylik ga; IqlimYillik yozilmaydi",
+        )
 
-    def handle(self, *args, yil=None, papka=None, **opts):
+    def handle(self, *args, yil=None, papka=None, qisman=False, **opts):
         papka = Path(papka) if papka else settings.ERA5_DIR
         kataklar = list(IqlimKatak.objects.order_by("id"))
         nuqtalar = [(k.markaz_lon, k.markaz_lat) for k in kataklar]
         jami, tegilgan = 0, []
         for y in [yil] if yil else range(2016, 2026):
-            if not hisob.fayllar_yil(papka, y):
+            if not hisob.fayllar_yil(papka, y, qisman=qisman):
                 continue
             sanalar, q = hisob.yil_kunlik(papka, y, nuqtalar)
             with transaction.atomic():
                 IqlimKunlik.objects.filter(sana__gte=dt.date(y, 1, 1), sana__lte=dt.date(y, 12, 31)).delete()
                 for m in range(1, 13):
                     jami += self.saqla_oy(kataklar, sanalar, q, y, m)
-            self.yillik(y)
+            if qisman:  # yillik ko'rsatkichlar (FAH, sovuqsiz kunlar, yillik yog'in) to'liq yilga tegishli - yozilmaydi
+                IqlimYillik.objects.filter(yil=y).delete()
+            else:
+                self.yillik(y)
             tegilgan.append(y)
             self.stdout.write(f"{y}: {len(sanalar)} kun")
         self.stdout.write(f"kunlik qatorlar: {jami}; yillar: {tegilgan}")
@@ -57,12 +65,18 @@ class Command(BaseCommand):
         boshi = dt.date(y, m, 1)
         oxiri = dt.date(y + (m == 12), m % 12 + 1, 1)
         indekslar = [i for i, s in enumerate(sanalar) if boshi <= s < oxiri]
+        if not indekslar:
+            IqlimOylik.objects.filter(yil=y, oy=m).delete()
+            return 0
         qatorlar = [
             IqlimKunlik(katak_id=k.id, sana=sanalar[ti], **{f: _float(q[f][ti, ki]) for f in MAYDONLAR})
             for ti in indekslar
             for ki, k in enumerate(kataklar)
         ]
         IqlimKunlik.objects.bulk_create(qatorlar, batch_size=5000)
+        if len(indekslar) < calendar.monthrange(y, m)[1]:  # to'liq bo'lmagan oy - oylik agregat yozilmaydi
+            IqlimOylik.objects.filter(yil=y, oy=m).delete()
+            return len(qatorlar)
         with connection.cursor() as cur:
             cur.execute(OYLIK_SQL, [boshi, oxiri])
         return len(qatorlar)

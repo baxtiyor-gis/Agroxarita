@@ -170,3 +170,80 @@ def test_soatlik_sorov_shakli():
     s = soatlik_sorov(2024, 2)
     assert s["variable"] == ["2m_temperature"] and len(s["time"]) == 24 and len(s["day"]) == 29
     assert s["month"] == ["02"] and s["data_format"] == "netcdf"
+
+
+# --- Joriy (to'liq bo'lmagan) yil ---
+def test_oxirgi_sana_va_oylar():
+    from apps.climate.era5 import oxirgi_sana, oy_mavjud_kunlar, tp_oy_nomi, yil_oylari
+
+    oxirgi = oxirgi_sana(dt.date(2026, 9, 30))
+    assert oxirgi == dt.date(2026, 9, 23)
+    assert yil_oylari(2026, oxirgi) == [(2025, 12)] + [(2026, m) for m in range(1, 10)]
+    assert yil_oylari(2025, oxirgi) == yil_oylari(2025) and len(yil_oylari(2026)) == 13
+    assert [oy_mavjud_kunlar(2026, m, oxirgi) for m in (8, 9, 10)] == [31, 23, 0]
+    assert soatlik_nomi(2026, 9, 23) == "soatlik/t2m_2026_09_k23.nc" and soatlik_nomi(2026, 8, 31) == "soatlik/t2m_2026_08.nc"
+    assert tp_oy_nomi(2026, 9, 23) == "soatlik/tp_2026_09_k23.nc"
+    assert len(soatlik_sorov(2026, 9, 23)["day"]) == 23 and soatlik_sorov(2026, 9, 23)["day"][-1] == "23"
+
+
+class SoxtaCds:
+    """cdsapi.Client o'rnida: so'rovga mos sintetik NetCDF yozadi (tarmoqsiz)."""
+
+    chaqiruvlar = []
+
+    def __init__(self, *a, **k):
+        pass
+
+    def retrieve(self, dataset, sorov_, maqsad):
+        SoxtaCds.chaqiruvlar.append((sorov_["variable"][0], sorov_["month"][0], len(sorov_["day"])))
+        y, m = int(sorov_["year"]), int(sorov_["month"][0])
+        soatlar = [int(t[:2]) for t in sorov_["time"]]
+        vaqt = [dt.datetime(y, m, int(d), h) for d in sorov_["day"] for h in soatlar]
+        nom, qiymat = ("t2m", 300.0) if sorov_["variable"][0] == "2m_temperature" else ("tp", 0.001)
+        with netCDF4.Dataset(maqsad, "w") as ds:
+            ds.createDimension("valid_time", len(vaqt))
+            ds.createDimension("latitude", len(LATS))
+            ds.createDimension("longitude", len(LONS))
+            t = ds.createVariable("valid_time", "i8", ("valid_time",))
+            t.units = "seconds since 1970-01-01"
+            t[:] = [int((x - dt.datetime(1970, 1, 1)).total_seconds()) for x in vaqt]
+            ds.createVariable("latitude", "f8", ("latitude",))[:] = LATS
+            ds.createVariable("longitude", "f8", ("longitude",))[:] = LONS
+            ds.createVariable(nom, "f4", ("valid_time", "latitude", "longitude"))[:] = np.full((len(vaqt), len(LATS), len(LONS)), qiymat)
+
+
+def test_yukla_joriy_yil_idempotent(kataklar_bor, tmp_path, settings, monkeypatch):
+    import cdsapi
+
+    settings.CDS_API_KEY = "test"
+    settings.ERA5_DIR = tmp_path
+    monkeypatch.setattr(cdsapi, "Client", SoxtaCds)
+    SoxtaCds.chaqiruvlar = []
+    call_command("katak_yarat")
+
+    def yukla(bugun):
+        SoxtaCds.chaqiruvlar = []
+        call_command("yukla_era5", joriy=True, bugun=bugun, import_=True)
+        return list(SoxtaCds.chaqiruvlar)
+
+    ch = yukla("2026-09-30")  # mavjud sana 2026-09-23
+    assert len(ch) == 10 + 9  # t2m: 2025-12 + 9 oy; tp: 9 oy
+    assert ("2m_temperature", "09", 23) in ch and ("total_precipitation", "09", 23) in ch
+    assert IqlimKunlik.objects.count() == 266 and IqlimKunlik.objects.latest("sana").sana == dt.date(2026, 9, 23)
+    assert sorted(IqlimOylik.objects.values_list("oy", flat=True)) == list(range(1, 9))  # faqat to'liq oylar
+    assert IqlimYillik.objects.count() == 0
+    assert IqlimKunlik.objects.get(sana=dt.date(2026, 3, 5)).yogin == pytest.approx(1.0, abs=1e-4)
+    assert hisob.fayl_oxirgi_sana(tmp_path / fayl_nomi("t_min", 2026)) == dt.date(2026, 9, 23)
+
+    assert yukla("2026-09-30") == []  # hech narsa yangi emas
+    assert IqlimKunlik.objects.count() == 266
+
+    ch = yukla("2026-10-02")  # 2 kun yangi: faqat sentyabr qayta yuklanadi
+    assert sorted(ch) == [("2m_temperature", "09", 25), ("total_precipitation", "09", 25)]
+    assert IqlimKunlik.objects.count() == 268 and IqlimOylik.objects.count() == 8
+    assert not (tmp_path / soatlik_nomi(2026, 9, 23)).exists()  # eski qisqa fayl o'chirilgan
+
+    ch = yukla("2026-10-10")  # sentyabr to'lishi + oktyabr boshlanishi
+    assert ("2m_temperature", "09", 30) in ch and ("2m_temperature", "10", 3) in ch
+    assert IqlimKunlik.objects.count() == 273 + 3 and sorted(IqlimOylik.objects.values_list("oy", flat=True)) == list(range(1, 10))
+    assert IqlimYillik.objects.count() == 0

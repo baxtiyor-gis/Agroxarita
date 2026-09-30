@@ -4,7 +4,7 @@ import math
 
 import numpy as np
 
-from .era5 import MAHALLIY_SOAT, fayl_nomi, oy_kunlari, soatlik_nomi, yil_oylari
+from .era5 import MAHALLIY_SOAT, fayl_nomi, oy_kunlari, oy_mavjud_kunlar, soatlik_nomi, tp_oy_nomi, yil_oylari
 
 
 def _o(ds, nom):
@@ -112,9 +112,26 @@ def yil_kunlik(papka, yil, kataklar):
     }
 
 
-def fayllar_yil(papka, yil):
-    """Yil uchun t_min, t_max, tp fayllari va keyingi yil tp si (31-dekabr yog'ini uchun) bor bo'lsa True."""
-    return all((papka / fayl_nomi(g, y)).exists() for g, y in (("t_min", yil), ("t_max", yil), ("tp", yil), ("tp", yil + 1)))
+def fayllar_yil(papka, yil, qisman=False):
+    """Yil uchun t_min, t_max, tp fayllari va keyingi yil tp si (31-dekabr yog'ini uchun) bor bo'lsa True.
+
+    qisman=True (joriy, to'liq bo'lmagan yil): keyingi yil tp si talab qilinmaydi.
+    """
+    kerak = [("t_min", yil), ("t_max", yil), ("tp", yil)] + ([] if qisman else [("tp", yil + 1)])
+    return all((papka / fayl_nomi(g, y)).exists() for g, y in kerak)
+
+
+def fayl_oxirgi_sana(yol):
+    """NetCDF dagi eng oxirgi sana (fayl yo'q yoki o'qilmasa None)."""
+    import netCDF4
+
+    if not yol.exists():
+        return None
+    try:
+        with netCDF4.Dataset(yol) as ds:
+            return max(_sanalar(ds))
+    except Exception:  # noqa: BLE001 - buzuq fayl = yo'q
+        return None
 
 
 def yillik_hisob(sanalar, t_min, t_ort, yogin, et0):
@@ -137,8 +154,8 @@ def yillik_hisob(sanalar, t_min, t_ort, yogin, et0):
     return fah, (oxiri - boshi).days - 1, ob, bk, yig(yogin), yig(et0), ort
 
 
-def _soatlik_oy(yol):
-    """(t2m[vaqt, lat, lon] K, lat, lon, vaqtlar UTC datetime) — bitta oy fayli."""
+def _soatlik_oy(yol, nom="t2m"):
+    """(nom[vaqt, lat, lon], lat, lon, vaqtlar UTC datetime) — bitta oy fayli (default t2m, K)."""
     import netCDF4
 
     with netCDF4.Dataset(yol) as ds:
@@ -146,26 +163,27 @@ def _soatlik_oy(yol):
         lon = _o(ds, "longitude")
         v = ds.variables["valid_time"]
         vaqt = netCDF4.num2date(v[:], v.units, only_use_cftime_datetimes=False, only_use_python_datetimes=True)
-        a = ds.variables["t2m"][:]
+        a = ds.variables[nom][:]
         a = a.astype("float32").filled(np.nan) if np.ma.isMaskedArray(a) else np.asarray(a, dtype="float32")
         while a.ndim > 3:  # expver o'lchami
             a = np.nanmax(a, axis=1)
     return a, lat, lon, list(vaqt)
 
 
-def soatlikdan_kunlik(papka, yil):
+def soatlikdan_kunlik(papka, yil, oxirgi=None):
     """Soatlik oy fayllari -> mahalliy kun (UTC+5) bo'yicha (sanalar, t_min, t_max, t_ort, lat, lon), K.
 
     Mahalliy kun D = UTC (D-1) 19:00 ... D 18:59, shuning uchun oldingi oyning oxirgi 5 soati qo'shiladi
     va oy oxirgi 5 soati (keyingi oy 1-kuni) tashlanadi. Oldingi yil dekabri kerak.
+    oxirgi (date) - joriy yil: oylar shu sanagacha, oxirgi oy fayli qisqartirilgan (soatlik_nomi(..., kunlar)).
     """
     sh = MAHALLIY_SOAT
     oldingi = None
     mn, mx, ort, sanalar = [], [], [], []
     lat = lon = None
-    for y, m in yil_oylari(yil):
-        a, lat, lon, vaqt = _soatlik_oy(papka / soatlik_nomi(y, m))
-        n = oy_kunlari(y, m)
+    for y, m in yil_oylari(yil, oxirgi):
+        n = oy_mavjud_kunlar(y, m, oxirgi)
+        a, lat, lon, vaqt = _soatlik_oy(papka / soatlik_nomi(y, m, n))
         if len(vaqt) != n * 24 or vaqt[0] != dt.datetime(y, m, 1):
             raise ValueError(f"{soatlik_nomi(y, m)}: kutilgan {n * 24} soat, {len(vaqt)} ta topildi")
         if y == yil:
@@ -179,8 +197,8 @@ def soatlikdan_kunlik(papka, yil):
     return sanalar, np.concatenate(mn), np.concatenate(mx), np.concatenate(ort), lat, lon
 
 
-def yoz_kunlik(yol, sanalar, qiymat, lat, lon):
-    """Kunlik massivni mavjud o'qish kodi kutgan shaklda yozadi (t2m, K; valid_time = kunlar)."""
+def yoz_kunlik(yol, sanalar, qiymat, lat, lon, nom="t2m", birlik="K"):
+    """Kunlik massivni mavjud o'qish kodi kutgan shaklda yozadi (default t2m, K; valid_time = kunlar)."""
     import netCDF4
 
     bosh = sanalar[0]
@@ -193,14 +211,14 @@ def yoz_kunlik(yol, sanalar, qiymat, lat, lon):
         t[:] = [(s - bosh).days for s in sanalar]
         ds.createVariable("latitude", "f8", ("latitude",))[:] = lat
         ds.createVariable("longitude", "f8", ("longitude",))[:] = lon
-        v = ds.createVariable("t2m", "f4", ("valid_time", "latitude", "longitude"), zlib=True)
-        v.units = "K"
+        v = ds.createVariable(nom, "f4", ("valid_time", "latitude", "longitude"), zlib=True)
+        v.units = birlik
         v[:] = qiymat
 
 
-def kunlik_fayllar_yoz(papka, yil):
+def kunlik_fayllar_yoz(papka, yil, oxirgi=None):
     """t_min/t_max/t_ort_{yil}.nc ni soatlik fayllardan yozadi (mahalliy kun)."""
-    sanalar, mn, mx, ort, lat, lon = soatlikdan_kunlik(papka, yil)
+    sanalar, mn, mx, ort, lat, lon = soatlikdan_kunlik(papka, yil, oxirgi)
     for guruh, q in (("t_min", mn), ("t_max", mx), ("t_ort", ort)):
         tmp = papka / (fayl_nomi(guruh, yil) + ".part")
         yoz_kunlik(tmp, sanalar, q, lat, lon)
@@ -208,5 +226,23 @@ def kunlik_fayllar_yoz(papka, yil):
     return sanalar
 
 
-def soatlik_tayyor(papka, yil):
-    return all((papka / soatlik_nomi(y, m)).exists() for y, m in yil_oylari(yil))
+def soatlik_tayyor(papka, yil, oxirgi=None):
+    return all((papka / soatlik_nomi(y, m, oy_mavjud_kunlar(y, m, oxirgi))).exists() for y, m in yil_oylari(yil, oxirgi))
+
+
+def tp_tayyor(papka, yil, oxirgi):
+    return all((papka / tp_oy_nomi(yil, m, oy_mavjud_kunlar(yil, m, oxirgi))).exists() for m in range(1, oxirgi.month + 1))
+
+
+def tp_birlashtir(papka, yil, oxirgi):
+    """Oyma-oy tp fayllari (00 UTC, m) -> tp_{yil}.nc (1-yanvar ... oxirgi). Eski 1-yanvar fayl o'rnini bosadi (atomik)."""
+    sanalar, bloklar = [], []
+    lat = lon = None
+    for m in range(1, oxirgi.month + 1):
+        a, lat, lon, vaqt = _soatlik_oy(papka / tp_oy_nomi(yil, m, oy_mavjud_kunlar(yil, m, oxirgi)), "tp")
+        bloklar.append(a)
+        sanalar += [v.date() for v in vaqt]
+    tmp = papka / (fayl_nomi("tp", yil) + ".part")
+    yoz_kunlik(tmp, sanalar, np.concatenate(bloklar), lat, lon, nom="tp", birlik="m")
+    tmp.replace(papka / fayl_nomi("tp", yil))
+    return sanalar
