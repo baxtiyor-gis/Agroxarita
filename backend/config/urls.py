@@ -7,5 +7,6 @@ urlpatterns = [
     path("api/", include("apps.land.urls")),
     path("api/", include("apps.relief.urls")),
     path("api/", include("apps.crop.urls")),
+    path("api/", include("apps.climate.urls")),
     path("tiles/", include("apps.tiles.urls")),
 ]

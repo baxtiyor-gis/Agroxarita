@@ -171,3 +171,25 @@ dan tile bbox (3857) ga bilinear warp, tuman geometriyasi bo'yicha clip (chetlar
 
 Legenda uchun: `{"min": 708, "max": 1678, "klasslar": [{"min": 708.0, "max": 902.0, "rang": "#4b8c5a"}, ...]}` (5 klass, metr;
 min/max butun metrga yaxlitlangan). Tuman yo'q -> `404`; DEM yo'q -> `503`.
+
+## Iqlim (Task 14)
+
+### GET `/api/konturlar/{id}/iqlim/`
+Kontur javobini og'irlashtirmaslik uchun alohida endpoint. ERA5-Land 0.1° katagi bo'yicha iqlim (bir katakdagi barcha konturlar bir xil javob oladi; server keshi 1 soat).
+```json
+{"katak": {"id": 1110, "lat": 40.45, "lon": 68.95, "balandlik": null},
+ "davr": [2023, 2026], "yillar": [2023, 2024, 2025, 2026],
+ "korsatkich": {"fah": 5854.6, "sovuqsiz": 257.7, "bahorgi_sovuq": 65.7, "kuzgi_sovuq": 324.3,
+                "issiq_kun": 76.3, "min_t": -14.3, "kech_sovuq_yillar": 0},
+ "yillik": [{"yil": 2023, "fah": 6095.8, "sovuqsiz": 285, "bahorgi_sovuq": 57, "kuzgi_sovuq": 343,
+             "issiq_kun": 74, "min_t": -23.1, "yogin": 345.5, "et0": 1368.5, "t_ort": 17.1, "toliq": true}],
+ "oylik_ortacha": [{"oy": 1, "t_ort": 1.8, "yogin": 26.1, "et0": 26.2}],
+ "yillar_oylar": [{"yil": 2023, "oylar": [{"oy": 1, "t_ort": -3.2, "yogin": 26.7}]}],
+ "suv_balansi": {"yogin": 351.7, "et0": 1356.3, "tanqislik": 1004.6},
+ "xavf": {"eng_issiq": {"yil": 2025, "qiymat": 17.6}, "eng_sovuq": {...}, "eng_nam": {...}, "eng_quruq": {...}}}
+```
+- Kontur -> katak: kontur ichki nuqtasi (`ST_PointOnSurface`) `floor(lon*10), floor(lat*10)` bo'yicha katak (`katak_yarat` bilan bir xil qoida). Katakda ma'lumot bo'lmasa (sug'orilmaydigan hududdagi kontur) yoki kontur yo'q bo'lsa `404` `{"detail": ...}`.
+- `yillar`/`davr` — bazadagi mavjud yillar (dinamik). `korsatkich` va `oylik_ortacha`, `suv_balansi`, `xavf` — faqat **to'liq** yillar (`yillik[].toliq`: yillik hisob bor va kunlar soni to'liq) o'rtachasi; joriy qisman yil kirmaydi, lekin `yillik` va `yillar_oylar` da (mavjud oylar bilan) ko'rinadi; qisman yilda `fah`/`sovuqsiz`/sovuq sanalari `null`.
+- `fah` — t_ort > 10 °C kunlar yig'indisi; `sovuqsiz` — kun; `bahorgi_sovuq`/`kuzgi_sovuq` — yil kuni (1..366; sovuq bo'lmasa `null`); `issiq_kun` — Tmax >= 35 °C kunlar; `min_t` — yil ichidagi eng past Tmin (`korsatkich.min_t` — yillar o'rtachasi); `kech_sovuq_yillar` — oxirgi bahorgi sovuq 10-apreldan keyin bo'lgan to'liq yillar soni.
+- `yogin`, `et0` — mm/yil; `tanqislik = et0 - yogin`. `t_ort` — °C. Hammasi 1 xona yaxlitlangan.
+- `katak.balandlik` — hozircha doim `null` (katak balandligi yo'q, shuning uchun V1 dagi -0.65 °C/100 m tuzatma qo'llanmaydi).
