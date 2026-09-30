@@ -76,13 +76,6 @@ export function TuproqTab({ k }: { k: Kontur }) {
           <Satr nom="Yuvilish" qiymat={bosh(t?.yuvilish) ?? yoq} />
           <Satr nom="Toshlanish" qiymat={bosh(t?.toshlanish) ?? yoq} />
           <Satr nom="Klass" qiymat={t?.klass ?? yoq} />
-          <Satr nom="Qoplanish" qiymat={t ? `${(t.qoplanish * 100).toFixed(0)} %` : yoq}>
-            {t && (
-              <div className="mt-1.5 pr-1">
-                <Shkala qiymat={t.qoplanish * 100} min={0} max={100} />
-              </div>
-            )}
-          </Satr>
         </div>
       </div>
     </>
