@@ -3,8 +3,8 @@
     python manage.py import_agrokimyo --qatlam Kaliy --korsatkich kaliy [--quruq] [--data-dir PAPKA] [--gdb YOL]
 
 Oqim: VectorTranslate -> staging `soil_agrokimyo_staging` (UNLOGGED) -> bitta tranzaksiyada shu `korsatkich`
-qatorlarini DELETE + INSERT ... SELECT -> tuman bog'lash (district_cad, keyin eng katta kesishuv) -> ANALYZE.
-Idempotent: faqat shu korsatkich almashtiriladi. `--quruq` bazaga yozmaydi.
+jadvalini (soil_kaliy/fosfor/gumus) TRUNCATE + INSERT ... SELECT -> tuman bog'lash (district_cad, keyin eng katta kesishuv) -> ANALYZE.
+Idempotent: faqat shu korsatkich jadvali almashtiriladi. `--quruq` bazaga yozmaydi.
 """
 import re
 import time
@@ -15,7 +15,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import connection, transaction
 from osgeo import gdal, ogr
 
-from apps.soil.models import Agrokimyo
+from apps.soil.models import AGROKIMYO_MODELLAR
 
 gdal.UseExceptions()
 ogr.UseExceptions()
@@ -69,7 +69,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--qatlam", required=True, help="GDB qatlam nomi (masalan Kaliy)")
-        parser.add_argument("--korsatkich", required=True, choices=[k for k, _ in Agrokimyo.KORSATKICH_TANLOV])
+        parser.add_argument("--korsatkich", required=True, choices=list(AGROKIMYO_MODELLAR))
         parser.add_argument("--quruq", action="store_true", help="bazaga yozmasdan manba statistikasi")
         parser.add_argument("--data-dir", default=None)
         parser.add_argument("--gdb", default=None, help="manba yo'li (default: <data-dir>/GIS.gdb); testlar uchun")
@@ -79,6 +79,7 @@ class Command(BaseCommand):
         if not gdb.exists():
             raise CommandError(f"Manba topilmadi: {gdb}")
         self.gdb, self.qatlam, self.kors = gdb, o["qatlam"], o["korsatkich"]
+        self.jadval = AGROKIMYO_MODELLAR[self.kors]._meta.db_table
         self.vaqt, self.w = [], self.stdout.write
         ds = ogr.Open(str(gdb))
         q = ds.GetLayerByName(self.qatlam)
@@ -123,8 +124,8 @@ class Command(BaseCommand):
             with transaction.atomic(), connection.cursor() as c:
                 t0 = time.perf_counter()
                 self.daraja_jadval(c)
-                c.execute("DELETE FROM soil_agrokimyo WHERE korsatkich = %s", [self.kors])
-                c.execute(self.insert_sql(), [self.kors])
+                c.execute(f"TRUNCATE {self.jadval} RESTART IDENTITY")
+                c.execute(self.insert_sql())
                 self.yuklandi = c.rowcount
                 self._bosqich("insert", t0)
                 t0 = time.perf_counter()
@@ -132,7 +133,7 @@ class Command(BaseCommand):
                 self._bosqich("tuman", t0)
             t0 = time.perf_counter()
             with connection.cursor() as c:
-                c.execute("ANALYZE soil_agrokimyo")
+                c.execute(f"ANALYZE {self.jadval}")
             self._bosqich("analyze", t0)
             self.maydon_birligi()
             self.hisobot()
@@ -171,9 +172,9 @@ class Command(BaseCommand):
         maydon = "s.area" if "area" in self.ustunlar else "round((ST_Area(g.geom::geography) / 10000.0)::numeric, 4)"
         massiv = _t("massiv") if "massiv" in self.ustunlar else "NULL::text"
         return f"""
-            INSERT INTO soil_agrokimyo (korsatkich, yil, daraja, daraja_nom, gradatsiya, tuman_id, maydon,
+            INSERT INTO {self.jadval} (yil, daraja, daraja_nom, gradatsiya, tuman_id, maydon,
                                         manba, geom, geom_mvt)
-            SELECT %s, {yil}, d.kod, coalesce(d.nom, ''), coalesce({_t("gradatsiyasi")}, ''), bt.id, {maydon},
+            SELECT {yil}, d.kod, coalesce(d.nom, ''), coalesce({_t("gradatsiyasi")}, ''), bt.id, {maydon},
                    jsonb_build_object('viloyat', {_t("viloyat")}, 'tuman', {_t("tuman")}, 'massiv', {massiv},
                        'darajasi', {_t("darajasi")}, 'region', s.region, 'district', s.district,
                        'region_cad', round(s.region_cad)::int, 'district_cad', round(s.district_cad)::int),
@@ -189,20 +190,20 @@ class Command(BaseCommand):
             ORDER BY s.manba_fid"""
 
     def tuman_boglash(self, c):
-        c.execute("SELECT count(*) FROM soil_agrokimyo WHERE korsatkich = %s AND tuman_id IS NOT NULL", [self.kors])
+        c.execute(f"SELECT count(*) FROM {self.jadval} WHERE tuman_id IS NOT NULL")
         self.cad_boyicha = c.fetchone()[0]
-        c.execute("""
-            UPDATE soil_agrokimyo k SET tuman_id = m.id
-            FROM (SELECT z.id AS kid, x.id FROM soil_agrokimyo z
+        c.execute(f"""
+            UPDATE {self.jadval} k SET tuman_id = m.id
+            FROM (SELECT z.id AS kid, x.id FROM {self.jadval} z
                   CROSS JOIN LATERAL (
                       SELECT t.id FROM border_tuman t
                       WHERE t.geom && z.geom AND ST_Intersects(t.geom, z.geom)
                       ORDER BY ST_Area(ST_Intersection(z.geom, t.geom)) DESC, t.id LIMIT 1
                   ) x
-                  WHERE z.korsatkich = %s AND z.tuman_id IS NULL) m
-            WHERE k.id = m.kid""", [self.kors])
+                  WHERE z.tuman_id IS NULL) m
+            WHERE k.id = m.kid""")
         self.geometrik = c.rowcount
-        c.execute("SELECT count(*) FROM soil_agrokimyo WHERE korsatkich = %s AND tuman_id IS NULL", [self.kors])
+        c.execute(f"SELECT count(*) FROM {self.jadval} WHERE tuman_id IS NULL")
         self.boglanmagan = c.fetchone()[0]
 
     def maydon_birligi(self):
@@ -214,20 +215,19 @@ class Command(BaseCommand):
                        percentile_cont(0.1) WITHIN GROUP (ORDER BY nisbat),
                        percentile_cont(0.9) WITHIN GROUP (ORDER BY nisbat)
                 FROM (SELECT maydon / (ST_Area(geom::geography) / 10000.0) AS nisbat
-                      FROM (SELECT maydon, geom FROM soil_agrokimyo
-                            WHERE korsatkich = %s AND maydon > 0 ORDER BY random() LIMIT {NAMUNA_SONI}) q) n
-                WHERE nisbat IS NOT NULL""", [self.kors])
+                      FROM (SELECT maydon, geom FROM {self.jadval}
+                            WHERE maydon > 0 ORDER BY random() LIMIT {NAMUNA_SONI}) q) n
+                WHERE nisbat IS NOT NULL""")
             self.nisbat = c.fetchone()
         self._bosqich("maydon_tekshiruvi", t0)
 
     def hisobot(self):
         w = self.w
         with connection.cursor() as c:
-            c.execute("SELECT count(*), coalesce(sum(maydon), 0) FROM soil_agrokimyo WHERE korsatkich = %s",
-                      [self.kors])
+            c.execute(f"SELECT count(*), coalesce(sum(maydon), 0) FROM {self.jadval}")
             jami, maydon = c.fetchone()
-            c.execute("""SELECT yil, coalesce(daraja::text, '?'), count(*) FROM soil_agrokimyo
-                         WHERE korsatkich = %s GROUP BY 1, 2 ORDER BY 1, 2""", [self.kors])
+            c.execute(f"""SELECT yil, coalesce(daraja::text, '?'), count(*) FROM {self.jadval}
+                         GROUP BY 1, 2 ORDER BY 1, 2""")
             taqsimot = {}
             for yil, daraja, n in c.fetchall():
                 taqsimot.setdefault(yil, []).append(f"{daraja}={n}")

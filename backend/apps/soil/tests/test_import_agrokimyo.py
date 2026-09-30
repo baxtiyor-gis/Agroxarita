@@ -6,7 +6,7 @@ from django.core.management import call_command
 from osgeo import ogr, osr
 
 from apps.soil.management.commands.import_agrokimyo import daraja_parse
-from apps.soil.models import Agrokimyo
+from apps.soil.models import Fosfor, Kaliy
 
 ogr.UseExceptions()
 
@@ -84,10 +84,10 @@ class TestImportAgrokimyo:
     def test_yuklash(self, manba, tuman, shahar):
         chiqish = ishga_tushir(manba)
         assert "manba 7, yuklandi 7, o'tkazildi 0" in chiqish
-        a = {(x.yil, x.daraja): x for x in Agrokimyo.objects.all()}
+        a = {(x.yil, x.daraja): x for x in Kaliy.objects.all()}
         assert len(a) == 7
         k = a[(2024, 2)]
-        assert k.korsatkich == "kaliy" and k.daraja_nom == "Kam" and k.gradatsiya == "101-200" and k.maydon == 100.0
+        assert k.daraja_nom == "Kam" and k.gradatsiya == "101-200" and k.maydon == 100.0
         assert k.geom.srid == 4326 and k.geom_mvt.srid == 3857 and k.geom.geom_type == "MultiPolygon"
         assert k.geom.extent == pytest.approx((69.1, 40.1, 69.2, 40.2))
         assert k.manba["viloyat"] == "Sinov" and k.manba["district_cad"] == 1201
@@ -95,15 +95,15 @@ class TestImportAgrokimyo:
 
     def test_nomalum_daraja_va_invalid(self, manba, tuman, shahar):
         chiqish = ishga_tushir(manba)
-        n = Agrokimyo.objects.get(yil=2022, daraja=None)
+        n = Kaliy.objects.get(yil=2022, daraja=None)
         assert n.daraja_nom == "" and n.gradatsiya == ""
         assert "['Nomalum']" in chiqish
         assert "tuzatildi (invalid -> ST_MakeValid): 1" in chiqish
-        assert all(x.geom.valid for x in Agrokimyo.objects.all())
+        assert all(x.geom.valid for x in Kaliy.objects.all())
 
     def test_tuman(self, manba, tuman, shahar):
         chiqish = ishga_tushir(manba)
-        t = {(x.yil, x.daraja): x.tuman_id for x in Agrokimyo.objects.all()}
+        t = {(x.yil, x.daraja): x.tuman_id for x in Kaliy.objects.all()}
         assert t[(2024, 2)] == tuman.id  # district_cad
         assert t[(2025, 5)] == shahar.id  # geometrik
         assert t[(2024, 3)] == tuman.id  # cad mos emas -> geometrik
@@ -111,28 +111,28 @@ class TestImportAgrokimyo:
         assert "district_cad bo'yicha 4, geometrik 2, bog'lanmagan 1" in chiqish
 
     def test_idempotent_va_korsatkich_ajratilgan(self, manba, tuman, shahar):
-        Agrokimyo.objects.create(korsatkich="fosfor", yil=2024, daraja=1, geom=tuman.geom, geom_mvt=tuman.geom_mvt)
+        Fosfor.objects.create(yil=2024, daraja=1, geom=tuman.geom, geom_mvt=tuman.geom_mvt)
         ishga_tushir(manba)
         ishga_tushir(manba)
-        assert Agrokimyo.objects.filter(korsatkich="kaliy").count() == 7
-        assert Agrokimyo.objects.filter(korsatkich="fosfor").count() == 1
+        assert Kaliy.objects.all().count() == 7
+        assert Fosfor.objects.all().count() == 1
 
     def test_quruq(self, manba, tuman, shahar):
         chiqish = ishga_tushir(manba, "--quruq")
         assert "manba 7" in chiqish and "'Nomalum': 1" in chiqish
-        assert Agrokimyo.objects.count() == 0
+        assert Kaliy.objects.count() == 0
 
 
 @pytest.mark.django_db(transaction=True)
 def test_yilsiz_qatlam_fosfor(tmp_path, tuman, shahar):
     yol = _manba_yarat(tmp_path, "Fosfor", yil_bor=False)
-    Agrokimyo.objects.create(korsatkich="kaliy", yil=2024, daraja=1, geom=tuman.geom, geom_mvt=tuman.geom_mvt)
+    Kaliy.objects.create(yil=2024, daraja=1, geom=tuman.geom, geom_mvt=tuman.geom_mvt)
     for _ in range(2):  # idempotent
         call_command("import_agrokimyo", "--gdb", str(yol), "--qatlam", "Fosfor", "--korsatkich", "fosfor",
                      stdout=StringIO())
-    f = Agrokimyo.objects.filter(korsatkich="fosfor")
+    f = Fosfor.objects.all()
     assert f.count() == 7 and set(f.values_list("yil", flat=True)) == {None}
     assert f.filter(daraja=2).first().manba["massiv"] == "M.Sinov"
     # area yo'q -> maydon = ST_Area(geography)/10000 (0.1x0.1 daraja ~ 9 ming ga)
     assert all(5_000 < x.maydon < 15_000 for x in f.exclude(daraja=4))
-    assert Agrokimyo.objects.filter(korsatkich="kaliy").count() == 1
+    assert Kaliy.objects.all().count() == 1

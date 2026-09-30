@@ -525,11 +525,11 @@ boshqa tumanga yozilgan — ya'ni ~530 kontur Kogon chegarasidan tashqarida.
 ### 1. Model — `backend-dev`
 
 - App `apps/soil`.
-- `TuproqLugat` — domen lug'ati: `tur` (`mexanika` / `shorlanish` / `yuvilish` / `toshlanish` / `klass`),
+- `TuproqClass` — domen lug'ati: `tur` (`mexanika` / `shorlanish` / `yuvilish` / `toshlanish` / `klass`),
   `kod` (int), `nom` (lotin; domen kirill nomidan transliteratsiya), unique (`tur`, `kod`).
 - `Tuproq`:
   - `globalid` (unique), `tuman` FK (null; `cad_raqami` → `Tuman.kod`, bo'lmasa geometrik — eng katta kesishuv),
-  - `mexanika`, `shorlanish`, `yuvilish`, `toshlanish`, `klass` — FK → `TuproqLugat` (null, PROTECT),
+  - `mexanika`, `shorlanish`, `yuvilish`, `toshlanish`, `klass` — FK → `TuproqClass` (null, PROTECT),
   - `bonitet` (float, `ball_bonitet`), `maydon` (float, `maydoni`),
   - `yer_osti_suvi` (matn, normallashtirilgan), `yer_osti_suvi_min`, `yer_osti_suvi_max` (float, metr, null),
   - `massiv_nomi` (matn), `manba` (JSONField — manba matn maydonlari: viloya, tuman, massiv, mexanikasi…klasss, bonitet_bali),
@@ -542,7 +542,7 @@ boshqa tumanga yozilgan — ya'ni ~530 kontur Kogon chegarasidan tashqarida.
 
 `python manage.py import_tuproq [--quruq] [--data-dir]`
 
-- [ ] Domenlar GDB'dan o'qiladi → `TuproqLugat` (update_or_create).
+- [ ] Domenlar GDB'dan o'qiladi → `TuproqClass` (update_or_create).
 - [ ] Poligonlar: `VectorTranslate` → staging → `INSERT ... SELECT` (Force2D → MakeValid → poligon qismlar → Multi);
       `geom_mvt` 3857; idempotent (TRUNCATE + INSERT bitta tranzaksiyada).
 - [ ] Domen ID'si lug'atda yo'q bo'lsa — NULL + hisobot.
@@ -626,7 +626,7 @@ Avval hisobot (son, ga), keyin yangilash.
 
 ### Qarorlar
 
-- Umumiy model `soil.Agrokimyo` — keyin gumus, fosfor ham shu jadvalga (`korsatkich`).
+- (Keyin alohida modellarga bo'lindi: `soil.Kaliy`, `soil.Fosfor`, `soil.Gumus` — abstrakt `AgrokimyoAsos`; jadvallar `soil_kaliy/fosfor/gumus`, `korsatkich` ustuni yo'q, `import_agrokimyo --korsatkich` tegishli jadvalni TRUNCATE + INSERT qiladi.)
 - Daraja — tartibli kod: 1 juda kam, 2 kam, 3 o'rtacha, 4 ko'p, 5 juda ko'p.
 - Konturga: eng so'nggi yil ichida eng katta kesishuv.
 

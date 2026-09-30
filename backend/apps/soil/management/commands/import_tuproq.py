@@ -2,7 +2,7 @@
 
     python manage.py import_tuproq [--quruq] [--data-dir PAPKA] [--gdb YOL]
 
-Oqim: domenlar -> TuproqLugat; VectorTranslate -> staging `soil_tuproq_staging` (UNLOGGED) -> bitta
+Oqim: domenlar -> TuproqClass; VectorTranslate -> staging `soil_tuproq_staging` (UNLOGGED) -> bitta
 tranzaksiyada TRUNCATE soil_tuproq + INSERT ... SELECT -> geometrik tuman bog'lash -> ANALYZE -> staging DROP.
 Idempotent: har ishga tushirishda soil_tuproq to'liq almashtiriladi. `--quruq` bazaga yozmaydi.
 """
@@ -15,7 +15,7 @@ from django.db import connection, transaction
 from osgeo import gdal, ogr
 
 from apps.soil.normalizatsiya import kirill_lotin, yer_osti_suvi_parse
-from apps.soil.models import TuproqLugat
+from apps.soil.models import TuproqClass
 
 gdal.UseExceptions()
 ogr.UseExceptions()
@@ -133,7 +133,7 @@ class Command(BaseCommand):
         with transaction.atomic():
             for tur, kodlar in self.domen.items():
                 for kod, nom in kodlar.items():
-                    TuproqLugat.objects.update_or_create(tur=tur, kod=kod, defaults={"nom": kirill_lotin(nom)})
+                    TuproqClass.objects.update_or_create(tur=tur, kod=kod, defaults={"nom": kirill_lotin(nom)})
                     self.lugat_soni += 1
 
     def staging_yoz(self):
@@ -160,7 +160,7 @@ class Command(BaseCommand):
                 c.execute(f"""
                     SELECT s.{ustun}, count(*) FROM {STAGING} s
                     WHERE s.{ustun} IS NOT NULL AND NOT EXISTS
-                      (SELECT 1 FROM soil_tuproqlugat l WHERE l.tur = %s AND l.kod = s.{ustun})
+                      (SELECT 1 FROM soil_tuproqclass l WHERE l.tur = %s AND l.kod = s.{ustun})
                     GROUP BY 1 ORDER BY 2 DESC""", [tur])
                 self.lugatsiz[tur] = c.fetchall()
         if self.manba == 0:
@@ -185,7 +185,7 @@ class Command(BaseCommand):
 
     def insert_sql(self):
         lugat = "".join(
-            f" LEFT JOIN soil_tuproqlugat l_{tur} ON l_{tur}.tur = '{tur}' AND l_{tur}.kod = s.{ustun}"
+            f" LEFT JOIN soil_tuproqclass l_{tur} ON l_{tur}.tur = '{tur}' AND l_{tur}.kod = s.{ustun}"
             for tur, ustun in DOMENLAR.items()
         )
         return f"""
@@ -262,7 +262,7 @@ class Command(BaseCommand):
             for tur in DOMENLAR:
                 c.execute("""
                     SELECT coalesce(l.nom, '(NULL)'), count(*) FROM soil_tuproq k
-                    LEFT JOIN soil_tuproqlugat l ON l.id = k.%s_id
+                    LEFT JOIN soil_tuproqclass l ON l.id = k.%s_id
                     GROUP BY 1 ORDER BY 2 DESC LIMIT 5""" % tur)
                 taqsimot[tur] = c.fetchall()
         w("\n=== HISOBOT ===")

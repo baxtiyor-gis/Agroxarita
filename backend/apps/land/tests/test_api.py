@@ -2,7 +2,7 @@ import pytest
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
-from apps.soil.models import Agrokimyo, Tuproq, TuproqLugat
+from apps.soil.models import AGROKIMYO_MODELLAR, Tuproq, TuproqClass
 from conftest import kontur_yarat, kvadrat
 
 
@@ -36,9 +36,9 @@ def test_kontur_tuzilma_va_yer_turlari(client, tuman):
 
 @pytest.mark.django_db
 def test_kontur_tuproq_eng_katta_kesishuv(client, tuman):
-    mex = TuproqLugat.objects.create(tur="mexanika", kod=1, nom="O'rta qumoqli")
-    kl = TuproqLugat.objects.create(tur="klass", kod=5, nom="V")
-    kichik = TuproqLugat.objects.create(tur="mexanika", kod=2, nom="Qumli")
+    mex = TuproqClass.objects.create(tur="mexanika", kod=1, nom="O'rta qumoqli")
+    kl = TuproqClass.objects.create(tur="klass", kod=5, nom="V")
+    kichik = TuproqClass.objects.create(tur="mexanika", kod=2, nom="Qumli")
     # kontur x 69.10..69.20; tuproq A: 69.10..69.16 (60%), B: 69.16..69.18 (20%)
     _tuproq("a", kvadrat(69.10, 40.1, 69.16, 40.2), mexanika=mex, klass=kl, bonitet=52, yer_osti_suvi="1-2")
     _tuproq("b", kvadrat(69.16, 40.1, 69.18, 40.2), mexanika=kichik, bonitet=10)
@@ -64,8 +64,8 @@ def test_kontur_tuman_geo_va_404(client, tuman, shahar):
 
 def _agro(geom, yil, daraja, korsatkich="kaliy", tuman=None):
     nomlar = {1: "Juda kam", 2: "Kam", 3: "O'rtacha", 6: "Yuqori"}
-    return Agrokimyo.objects.create(
-        korsatkich=korsatkich, yil=yil, daraja=daraja, daraja_nom=nomlar[daraja], gradatsiya="101-200",
+    return AGROKIMYO_MODELLAR[korsatkich].objects.create(
+        yil=yil, daraja=daraja, daraja_nom=nomlar[daraja], gradatsiya="101-200",
         geom=geom, geom_mvt=geom.transform(3857, clone=True), tuman=tuman,
     )
 

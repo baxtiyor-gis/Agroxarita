@@ -1,7 +1,7 @@
 import pytest
 from django.db import IntegrityError, transaction
 
-from apps.soil.models import Tuproq, TuproqLugat
+from apps.soil.models import Tuproq, TuproqClass
 from conftest import geometriya_maydonlari, kvadrat
 
 
@@ -12,7 +12,7 @@ def tuproq_yarat(globalid, **kw):
 
 @pytest.mark.django_db
 def test_tuproq_yaratish_va_lugat(tuman):
-    lugat = TuproqLugat.objects.create(tur="mexanika", kod=1, nom="O‘rta qumoqli")
+    lugat = TuproqClass.objects.create(tur="mexanika", kod=1, nom="O‘rta qumoqli")
     t = tuproq_yarat("{A}", tuman=tuman, mexanika=lugat, bonitet=55.5, yer_osti_suvi="1–2")
     t.refresh_from_db()
     assert t.mexanika.nom == "O‘rta qumoqli"
@@ -30,10 +30,10 @@ def test_globalid_unique():
 
 @pytest.mark.django_db
 def test_lugat_tur_kod_unique():
-    TuproqLugat.objects.create(tur="mexanika", kod=1, nom="a")
-    TuproqLugat.objects.create(tur="shorlanish", kod=1, nom="b")  # boshqa tur — mumkin
+    TuproqClass.objects.create(tur="mexanika", kod=1, nom="a")
+    TuproqClass.objects.create(tur="shorlanish", kod=1, nom="b")  # boshqa tur — mumkin
     with pytest.raises(IntegrityError), transaction.atomic():
-        TuproqLugat.objects.create(tur="mexanika", kod=1, nom="c")
+        TuproqClass.objects.create(tur="mexanika", kod=1, nom="c")
 
 
 @pytest.mark.django_db

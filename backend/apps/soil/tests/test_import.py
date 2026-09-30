@@ -5,7 +5,7 @@ import pytest
 from django.core.management import call_command
 from osgeo import ogr, osr
 
-from apps.soil.models import Tuproq, TuproqLugat
+from apps.soil.models import Tuproq, TuproqClass
 
 ogr.UseExceptions()
 
@@ -86,8 +86,8 @@ class TestImportTuproq:
         chiqish = ishga_tushir(manba)
         assert "manba 6, yuklandi 5, o'tkazildi 1" in chiqish
         assert Tuproq.objects.count() == 5
-        assert TuproqLugat.objects.count() == 10  # 5 tur x 2 kod
-        assert TuproqLugat.objects.get(tur="mexanika", kod=1).nom == "Qumoq"
+        assert TuproqClass.objects.count() == 10  # 5 tur x 2 kod
+        assert TuproqClass.objects.get(tur="mexanika", kod=1).nom == "Qumoq"
         a = Tuproq.objects.get(globalid="A")
         assert a.mexanika.kod == 1 and a.mexanika.tur == "mexanika"
         assert a.geom.srid == 4326 and a.geom_mvt.srid == 3857 and a.geom.geom_type == "MultiPolygon"
@@ -132,9 +132,9 @@ class TestImportTuproq:
     def test_idempotent(self, manba, tuman, shahar):
         ishga_tushir(manba)
         birinchi = sorted(Tuproq.objects.values_list("globalid", "tuman_id", "mexanika_id", "yer_osti_suvi"))
-        lugat = TuproqLugat.objects.count()
+        lugat = TuproqClass.objects.count()
         ishga_tushir(manba)
-        assert Tuproq.objects.count() == 5 and TuproqLugat.objects.count() == lugat
+        assert Tuproq.objects.count() == 5 and TuproqClass.objects.count() == lugat
         assert sorted(Tuproq.objects.values_list("globalid", "tuman_id", "mexanika_id", "yer_osti_suvi")) == birinchi
 
     def test_quruq(self, manba, tuman, shahar):

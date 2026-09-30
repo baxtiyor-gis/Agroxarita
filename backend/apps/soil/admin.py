@@ -1,6 +1,6 @@
 from django.contrib.gis import admin
 
-from .models import Agrokimyo, Tuproq, TuproqLugat
+from .models import Fosfor, Gumus, Kaliy, Tuproq, TuproqClass
 
 
 @admin.register(Tuproq)
@@ -17,16 +17,30 @@ class TuproqAdmin(admin.GISModelAdmin):
         return obj.globalid[:9]
 
 
-@admin.register(TuproqLugat)
-class TuproqLugatAdmin(admin.ModelAdmin):
+@admin.register(TuproqClass)
+class TuproqClassAdmin(admin.ModelAdmin):
     list_display = ("tur", "kod", "nom")
     list_filter = ("tur",)
 
 
-@admin.register(Agrokimyo)
 class AgrokimyoAdmin(admin.GISModelAdmin):
-    list_display = ("id", "korsatkich", "yil", "daraja_nom", "gradatsiya", "tuman", "maydon")
-    list_filter = ("korsatkich", "yil", "daraja")
+    list_display = ("id", "yil", "daraja_nom", "gradatsiya", "tuman", "maydon")
+    list_filter = ("yil", "daraja")
     show_full_result_count = False
     raw_id_fields = ("tuman",)
     list_select_related = ("tuman",)
+
+
+@admin.register(Kaliy)
+class KaliyAdmin(AgrokimyoAdmin):
+    pass
+
+
+@admin.register(Fosfor)
+class FosforAdmin(AgrokimyoAdmin):
+    pass
+
+
+@admin.register(Gumus)
+class GumusAdmin(AgrokimyoAdmin):
+    pass

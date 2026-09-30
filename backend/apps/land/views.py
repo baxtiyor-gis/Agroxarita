@@ -23,11 +23,11 @@ SELECT t.bonitet, t.yer_osti_suvi,
        (SELECT LEAST(1.0, COALESCE(SUM(s), 0) / NULLIF((SELECT maydon FROM k), 0)) FROM kesish)
 FROM eng
 JOIN soil_tuproq t ON t.id = eng.id
-LEFT JOIN soil_tuproqlugat me ON me.id = t.mexanika_id
-LEFT JOIN soil_tuproqlugat sh ON sh.id = t.shorlanish_id
-LEFT JOIN soil_tuproqlugat yu ON yu.id = t.yuvilish_id
-LEFT JOIN soil_tuproqlugat tosh ON tosh.id = t.toshlanish_id
-LEFT JOIN soil_tuproqlugat kl ON kl.id = t.klass_id
+LEFT JOIN soil_tuproqclass me ON me.id = t.mexanika_id
+LEFT JOIN soil_tuproqclass sh ON sh.id = t.shorlanish_id
+LEFT JOIN soil_tuproqclass yu ON yu.id = t.yuvilish_id
+LEFT JOIN soil_tuproqclass tosh ON tosh.id = t.toshlanish_id
+LEFT JOIN soil_tuproqclass kl ON kl.id = t.klass_id
 """
 
 # Eng so'nggi yil (kesishgan poligonlar ichida), shu yilda eng katta kesishuv + shu yil poligonlari bo'yicha qoplanish.
@@ -35,21 +35,23 @@ AGROKIMYO_SQL = """
 WITH k AS (SELECT geom, ST_Area(geom) AS maydon FROM land_kontur WHERE id = %s),
 kesish AS (
     SELECT a.id, a.yil, ST_Area(ST_Intersection(a.geom, k.geom)) AS s
-    FROM soil_agrokimyo a, k
-    WHERE a.korsatkich = %s AND a.geom && k.geom AND ST_Intersects(a.geom, k.geom)
+    FROM {jadval} a, k
+    WHERE a.geom && k.geom AND ST_Intersects(a.geom, k.geom)
 ),
 oxirgi AS (SELECT max(yil) AS yil FROM kesish),
 shu_yil AS (SELECT kesish.* FROM kesish, oxirgi WHERE kesish.yil IS NOT DISTINCT FROM oxirgi.yil),
 eng AS (SELECT id FROM shu_yil ORDER BY s DESC, id LIMIT 1)
 SELECT a.daraja, a.daraja_nom, a.gradatsiya, a.yil,
        (SELECT LEAST(1.0, COALESCE(SUM(s), 0) / NULLIF((SELECT maydon FROM k), 0)) FROM shu_yil)
-FROM eng JOIN soil_agrokimyo a ON a.id = eng.id
+FROM eng JOIN {jadval} a ON a.id = eng.id
 """
+
+AGROKIMYO_JADVALLAR = {"kaliy": "soil_kaliy", "fosfor": "soil_fosfor", "gumus": "soil_gumus"}  # qat'iy ro'yxat
 
 
 def agrokimyo_malumoti(kontur_id, korsatkich):
     with connection.cursor() as cursor:
-        cursor.execute(AGROKIMYO_SQL, [kontur_id, korsatkich])
+        cursor.execute(AGROKIMYO_SQL.format(jadval=AGROKIMYO_JADVALLAR[korsatkich]), [kontur_id])
         qator = cursor.fetchone()
     if qator is None:
         return None
