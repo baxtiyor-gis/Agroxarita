@@ -6,6 +6,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_GET
 
 from apps.border.models import Massiv, Tuman, Viloyat
+from apps.crop.models import EkinClass, KonturEkin
 from apps.land.models import Kontur, KonturKorsatkich
 from apps.relief.models import KonturRelyef
 
@@ -128,10 +129,16 @@ def kontur_sql(z):
             SELECT t.id, t.kontur_raqami, ROUND(t.umumiy_maydoni::numeric, 2)::float8 AS maydon, t.tur,
                    ks.bonitet, ks.shorlanish, ks.gumus, ks.fosfor, ks.kaliy,
                    r.balandlik_ortacha AS balandlik, r.qiyalik_ortacha AS qiyalik,
+                   c26.guruh AS ekin_2026, c25.guruh AS ekin_2025,
                    ST_AsMVTGeom({geom_ifoda}, tile.env, {EXTENT}, {BUFFER}, true) AS geom
             FROM {Kontur._meta.db_table} t
             LEFT JOIN {KonturKorsatkich._meta.db_table} ks ON ks.kontur_id = t.id
-            LEFT JOIN {KonturRelyef._meta.db_table} r ON r.kontur_id = t.id, tile
+            LEFT JOIN {KonturRelyef._meta.db_table} r ON r.kontur_id = t.id
+            -- asosiy ekin guruhi (yil bo'yicha); yo'q bo'lsa NULL -> MVT'da atribut yo'q
+            LEFT JOIN {KonturEkin._meta.db_table} e26 ON e26.kontur_id = t.id AND e26.yil = 2026 AND e26.asosiy
+            LEFT JOIN {EkinClass._meta.db_table} c26 ON c26.id = e26.ekin_id
+            LEFT JOIN {KonturEkin._meta.db_table} e25 ON e25.kontur_id = t.id AND e25.yil = 2025 AND e25.asosiy
+            LEFT JOIN {EkinClass._meta.db_table} c25 ON c25.id = e25.ekin_id, tile
             -- tuman_geo hali hisoblanmagan konturlar uchun vaqtincha manba tumani (distrikt_id)
             WHERE COALESCE(t.tuman_geo_id, t.tuman_id) = %s AND t.geom_mvt && tile.env{maydon_sharti}
         ) q

@@ -20,7 +20,7 @@ def test_kontur_tuzilma_va_yer_turlari(client, tuman):
     with CaptureQueriesContext(connection) as sorovlar:
         r = client.get(f"/api/konturlar/{k.pk}/", HTTP_HOST="localhost")
     assert r.status_code == 200
-    assert len(sorovlar) <= 5
+    assert len(sorovlar) <= 6  # +1: ekinlar
     d = r.json()
     assert d["id"] == k.pk and d["kontur_raqami"] == 5 and d["yagona_kontur"] == "12:01:00005"
     assert d["maydon"] == 18.61 and d["tur"] == "sugoriladigan"
@@ -45,7 +45,7 @@ def test_kontur_tuproq_eng_katta_kesishuv(client, tuman):
     k = kontur_yarat(tuman, 11, kvadrat(69.10, 40.1, 69.20, 40.2), umumiy_maydoni=1.0)
     with CaptureQueriesContext(connection) as sorovlar:
         d = client.get(f"/api/konturlar/{k.pk}/", HTTP_HOST="localhost").json()
-    assert len(sorovlar) <= 5
+    assert len(sorovlar) <= 6  # +1: ekinlar
     t = d["tuproq"]
     assert t["bonitet"] == 52 and t["mexanika"] == "O'rta qumoqli" and t["klass"] == "V"
     assert t["yer_osti_suvi"] == "1-2" and t["shorlanish"] is None

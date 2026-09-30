@@ -4,6 +4,7 @@ from rest_framework.decorators import api_view
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
+from apps.crop.models import KonturEkin
 from apps.soil.normalizatsiya import kirill_lotin
 
 from .models import Kontur
@@ -79,6 +80,20 @@ def relyef_malumoti(kontur):
     }
 
 
+def ekin_malumoti(kontur_id):
+    """Kontur ekinlari: yil kamayish, maydon kamayish (bitta so'rov)."""
+    qatorlar = (
+        KonturEkin.objects.filter(kontur_id=kontur_id)
+        .select_related("ekin")
+        .order_by("-yil", "-maydon", "ekin__kod")
+    )
+    return [
+        {"yil": q.yil, "kod": q.ekin.kod, "nom": q.ekin.nom, "guruh": q.ekin.guruh,
+         "maydon": round(q.maydon, 2), "asosiy": q.asosiy}
+        for q in qatorlar
+    ]
+
+
 def tuproq_malumoti(kontur_id):
     with connection.cursor() as cursor:
         cursor.execute(TUPROQ_SQL, [kontur_id])
@@ -143,6 +158,7 @@ def kontur_batafsil(request, id):
                 "gumus": agrokimyo_malumoti(kontur.pk, "gumus"),
             },
             "relyef": relyef_malumoti(kontur),
+            "ekinlar": ekin_malumoti(kontur.pk),
             "bbox": list(kontur.geom.extent),
         }
     )

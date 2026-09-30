@@ -95,11 +95,11 @@ class Command(BaseCommand):
             with transaction.atomic(), connection.cursor() as c:
                 t0 = time.perf_counter()
                 if self.tuman is None:
-                    # relyef (hisobla_relyef) va ko'rsatkich (hisobla_korsatkich) qayta hisoblanadi
-                    c.execute("TRUNCATE land_kontur, relief_konturrelyef, land_konturkorsatkich")
+                    # relyef, ekin (import_ekin) va ko'rsatkich (hisobla_korsatkich) qayta hisoblanadi
+                    c.execute("TRUNCATE land_kontur, relief_konturrelyef, land_konturkorsatkich, crop_konturekin")
                     ochirildi = None
                 else:
-                    for jadval in ("relief_konturrelyef", "land_konturkorsatkich"):
+                    for jadval in ("relief_konturrelyef", "land_konturkorsatkich", "crop_konturekin"):
                         c.execute(f"DELETE FROM {jadval} WHERE kontur_id IN (SELECT k.id FROM land_kontur k "
                                   "JOIN border_tuman t ON t.id = k.tuman_id WHERE t.kod = %s)", [self.tuman])
                     c.execute("DELETE FROM land_kontur WHERE tuman_id IN (SELECT id FROM border_tuman WHERE kod = %s)",

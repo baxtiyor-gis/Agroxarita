@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "apps.border",
     "apps.land",
     "apps.relief",
+    "apps.crop",
     "apps.soil",
     "apps.climate",
     "apps.tiles",
