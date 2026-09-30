@@ -59,6 +59,7 @@ export function Legenda({ tuman }: { tuman: number | null }) {
               key={i}
               onClick={() => setKlassFiltr(tanlangan ? null : i)}
               aria-pressed={tanlangan}
+              title={k.nom}
               className={`flex w-full items-center gap-2.5 rounded-md px-2 py-[5px] text-left transition-colors hover:bg-sunken ${tanlangan ? 'bg-leaf-soft font-medium ring-1 ring-leaf-line' : ''}`}
             >
               {ichki}
@@ -72,7 +73,7 @@ export function Legenda({ tuman }: { tuman: number | null }) {
             className={`mt-1 flex w-full items-center gap-2.5 rounded-md border-t border-line px-2 py-[5px] text-left transition-colors hover:bg-sunken ${klassFiltr === YOQ_KLASS ? 'bg-leaf-soft' : ''}`}
           >
             <span className="size-3.5 shrink-0 rounded-[4px] ring-1 ring-black/10" style={{ background: YOQ_RANG }} />
-            <span className="flex-1 text-[12px] text-muted">{YOQ_NOM}</span>
+            <span className="flex-1 text-[12px] text-muted">{sh.yoqNom ?? YOQ_NOM}</span>
           </button>
         )}
       </div>

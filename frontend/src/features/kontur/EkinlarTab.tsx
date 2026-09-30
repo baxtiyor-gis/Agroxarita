@@ -1,6 +1,8 @@
 import { AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { ekinRangi } from '@/features/map/tematik'
 import { ga } from './format'
+import type { EkinQator } from './types'
 import { almashlabOgoh, ekinTarixiMock, ekinYillarSoni } from './mock'
 import { NamunaBelgi } from './ui'
 
@@ -16,8 +18,46 @@ function Kichik({ nom, qiymat, birlik, ogoh }: { nom: string; qiymat: string; bi
   )
 }
 
-/** V1 Ekinlar tabi — yillar bo'yicha ekin tarixi (vaqt chizig'i) */
-export function EkinlarTab({ id, maydon }: { id: number; maydon: number }) {
+/** Haqiqiy ekinlar (API): yil bo'yicha guruhlangan ro'yxat, asosiy ekin belgilangan */
+function HaqiqiyEkinlar({ ekinlar }: { ekinlar: EkinQator[] }) {
+  if (ekinlar.length === 0) {
+    return <div className="rounded-lg border border-line bg-sunken/60 px-3 py-2.5 text-[12px] text-muted">Ekin ma'lumoti yo'q</div>
+  }
+  const yillar = [...new Set(ekinlar.map((e) => e.yil))].sort((a, b) => b - a)
+  return (
+    <div className="space-y-3">
+      {yillar.map((yil) => (
+        <div key={yil}>
+          <div className="nums text-[13px] font-semibold text-navy">{yil}</div>
+          <div className="mt-1.5 space-y-1">
+            {ekinlar
+              .filter((e) => e.yil === yil)
+              .map((e) => (
+                <div key={e.kod} className="flex items-center gap-2 text-[12.5px]">
+                  <span
+                    className="size-2.5 shrink-0 rounded-full ring-1 ring-black/10"
+                    style={{ background: ekinRangi(e.guruh) }}
+                  />
+                  <span className={cn('min-w-0 flex-1 truncate text-ink', e.asosiy ? 'font-semibold' : 'font-medium')}>
+                    {e.nom}
+                  </span>
+                  {e.asosiy && (
+                    <span className="shrink-0 rounded-full bg-leaf-soft px-1.5 py-px text-[10px] font-semibold text-leaf-dark">
+                      asosiy
+                    </span>
+                  )}
+                  <span className="nums shrink-0 text-[11.5px] text-muted">{ga(e.maydon)} ga</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** V1 Ekinlar tabi — haqiqiy ekinlar ro'yxati + yillar bo'yicha ekin tarixi (namuna vaqt chizig'i) */
+export function EkinlarTab({ id, maydon, ekinlar: haqiqiy }: { id: number; maydon: number; ekinlar: EkinQator[] }) {
   const tarix = ekinTarixiMock(id)
   const ogoh = almashlabOgoh(tarix)
   const borYil = tarix.filter((t) => t.ekinlar.length).length
@@ -25,7 +65,10 @@ export function EkinlarTab({ id, maydon }: { id: number; maydon: number }) {
 
   return (
     <div className="px-2.5 pb-1">
-      <div className="pb-2">
+      <div className="pb-3">
+        <HaqiqiyEkinlar ekinlar={haqiqiy} />
+      </div>
+      <div className="border-t border-line pt-3 pb-2">
         <NamunaBelgi />
       </div>
       <div className="grid grid-cols-3 gap-2">

@@ -40,6 +40,19 @@ export interface Relyef {
   yonalish: { kod: string | null; nom: string | null; gradus: number | null }
 }
 
+/** Kontur bilan bog'langan ekin (yil kamayish, maydon kamayish tartibida) */
+export interface EkinQator {
+  yil: number
+  kod: number
+  nom: string
+  /** guruh kodi: galla, paxta, ... */
+  guruh: string
+  /** ga */
+  maydon: number
+  /** shu yilda konturdagi eng katta jami maydonli ekin */
+  asosiy: boolean
+}
+
 /** GET /api/konturlar/{id}/ */
 export interface Kontur {
   id: number
@@ -59,5 +72,6 @@ export interface Kontur {
     gumus: AgrokimyoQiymat | null
   }
   relyef?: Relyef | null
+  ekinlar?: EkinQator[]
   bbox: [number, number, number, number]
 }
