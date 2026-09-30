@@ -17,6 +17,13 @@ CI/CD — `.gitlab-ci.yml` (dev.digitagro.uz GitLab): `build` (obrazlar, SHA teg
 obrazida PostGIS servis bilan; frontend lint + build) → `release` (main: `latest`) → `deploy` (main, **qo'lda**
 tugma, SSH orqali `deploy/deploy.sh <sha>`, health tekshiruvi, muvaffaqiyatsiz bo'lsa oldingi tegga qaytadi).
 
+**GitHub Actions** (`.github/workflows/ci-cd.yml`, github.com/baxtiyor-gis/Agroxarita) — xuddi shu oqim:
+`frontend` (lint + build) va `backend` (obraz + pytest PostGIS bilan) → `release` (main: `ghcr.io/<owner>/<repo>/…`
+`:<sha>` va `:latest`) → `deploy` (faqat qo'lda: Actions → ci-cd → Run workflow → `deploy = true`).
+Secrets: `SSH_PRIVATE_KEY`, `SSH_KNOWN_HOSTS`, `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`; `production` environment'da
+tasdiqlovchi qo'yish tavsiya etiladi. Serverni qaysi registry'dan tortishini `.env` dagi `REGISTRY_IMAGE` belgilaydi —
+ikkala tizimdan bir vaqtda deploy qilmang, bittasini asosiy qiling.
+
 ---
 
 ## Dasturchi uchun qisqa qo'llanma
