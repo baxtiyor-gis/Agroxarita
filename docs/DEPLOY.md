@@ -50,6 +50,10 @@ Qaytarish: `sudo rm /etc/nginx/sites-enabled/agro-xarita && sudo nginx -t && sud
 - Server qayta yuklanganda konteynerlar `restart: unless-stopped` bilan o'zi ko'tariladi (systemd unit shart emas).
 - Backup — foydalanuvchi crontab'i (`crontab -e`):
   `30 2 * * * cd $HOME/Agroxarita && sg docker -c ./deploy/backup.sh >> backups/backup.log 2>&1`
+- Tile keshi — `web` konteyneridagi nginx (`/tiles/`, kontur 1 soat, chegaralar 1 kun; `X-Tile-Cache: HIT|MISS`). Har deployda
+  tozalanadi. Ma'lumot importidan keyin darhol yangilash: `docker compose exec redis redis-cli FLUSHDB` va
+  `docker compose up -d --force-recreate web`.
+- Deploy paytida backend qayta yaratiladi (migrate + collectstatic) — ~10–15 soniya `/api` va keshlanmagan tile'lar 502 beradi.
 - To'liq to'xtatish: `docker compose down` (faqat shu loyiha; `pgdata` volume saqlanadi). **`down -v` — bazani o'chiradi.**
 
 ---
