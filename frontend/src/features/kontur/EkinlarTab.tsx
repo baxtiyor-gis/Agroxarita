@@ -3,8 +3,9 @@ import { cn } from '@/lib/cn'
 import { ekinRangi } from '@/features/map/tematik'
 import { ga } from './format'
 import type { EkinQator } from './types'
-import { almashlabOgoh, ekinTarixiMock, ekinYillarSoni } from './mock'
-import { NamunaBelgi } from './ui'
+
+/** Bazadagi ekin yillari (Crop_2026, Crop_2025) — eng yangisi tepada */
+const YILLAR = [2026, 2025]
 
 function Kichik({ nom, qiymat, birlik, ogoh }: { nom: string; qiymat: string; birlik?: string; ogoh?: boolean }) {
   return (
@@ -18,75 +19,34 @@ function Kichik({ nom, qiymat, birlik, ogoh }: { nom: string; qiymat: string; bi
   )
 }
 
-/** Haqiqiy ekinlar (API): yil bo'yicha guruhlangan ro'yxat, asosiy ekin belgilangan */
-function HaqiqiyEkinlar({ ekinlar }: { ekinlar: EkinQator[] }) {
-  if (ekinlar.length === 0) {
-    return <div className="rounded-lg border border-line bg-sunken/60 px-3 py-2.5 text-[12px] text-muted">Boshqa</div>
-  }
-  const yillar = [...new Set(ekinlar.map((e) => e.yil))].sort((a, b) => b - a)
-  return (
-    <div className="space-y-3">
-      {yillar.map((yil) => (
-        <div key={yil}>
-          <div className="nums text-[13px] font-semibold text-navy">{yil}</div>
-          <div className="mt-1.5 space-y-1">
-            {ekinlar
-              .filter((e) => e.yil === yil)
-              .map((e) => (
-                <div key={e.kod} className="flex items-center gap-2 text-[12.5px]">
-                  <span
-                    className="size-2.5 shrink-0 rounded-full ring-1 ring-black/10"
-                    style={{ background: ekinRangi(e.kod) }}
-                  />
-                  <span className={cn('min-w-0 flex-1 truncate text-ink', e.asosiy ? 'font-semibold' : 'font-medium')}>
-                    {e.nom}
-                  </span>
-                  {e.asosiy && (
-                    <span className="shrink-0 rounded-full bg-leaf-soft px-1.5 py-px text-[10px] font-semibold text-leaf-dark">
-                      asosiy
-                    </span>
-                  )}
-                  <span className="nums shrink-0 text-[11.5px] text-muted">{ga(e.maydon)} ga</span>
-                </div>
-              ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/** V1 Ekinlar tabi — haqiqiy ekinlar ro'yxati + yillar bo'yicha ekin tarixi (namuna vaqt chizig'i) */
-export function EkinlarTab({ id, maydon, ekinlar: haqiqiy }: { id: number; maydon: number; ekinlar: EkinQator[] }) {
-  const tarix = ekinTarixiMock(id)
-  const ogoh = almashlabOgoh(tarix)
-  const borYil = tarix.filter((t) => t.ekinlar.length).length
-  const turlar = new Set(tarix.flatMap((t) => t.ekinlar.map((e) => e.nom)))
+/** V1 Ekinlar tabi — bazadagi ekinlar (API `ekinlar`), yillar bo'yicha vaqt chizig'i */
+export function EkinlarTab({ maydon, ekinlar }: { id: number; maydon: number; ekinlar: EkinQator[] }) {
+  const tarix = YILLAR.map((yil) => ({ yil, l: ekinlar.filter((e) => e.yil === yil) }))
+  const borYil = tarix.filter((t) => t.l.length).length
+  const turlar = new Set(ekinlar.map((e) => e.kod))
+  // ketma-ket yillarda bir xil asosiy ekin — almashlab ekilmagan
+  const asosiylar = tarix.map((t) => t.l.find((e) => e.asosiy))
+  const takror = asosiylar[0] != null && asosiylar[0].kod === asosiylar[1]?.kod ? asosiylar[0] : null
+  const ulush = (m: number) => (maydon > 0 ? Math.min(100, (m / maydon) * 100) : 0)
 
   return (
     <div className="px-2.5 pb-1">
-      <div className="pb-3">
-        <HaqiqiyEkinlar ekinlar={haqiqiy} />
-      </div>
-      <div className="border-t border-line pt-3 pb-2">
-        <NamunaBelgi />
-      </div>
       <div className="grid grid-cols-3 gap-2">
-        <Kichik nom="Ma'lumot bor" qiymat={`${borYil} / ${ekinYillarSoni}`} birlik="yil" />
+        <Kichik nom="Ma'lumot bor" qiymat={`${borYil} / ${YILLAR.length}`} birlik="yil" />
         <Kichik nom="Ekin turlari" qiymat={String(turlar.size)} birlik="ta" />
         <Kichik
-          nom={ogoh ? 'Ketma-ket ekilgan' : 'Almashlab ekish'}
-          qiymat={ogoh ? `${ogoh.uzunlik} yil` : borYil >= 2 ? (turlar.size > 1 ? 'Bor' : "Yo'q") : '—'}
-          ogoh={!!ogoh}
+          nom={takror ? 'Ketma-ket ekilgan' : 'Almashlab ekish'}
+          qiymat={takror ? `${YILLAR.length} yil` : borYil >= 2 ? 'Bor' : '—'}
+          ogoh={!!takror}
         />
       </div>
 
-      {ogoh && (
+      {takror && (
         <div className="mt-3 flex items-start gap-2 rounded-lg border border-wheat/30 bg-wheat-soft px-3 py-2.5 text-[12px] leading-snug text-wheat">
           <AlertTriangle className="mt-px size-4 shrink-0" strokeWidth={2.2} />
           <span>
             <b className="font-semibold">
-              {ogoh.uzunlik} yil ketma-ket ({ogoh.yillar[0]}–{ogoh.yillar[1]}) {ogoh.ekin}
+              {YILLAR.length} yil ketma-ket ({YILLAR[YILLAR.length - 1]}–{YILLAR[0]}) {takror.nom}
             </b>{' '}
             — tuproq charchashi va kasallik xavfi. Almashlab ekish tavsiya etiladi.
           </span>
@@ -96,49 +56,45 @@ export function EkinlarTab({ id, maydon, ekinlar: haqiqiy }: { id: number; maydo
       {/* Vaqt chizig'i — eng yangi yil tepada */}
       <ol className="relative mt-4 ml-1.5">
         <span className="absolute top-2 bottom-2 left-[5px] w-px bg-line" aria-hidden />
-        {[...tarix].reverse().map(({ yil, ekinlar: l }) => {
-          const asosiy = l[0]
+        {tarix.map(({ yil, l }) => {
+          const asosiy = l.find((e) => e.asosiy) ?? l[0]
+          const jami = l.reduce((s, e) => s + e.maydon, 0)
           return (
             <li key={yil} className="relative pb-4 pl-6 last:pb-1">
               <span
-                className={cn(
-                  'absolute top-1 left-0 size-[11px] rounded-full ring-2 ring-surface',
-                  !asosiy && 'bg-line-strong',
-                )}
-                style={asosiy ? { background: asosiy.rang } : undefined}
+                className={cn('absolute top-1 left-0 size-[11px] rounded-full ring-2 ring-surface', !asosiy && 'bg-line-strong')}
+                style={asosiy ? { background: ekinRangi(asosiy.kod) } : undefined}
               />
               <div className="flex items-baseline justify-between gap-2">
                 <span className="nums text-[13px] font-semibold text-navy">{yil}</span>
-                {l.length > 0 && (
-                  <span className="nums text-[11.5px] text-muted">
-                    {ga((maydon * Math.min(100, l.reduce((s, e) => s + e.ulush, 0))) / 100)} ga ekilgan
-                  </span>
-                )}
+                {l.length > 0 && <span className="nums text-[11.5px] text-muted">{ga(jami)} ga ekilgan</span>}
               </div>
               {l.length === 0 ? (
-                <div className="mt-0.5 text-[12px] text-faint">Ma'lumot yo'q</div>
+                <div className="mt-0.5 text-[12px] text-faint">Boshqa</div>
               ) : (
                 <>
                   <div className="mt-1.5 flex h-2 overflow-hidden rounded-full bg-sunken">
                     {l.map((e) => (
                       <span
-                        key={e.nom}
+                        key={e.kod}
                         className="h-full border-r border-surface last:border-r-0"
-                        style={{ width: `${e.ulush}%`, background: e.rang }}
-                        title={`${e.nom} — ${e.ulush} %`}
+                        style={{ width: `${ulush(e.maydon)}%`, background: ekinRangi(e.kod) }}
+                        title={`${e.nom} — ${ulush(e.maydon).toFixed(0)} %`}
                       />
                     ))}
                   </div>
                   <div className="mt-1.5 space-y-1">
                     {l.map((e) => (
-                      <div key={e.nom} className="flex items-center gap-2 text-[12.5px]">
+                      <div key={e.kod} className="flex items-center gap-2 text-[12.5px]">
                         <span
                           className="size-2.5 shrink-0 rounded-[3px] ring-1 ring-black/10"
-                          style={{ background: e.rang }}
+                          style={{ background: ekinRangi(e.kod) }}
                         />
-                        <span className="min-w-0 flex-1 truncate font-medium text-ink">{e.nom}</span>
+                        <span className={cn('min-w-0 flex-1 truncate text-ink', e.asosiy ? 'font-semibold' : 'font-medium')}>
+                          {e.nom}
+                        </span>
                         <span className="nums shrink-0 text-[11.5px] text-muted">
-                          {e.ulush} % · {ga((maydon * e.ulush) / 100)} ga
+                          {ulush(e.maydon).toFixed(0)} % · {ga(e.maydon)} ga
                         </span>
                       </div>
                     ))}
