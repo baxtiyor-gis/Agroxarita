@@ -41,10 +41,13 @@ curl -s http://127.0.0.1:8090/api/health/
 ### Host nginx (sudo; faqat yangi fayl qo'shiladi)
 ```bash
 sudo cp deploy/nginx/agro-xarita.conf /etc/nginx/sites-available/agro-xarita
-sudo ln -s /etc/nginx/sites-available/agro-xarita /etc/nginx/sites-enabled/agro-xarita
+sudo ln -s /etc/nginx/sites-available/agro-xarita /etc/nginx/sites-enabled/zz-agro-xarita   # zz- — default sayt bo'lmasin
 sudo nginx -t && sudo systemctl reload nginx      # restart EMAS; -t o'tmasa reload qilinmaydi
 ```
-Qaytarish: `sudo rm /etc/nginx/sites-enabled/agro-xarita && sudo nginx -t && sudo systemctl reload nginx`.
+Iframe: faqat `frame-ancestors` ro'yxatidagi saytlar (hozir `agroportal.digitagro.uz`) joylay oladi — yangi sayt
+qo'shish uchun `deploy/nginx/agro-xarita.conf` ni o'zgartirib, yuqoridagi `cp` + `nginx -t` + `reload` ni takrorlang.
+
+Qaytarish: `sudo rm /etc/nginx/sites-enabled/zz-agro-xarita && sudo nginx -t && sudo systemctl reload nginx`.
 
 ### Qayta yuklash va backup (sudo'siz)
 - Server qayta yuklanganda konteynerlar `restart: unless-stopped` bilan o'zi ko'tariladi (systemd unit shart emas).
