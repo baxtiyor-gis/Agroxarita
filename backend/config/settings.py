@@ -85,6 +85,9 @@ DATABASES = {
         "PASSWORD": env("DB_PASSWORD"),
         "HOST": env("DB_HOST", default="localhost"),
         "PORT": env("DB_PORT", default="5432"),
+        # production: ulanish qayta ishlatiladi (har tile so'rovida yangi ulanish ochilmasin); dev/test — 0
+        "CONN_MAX_AGE": env.int("DB_CONN_MAX_AGE", default=0),
+        "CONN_HEALTH_CHECKS": True,
     }
 }
 
