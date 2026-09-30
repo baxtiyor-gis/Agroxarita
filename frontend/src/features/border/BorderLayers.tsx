@@ -1,10 +1,19 @@
 import { useEffect, useRef } from 'react'
 import type { ExpressionSpecification, Map, MapLayerMouseEvent, VectorTileSource } from 'maplibre-gl'
 import { useUi } from '@/store/useUi'
+import {
+  CHIZIQ_OSM,
+  CHIZIQ_SPUTNIK,
+  klassFiltri,
+  rangIfoda,
+  rasterTematikmi,
+  type TematikId,
+} from '@/features/map/tematik'
 import type { Tanlov } from './useTanlov'
 
-const SRC = { viloyat: 'viloyat-src', tuman: 'tuman-src', massiv: 'massiv-src', kontur: 'kontur-src' }
+const SRC = { viloyat: 'viloyat-src', tuman: 'tuman-src', massiv: 'massiv-src', kontur: 'kontur-src', dem: 'dem-src' }
 const L = {
+  dem: 'dem-raster',
   konturFill: 'kontur-fill',
   kontur: 'kontur-line',
   massivLine: 'massiv-line',
@@ -155,6 +164,8 @@ function yangilash(
   { viloyat, tuman }: Pick<Tanlov, 'viloyat' | 'tuman'>,
   qat: Qatlamlar,
   sputnik: boolean,
+  tematik: TematikId | null,
+  klassFiltr: number | null,
 ) {
   const vis = (id: string, korinadi: boolean) =>
     map.setLayoutProperty(id, 'visibility', korinadi ? 'visible' : 'none')
@@ -187,10 +198,27 @@ function yangilash(
   // massiv va kontur: faqat tuman tanlanganda (qatlam yoqilgan bo'lsa)
   map.setPaintProperty(L.massivLine, 'line-color', chegara)
   vis(L.massivLine, tuman != null && qat.massiv)
-  map.setPaintProperty(L.kontur, 'line-color', konturRang(sputnik))  // kontur: QX yerlari va qolgan yerlar alohida yoqiladi (filtr tur bo'yicha)
+  // kontur: QX yerlari va qolgan yerlar alohida yoqiladi (filtr tur bo'yicha)
   const qx: ExpressionSpecification = ['==', ['get', 'tur'], 'sugoriladigan']
   const qolgan: ExpressionSpecification = ['!', qx]
-  const konturFiltr = qat.qx && qat.qolgan ? null : qat.qx ? qx : qolgan
+  const turFiltr = qat.qx && qat.qolgan ? null : qat.qx ? qx : qolgan
+  // tematik ranglash (V1): fill atribut bo'yicha, chiziq ingichka; balandlikda fill shaffof (raster ostida)
+  const tem = tematik === 'balandlik' && tuman == null ? null : tematik
+  const fillTematik = tem != null && !rasterTematikmi(tem)
+  const klassF = fillTematik ? klassFiltri(tem, klassFiltr) : null
+  const konturFiltr: ExpressionSpecification | null =
+    turFiltr && klassF ? ['all', turFiltr, klassF] : (turFiltr ?? klassF)
+  map.setPaintProperty(L.konturFill, 'fill-color', fillTematik ? rangIfoda(tem) : '#000000')
+  map.setPaintProperty(L.konturFill, 'fill-opacity', fillTematik ? 1 : 0)
+  if (tem == null) {
+    map.setPaintProperty(L.kontur, 'line-color', konturRang(sputnik))
+    map.setPaintProperty(L.kontur, 'line-width', ['interpolate', ['linear'], ['zoom'], 9, 0.5, 12, 0.8, 16, 1.2])
+    map.setPaintProperty(L.kontur, 'line-opacity', 1)
+  } else {
+    map.setPaintProperty(L.kontur, 'line-color', sputnik ? CHIZIQ_SPUTNIK : CHIZIQ_OSM)
+    map.setPaintProperty(L.kontur, 'line-width', ['interpolate', ['linear'], ['zoom'], 9, 0.2, 12, 0.4, 16, 0.9])
+    map.setPaintProperty(L.kontur, 'line-opacity', sputnik ? 0.85 : 1)
+  }
   map.setFilter(L.kontur, konturFiltr)
   map.setFilter(L.konturFill, konturFiltr)
   vis(L.kontur, tuman != null && (qat.qx || qat.qolgan))
@@ -248,9 +276,32 @@ export function BorderLayers({ map, tanlov }: { map: Map; tanlov: Tanlov }) {
     tanlanganKontur(map, kontur, tuman)
   }, [map, kontur, tuman])
 
+  const tematik = useUi((s) => s.tematik)
+  const klassFiltr = useUi((s) => s.klassFiltr)
+
   useEffect(() => {
-    yangilash(map, { viloyat, tuman }, qatlamlar, asosiy === 'sputnik')
-  }, [map, viloyat, tuman, qatlamlar, asosiy])
+    yangilash(map, { viloyat, tuman }, qatlamlar, asosiy === 'sputnik', tematik, klassFiltr)
+  }, [map, viloyat, tuman, qatlamlar, asosiy, tematik, klassFiltr])
+
+  // DEM raster: faqat "Balandlik" tanlanganda va tuman bor bo'lsa; tuman almashsa qayta quriladi
+  const demTuman = tematik === 'balandlik' ? tuman : null
+  useEffect(() => {
+    if (demTuman == null) return
+    map.addSource(SRC.dem, {
+      type: 'raster',
+      tiles: [tileUrl('dem', demTuman).replace('.pbf', '.png')],
+      tileSize: 256,
+      minzoom: 8,
+      maxzoom: 16,
+    })
+    // kontur fill'dan pastda: raster ustida faqat kontur/chegara chiziqlari
+    map.addLayer({ id: L.dem, type: 'raster', source: SRC.dem, paint: { 'raster-opacity': 0.9 } }, L.konturFill)
+    return () => {
+      if (!map.getStyle()) return
+      if (map.getLayer(L.dem)) map.removeLayer(L.dem)
+      if (map.getSource(SRC.dem)) map.removeSource(SRC.dem)
+    }
+  }, [map, demTuman])
 
   return null
 }

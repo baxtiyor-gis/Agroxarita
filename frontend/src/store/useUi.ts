@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { AsosiyXarita } from '@/features/map/config'
+import type { TematikId } from '@/features/map/tematik'
 
 export type BolimId = 'hudud' | 'yer' | 'tuproq' | 'agrokimyo' | 'relyef'
 /** qx — qishloq xo'jaligi yerlari (tur = sugoriladigan), qolgan — qolgan konturlar */
@@ -45,6 +46,12 @@ interface UiState extends Saqlangan {
   toggleBolim: (id: BolimId) => void
   setAsosiy: (a: AsosiyXarita) => void
   toggleQatlam: (id: QatlamId) => void
+  /** Xaritani ranglash (null — oddiy ko'rinish) */
+  tematik: TematikId | null
+  /** Legendada tanlangan klass (indeks; YOQ_KLASS — ma'lumotsizlar), null — filtr yo'q */
+  klassFiltr: number | null
+  setTematik: (id: TematikId | null) => void
+  setKlassFiltr: (i: number | null) => void
 }
 
 export const useUi = create<UiState>((set, get) => ({
@@ -55,6 +62,10 @@ export const useUi = create<UiState>((set, get) => ({
     set({ asosiy })
     yozish(get())
   },
+  tematik: null,
+  klassFiltr: null,
+  setTematik: (tematik) => set({ tematik, klassFiltr: null }),
+  setKlassFiltr: (klassFiltr) => set({ klassFiltr }),
   toggleQatlam: (id) => {
     set((s) => ({ qatlamlar: { ...s.qatlamlar, [id]: !s.qatlamlar[id] } }))
     yozish(get())

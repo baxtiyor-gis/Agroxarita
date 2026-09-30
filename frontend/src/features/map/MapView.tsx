@@ -5,6 +5,7 @@ import { KonturPanel } from '@/features/kontur/KonturPanel'
 import { useKontur } from '@/features/kontur/api'
 import { useTanlov } from '@/features/border/useTanlov'
 import { useUi } from '@/store/useUi'
+import { Legenda } from './Legenda'
 import { MapControls } from './MapControls'
 import { MAX_BOUNDS, MAX_ZOOM, MIN_ZOOM, UZ_BOUNDS, asosiyStyle } from './config'
 
@@ -97,6 +98,7 @@ export function MapView() {
         </div>
       )}
       {tayyor && <BorderLayers map={tayyor} tanlov={tanlov} />}
+      <Legenda tuman={tanlov.tuman} />
       <KonturPanel />
       <MapControls
         onZoomIn={() => xarita.current?.zoomIn()}

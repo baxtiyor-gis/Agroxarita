@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Layers } from 'lucide-react'
+import { useSearchParams } from 'react-router'
 import { useUi, type QatlamId } from '@/store/useUi'
 import type { AsosiyXarita } from './config'
+import { SHKALA, TEMATIK_GURUHLAR, gradient, rasterTematikmi } from './tematik'
 
 const ASOSIY: { id: AsosiyXarita; nom: string }[] = [
   { id: 'sputnik', nom: 'Sputnik' },
@@ -68,6 +70,10 @@ export function LayersControl() {
   const qatlamlar = useUi((s) => s.qatlamlar)
   const setAsosiy = useUi((s) => s.setAsosiy)
   const toggleQatlam = useUi((s) => s.toggleQatlam)
+  const tematik = useUi((s) => s.tematik)
+  const setTematik = useUi((s) => s.setTematik)
+  const tumanParam = useSearchParams()[0].get('tuman')
+  const tuman = tumanParam != null && /^\d+$/.test(tumanParam) ? Number(tumanParam) : null
 
   return (
     // relative yo'q: panel butun boshqaruv ustuniga nisbatan — tepadan boshlanadi
@@ -82,7 +88,7 @@ export function LayersControl() {
         <Layers className="size-4" />
       </button>
       {ochiq && (
-        <div className="float-panel absolute top-0 right-[52px] w-64 rounded-card p-3 text-[13px] text-body">
+        <div className="float-panel absolute top-0 right-[52px] scrollbar-thin max-h-[calc(100vh-96px)] w-72 overflow-y-auto rounded-card p-3 text-[13px] text-body">
           <div className="eyebrow mb-1.5">Asosiy xarita</div>
           {ASOSIY.map(({ id, nom }) => (
             <label key={id} className="flex cursor-pointer items-center gap-2 py-1">
@@ -103,6 +109,52 @@ export function LayersControl() {
               {nom}
             </label>
           ))}
+          <div className="eyebrow mt-3 mb-1.5">Xaritani ranglash</div>
+          <div role="radiogroup" aria-label="Tematik qatlam">
+            <label className="flex cursor-pointer items-center gap-2 py-1">
+              <input
+                type="radio"
+                name="tematik"
+                checked={tematik === null}
+                onChange={() => setTematik(null)}
+              />
+              Faqat kontur chegaralari
+            </label>
+            {TEMATIK_GURUHLAR.map((g) => (
+              <div key={g.nom}>
+                <div className="eyebrow mt-2 mb-0.5">{g.nom}</div>
+                {g.idlar.map((id) => {
+                  const sh = SHKALA[id]
+                  const yoq = rasterTematikmi(id) && tuman == null
+                  return (
+                    <label
+                      key={id}
+                      className={`flex items-center gap-2 py-1 ${yoq ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                      title={yoq ? 'Tuman tanlang' : undefined}
+                    >
+                      <input
+                        type="radio"
+                        name="tematik"
+                        checked={tematik === id}
+                        disabled={yoq}
+                        onChange={() => setTematik(id)}
+                      />
+                      <span className="min-w-0 flex-1 truncate">{sh.nom}</span>
+                      {yoq ? (
+                        <span className="text-[10.5px] text-faint">Tuman tanlang</span>
+                      ) : (
+                        <span
+                          aria-hidden
+                          className="h-2.5 w-14 shrink-0 rounded-full ring-1 ring-black/10"
+                          style={{ background: gradient(sh.klasslar) }}
+                        />
+                      )}
+                    </label>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
