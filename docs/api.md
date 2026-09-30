@@ -82,7 +82,7 @@ Tile ichidagi qatlam nomi = URL dagi `{qatlam}`. Extent 4096, buffer 64.
 | `tuman` | 5–14 | `kod`, `nom`, `tip`, `region_id` | `?viloyat={region_id}` |
 | `massiv` | 9–16 (`?tuman=` bilan **6–16**) | `nom`, `kod` (tuman kodi) | `?tuman={kod}` |
 | `maska` | 0–16 | — (faqat geometriya) | `?tuman={kod}` **majburiy** |
-| `kontur` | 9–18 | `id`, `kontur_raqami`, `maydon` (ga, 2 xona), `tur` (`sugoriladigan` \| `aniqlanmagan`) | `?tuman={kod}` **majburiy** (`tuman_geo` bo'yicha) |
+| `kontur` | 9–18 | `id`, `kontur_raqami`, `maydon` (ga, 2 xona), `tur` (`sugoriladigan` \| `aniqlanmagan`), tematik: `bonitet`, `shorlanish` (1–5), `gumus` (1–6), `fosfor` (1–5), `kaliy` (1–5), `balandlik` (m), `qiyalik` (gradus) | `?tuman={kod}` **majburiy** (`tuman_geo` bo'yicha) |
 
 `maska` — tile to'rtburchagi minus tuman geometriyasi (`ST_Difference`); tuman tile'ga tegmasa — butun
 tile to'rtburchagi; tile to'liq tuman ichida bo'lsa — `204`. `z < 9` da `geom_mvt_s`. `?tuman` yo'q yoki
@@ -118,3 +118,35 @@ Javoblar:
 
 Tekshiruv tartibi: qatlam (404) -> z/x/y (400) -> filtr (400) -> zoom oralig'i (204) -> bo'sh tile (204).
 `?viloyat` faqat `tuman` qatlamiga, `?tuman` faqat `massiv`, `maska` va `kontur` qatlamlariga ta'sir qiladi (boshqasida e'tiborsiz).
+
+### Kontur tematik atributlari (Task 11)
+
+`kontur` tile atributlari `land_konturkorsatkich` (`KonturKorsatkich`) va `relief_konturrelyef` dan LEFT JOIN — qiymat
+yo'q bo'lsa atribut tile'da umuman bo'lmaydi (MapLibre'da `["has", "gumus"]`). Bo'yash — frontend (V1 `ranglar.ts`).
+
+- `bonitet` — ball (float), eng katta kesishuvli tuproq poligonidan.
+- `shorlanish` — klass: 1 sho'rlanmagan, 2 kuchsiz, 3 o'rtacha, 4 kuchli, 5 juda kuchli/sho'rxok. Manba
+  `TuproqClass(tur='shorlanish')` kodi: 1–5 o'zi; 6 "Kam" -> 2; 7 "Sho'rlanmagan yoki kam" -> 1; 8 "Ba'zan kam sho'rlangan" -> 2;
+  9 "Ba'zan kuchsiz" -> 2.
+- `gumus` (1–6), `fosfor` (1–5), `kaliy` (1–5) — `daraja`, eng so'nggi yil ichida eng katta kesishuvli poligondan (kontur API bilan bir xil).
+- Qoplanish (kesishuv / kontur maydoni) < 0.1 bo'lsa qiymat null. `balandlik`/`qiyalik` — `KonturRelyef` o'rtachasi (faqat sug'oriladigan konturlar).
+- To'ldirish: `manage.py hisobla_korsatkich [--tuman KOD ...] [--viloyat ID ...] [--qayta]` (SQL, tuman bo'yicha, har tuman
+  alohida tranzaksiya; hisoblanganlar `--qayta`siz o'tkaziladi). `import_kontur` konturlarni tozalaganda ko'rsatkichlar ham o'chadi.
+
+## DEM raster tile (Task 11)
+
+### GET `/tiles/dem/{z}/{x}/{y}.png?tuman={kod}`
+
+Tuman ichida balandlik rang shkalasi + yengil hillshade, tuman tashqarisi shaffof (RGBA PNG, 256 px). `data/dem/dem.vrt`
+dan tile bbox (3857) ga bilinear warp, tuman geometriyasi bo'yicha clip (chetlari yumshoq alfa). Zoom **8–16**, tashqarisida `204`.
+
+- `?tuman` majburiy: yo'q/butun son emas -> `400`; tuman yo'q -> `404`; `x`/`y` diapazondan tashqarida -> `400`; DEM fayli yo'q -> `503`.
+- Tile tuman bilan kesishmasa -> `204`. Javob: `200`, `Content-Type: image/png`, `Cache-Control` — statik qatlamlar kabi (`TILE_STATIK_MAX_AGE`).
+- Rang shkalasi tuman ichidagi min–max bo'yicha 5 teng oraliq (V1 BALANDLIK): `#4b8c5a` `#9cbd6c` `#e2cc84` `#c99a63` `#9a6a4c`.
+  Xarita `raster` source (`tileSize: 256`, `minzoom: 8`, `maxzoom: 16`), URL da `?tuman=`.
+- Server keshi: tile PNG (tuman/z/x/y) va tuman min/max (`dem:minmax:{kod}`) xotirada.
+
+### GET `/api/tumanlar/{kod}/relyef/`
+
+Legenda uchun: `{"min": 708, "max": 1678, "klasslar": [{"min": 708.0, "max": 902.0, "rang": "#4b8c5a"}, ...]}` (5 klass, metr;
+min/max butun metrga yaxlitlangan). Tuman yo'q -> `404`; DEM yo'q -> `503`.

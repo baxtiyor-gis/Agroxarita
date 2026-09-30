@@ -84,3 +84,23 @@ class Kontur(models.Model):
 
     def __str__(self):
         return f"{self.kontur_raqami} ({self.tuman_id})"
+
+
+class KonturKorsatkich(models.Model):
+    """Kontur bo'yicha tematik bo'yash qiymatlari (bonitet, sho'rlanish, gumus, fosfor, kaliy klasslari).
+
+    `hisobla_korsatkich` to'ldiradi: eng katta kesishuvli tuproq/agrokimyo poligoni; qoplanish < 0.1 -> null.
+    """
+
+    kontur = models.OneToOneField(Kontur, on_delete=models.CASCADE, related_name="korsatkich")
+    bonitet = models.FloatField(null=True, blank=True)
+    shorlanish = models.PositiveSmallIntegerField(null=True, blank=True)  # 1 sho'rlanmagan .. 5 juda kuchli
+    gumus = models.PositiveSmallIntegerField(null=True, blank=True)  # 1..6
+    fosfor = models.PositiveSmallIntegerField(null=True, blank=True)  # 1..5
+    kaliy = models.PositiveSmallIntegerField(null=True, blank=True)  # 1..5
+
+    class Meta:
+        verbose_name_plural = "kontur ko'rsatkichlari"
+
+    def __str__(self):
+        return f"korsatkich kontur={self.kontur_id}"

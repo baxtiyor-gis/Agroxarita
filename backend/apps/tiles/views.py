@@ -6,7 +6,8 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_GET
 
 from apps.border.models import Massiv, Tuman, Viloyat
-from apps.land.models import Kontur
+from apps.land.models import Kontur, KonturKorsatkich
+from apps.relief.models import KonturRelyef
 
 MVT_TURI = "application/vnd.mapbox-vector-tile"
 EXTENT = 4096
@@ -125,8 +126,12 @@ def kontur_sql(z):
         SELECT ST_AsMVT(q, %s, {EXTENT}, 'geom')
         FROM (
             SELECT t.id, t.kontur_raqami, ROUND(t.umumiy_maydoni::numeric, 2)::float8 AS maydon, t.tur,
+                   ks.bonitet, ks.shorlanish, ks.gumus, ks.fosfor, ks.kaliy,
+                   r.balandlik_ortacha AS balandlik, r.qiyalik_ortacha AS qiyalik,
                    ST_AsMVTGeom({geom_ifoda}, tile.env, {EXTENT}, {BUFFER}, true) AS geom
-            FROM {Kontur._meta.db_table} t, tile
+            FROM {Kontur._meta.db_table} t
+            LEFT JOIN {KonturKorsatkich._meta.db_table} ks ON ks.kontur_id = t.id
+            LEFT JOIN {KonturRelyef._meta.db_table} r ON r.kontur_id = t.id, tile
             -- tuman_geo hali hisoblanmagan konturlar uchun vaqtincha manba tumani (distrikt_id)
             WHERE COALESCE(t.tuman_geo_id, t.tuman_id) = %s AND t.geom_mvt && tile.env{maydon_sharti}
         ) q
@@ -211,3 +216,59 @@ def kesh_sarlavhasi(qatlam="kontur"):
     """Chegara qatlamlari — `TILE_STATIK_MAX_AGE` (uzoq); kontur — `TILE_CACHE_MAX_AGE` (dev'da 0 — kesh yo'q)."""
     soniya = settings.TILE_STATIK_MAX_AGE if qatlam in STATIK_QATLAMLAR else settings.TILE_CACHE_MAX_AGE
     return f"public, max-age={soniya}" if soniya > 0 else "no-cache"
+
+
+DEM_ZOOM = (8, 16)
+DEM_SQL = """
+    SELECT ST_AsBinary(ST_CollectionExtract(ST_Intersection(t.{ustun}, ST_TileEnvelope(%s, %s, %s)), 3))
+    FROM border_tuman t
+    WHERE t.kod = %s AND t.{ustun} && ST_TileEnvelope(%s, %s, %s)
+"""
+
+
+@require_GET
+def dem_tile(request, z, x, y):
+    """DEM raster tile (PNG): tuman ichida balandlik ranglari + hillshade, tashqarisi shaffof."""
+    from osgeo import ogr
+
+    from apps.relief.dem_tile import minmax_keshli, tile_png
+    from apps.relief.views import dem_vrt, tuman_geom_3857
+
+    n = 2**z
+    if not (0 <= x < n and 0 <= y < n):
+        return _xato(f"z={z} uchun x va y 0 dan {n - 1} gacha bo'lishi kerak.", 400)
+    xom = request.GET.get("tuman")
+    if xom in (None, ""):
+        return _xato("'tuman' parametri majburiy.", 400)
+    try:
+        kod = int(xom.strip())
+    except ValueError:
+        return _xato("'tuman' parametri butun son bo'lishi kerak.", 400)
+    if not DEM_ZOOM[0] <= z <= DEM_ZOOM[1]:
+        return HttpResponse(status=204)
+    if not Tuman.objects.filter(kod=kod).exists():
+        return _xato(f"kod={kod} tuman topilmadi.", 404)
+    vrt = dem_vrt()
+    if vrt is None:
+        return _xato("DEM (data/dem/dem.vrt) mavjud emas.", 503)
+
+    kesh_kalit = f"tile:dem:{z}:{x}:{y}:{kod}"
+    png = cache.get(kesh_kalit)
+    if png is None:
+        ustun = "geom_mvt_s" if z < QUYI_ZOOM_CHEGARA else "geom_mvt"
+        with connection.cursor() as cursor:
+            cursor.execute(DEM_SQL.format(ustun=ustun), [z, x, y, kod, z, x, y])
+            qator = cursor.fetchone()
+        png = b""
+        if qator and qator[0] is not None:
+            geom = ogr.CreateGeometryFromWkb(bytes(qator[0]))
+            if not geom.IsEmpty():
+                mm = minmax_keshli(vrt, kod, lambda: tuman_geom_3857(kod))
+                if mm is not None:
+                    png = tile_png(vrt, z, x, y, geom, *mm) or b""
+        cache.set(kesh_kalit, png, timeout=None)
+    if not png:
+        return HttpResponse(status=204)
+    javob = HttpResponse(png, content_type="image/png")
+    javob["Cache-Control"] = kesh_sarlavhasi("massiv")  # statik qatlamlar kabi
+    return javob
