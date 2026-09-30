@@ -21,7 +21,7 @@ function Kichik({ nom, qiymat, birlik, ogoh }: { nom: string; qiymat: string; bi
 /** Haqiqiy ekinlar (API): yil bo'yicha guruhlangan ro'yxat, asosiy ekin belgilangan */
 function HaqiqiyEkinlar({ ekinlar }: { ekinlar: EkinQator[] }) {
   if (ekinlar.length === 0) {
-    return <div className="rounded-lg border border-line bg-sunken/60 px-3 py-2.5 text-[12px] text-muted">Ekin ma'lumoti yo'q</div>
+    return <div className="rounded-lg border border-line bg-sunken/60 px-3 py-2.5 text-[12px] text-muted">Boshqa</div>
   }
   const yillar = [...new Set(ekinlar.map((e) => e.yil))].sort((a, b) => b - a)
   return (
@@ -36,7 +36,7 @@ function HaqiqiyEkinlar({ ekinlar }: { ekinlar: EkinQator[] }) {
                 <div key={e.kod} className="flex items-center gap-2 text-[12.5px]">
                   <span
                     className="size-2.5 shrink-0 rounded-full ring-1 ring-black/10"
-                    style={{ background: ekinRangi(e.guruh) }}
+                    style={{ background: ekinRangi(e.kod) }}
                   />
                   <span className={cn('min-w-0 flex-1 truncate text-ink', e.asosiy ? 'font-semibold' : 'font-medium')}>
                     {e.nom}

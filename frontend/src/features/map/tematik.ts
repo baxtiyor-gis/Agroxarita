@@ -16,8 +16,10 @@ export type TematikId =
   | 'balandlik'
 
 export interface Klass {
-  /** Kategoriyali shkala: atribut qiymati (ekin guruh kodi) */
-  kod?: string
+  /** Kategoriyali shkala: atribut qiymati (ekin kodi) */
+  kod?: number
+  /** "Boshqa": asosiy kodlardan hech biri emas yoki atribut yo'q */
+  boshqa?: boolean
   /** Quyi chegara (shu qiymatdan boshlab shu klass) */
   min: number
   /** Yuqori chegara (kiritilmaydi), oxirgi klassda Infinity */
@@ -99,52 +101,44 @@ const BALANDLIK: Klass[] = BALANDLIK_RANGLAR.map((rang, i) => ({
   nom: BALANDLIK_NOMLAR[i],
 }))
 
-/** Ekin guruhlari (docs/api.md) — kategoriyali palitra, bir-biridan aniq farqli */
-export const EKIN_GURUHLAR: { kod: string; nom: string; rang: string }[] = [
-  { kod: 'galla', nom: "Don (g'alla, arpa, javdar, suli)", rang: '#d9a441' },
-  { kod: 'paxta', nom: 'Paxta', rang: '#8fb8de' },
-  { kod: 'sholi', nom: 'Sholi', rang: '#7bb662' },
-  { kod: 'makkajoxori', nom: "Makkajo'xori (don)", rang: '#e6c229' },
-  { kod: 'moyli', nom: 'Moyli ekinlar', rang: '#f08a24' },
-  { kod: 'sabzavot', nom: 'Sabzavot', rang: '#d1495b' },
-  { kod: 'poliz', nom: 'Poliz', rang: '#e58fb0' },
-  { kod: 'dukkakli', nom: 'Dukkakli ekinlar', rang: '#8e6bbf' },
-  { kod: 'kartoshka', nom: 'Kartoshka', rang: '#a67c52' },
-  { kod: 'ozuqa', nom: 'Ozuqa ekinlari', rang: '#c5d86d' },
-  { kod: 'bog', nom: "Bog' va mevali daraxtlar", rang: '#2e8b3e' },
-  { kod: 'uzum', nom: 'Uzumzor', rang: '#6a2c70' },
-  { kod: 'boshqa', nom: 'Boshqa', rang: '#5b6472' },
+/** Asosiy ekinlar (kod = MVT ekin_2026/ekin_2025 qiymati), tartib bilan; qolganlari va ma'lumotsizlar — "Boshqa" */
+export const EKIN_ASOSIY: { kod: number; nom: string; rang: string }[] = [
+  { kod: 102010000, nom: "G'alla", rang: '#d9a441' },
+  { kod: 101010000, nom: 'Paxta', rang: '#8fb8de' },
+  { kod: 108010000, nom: 'Beda', rang: '#c5d86d' },
+  { kod: 104040000, nom: 'Piyoz', rang: '#d1495b' },
+  { kod: 102060000, nom: "Makkajo'xori", rang: '#e6c229' },
+  { kod: 107010000, nom: 'Kartoshka', rang: '#a67c52' },
+  { kod: 108040000, nom: 'Makka (silos)', rang: '#2e8b3e' },
+  { kod: 105020000, nom: 'Qovun', rang: '#e58fb0' },
+  { kod: 102080000, nom: 'Sholi', rang: '#7bb662' },
+  { kod: 104030000, nom: 'Sabzi', rang: '#f08a24' },
+  { kod: 104050000, nom: 'Sarimsoq piyoz', rang: '#8e6bbf' },
+  { kod: 103020000, nom: 'Kungaboqar', rang: '#0f8b8d' },
 ]
 
-const EKIN_KLASSLAR: Klass[] = EKIN_GURUHLAR.map((g, i) => ({
-  kod: g.kod,
-  min: i,
-  max: i + 1,
-  rang: g.rang,
-  nom: g.nom,
-}))
+const EKIN_KLASSLAR: Klass[] = [
+  ...EKIN_ASOSIY.map((e, i) => ({ kod: e.kod, min: i, max: i + 1, rang: e.rang, nom: e.nom })),
+  { boshqa: true, min: EKIN_ASOSIY.length, max: EKIN_ASOSIY.length + 1, rang: YOQ_RANG, nom: 'Boshqa' },
+]
 
-/** Guruh kodi -> rang (kontur paneli uchun) */
-export const ekinRangi = (kod: string) => EKIN_GURUHLAR.find((g) => g.kod === kod)?.rang ?? YOQ_RANG
-
-const EKIN_YOQ = "Ekin ma'lumoti yo'q"
+/** Ekin kodi -> rang (kontur paneli uchun); asosiy ro'yxatda bo'lmasa kulrang */
+export const ekinRangi = (kod: number) => EKIN_ASOSIY.find((e) => e.kod === kod)?.rang ?? YOQ_RANG
 
 export const SHKALA: Record<TematikId, Shkala> = {
   ekin_2026: {
     nom: 'Ekin 2026',
-    izoh: 'asosiy ekin guruhi',
+    izoh: 'asosiy ekin',
     atribut: 'ekin_2026',
     klasslar: EKIN_KLASSLAR,
     kategoriyali: true,
-    yoqNom: EKIN_YOQ,
   },
   ekin_2025: {
     nom: 'Ekin 2025',
-    izoh: 'asosiy ekin guruhi',
+    izoh: 'asosiy ekin',
     atribut: 'ekin_2025',
     klasslar: EKIN_KLASSLAR,
     kategoriyali: true,
-    yoqNom: EKIN_YOQ,
   },
   bonitet: { nom: 'Tuproq boniteti', izoh: 'ball', atribut: 'bonitet', klasslar: BONITET },
   shorlanish: { nom: "Sho'rlanish", izoh: 'daraja', atribut: 'shorlanish', klasslar: SHOR },
@@ -177,7 +171,7 @@ export function rangIfoda(id: TematikId): ExpressionSpecification {
   const { atribut, klasslar, kategoriyali } = SHKALA[id]
   if (kategoriyali) {
     const match: unknown[] = ['match', ['get', atribut]]
-    for (const k of klasslar) match.push(k.kod, k.rang)
+    for (const k of klasslar) if (k.kod != null) match.push(k.kod, k.rang)
     match.push(YOQ_RANG)
     return ['case', ['has', atribut], match, YOQ_RANG] as unknown as ExpressionSpecification
   }
@@ -197,7 +191,13 @@ export function klassFiltri(id: TematikId, klassIdx: number | null): ExpressionS
   if (klassIdx === YOQ_KLASS) return ['!', ['has', atribut]] as ExpressionSpecification
   const k = klasslar[klassIdx]
   if (!k) return null
-  if (kategoriyali) return ['all', ['has', atribut], ['==', ['get', atribut], k.kod ?? '']] as ExpressionSpecification
+  if (kategoriyali) {
+    if (k.boshqa) {
+      const kodlar = klasslar.flatMap((x) => (x.kod != null ? [x.kod] : []))
+      return ['any', ['!', ['has', atribut]], ['!', ['in', ['get', atribut], ['literal', kodlar]]]] as ExpressionSpecification
+    }
+    return ['all', ['has', atribut], ['==', ['get', atribut], k.kod ?? 0]] as ExpressionSpecification
+  }
   const shartlar: unknown[] = [['has', atribut]]
   if (Number.isFinite(k.min)) shartlar.push(['>=', ['get', atribut], k.min])
   if (Number.isFinite(k.max)) shartlar.push(['<', ['get', atribut], k.max])

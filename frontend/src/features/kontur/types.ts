@@ -45,8 +45,6 @@ export interface EkinQator {
   yil: number
   kod: number
   nom: string
-  /** guruh kodi: galla, paxta, ... */
-  guruh: string
   /** ga */
   maydon: number
   /** shu yilda konturdagi eng katta jami maydonli ekin */

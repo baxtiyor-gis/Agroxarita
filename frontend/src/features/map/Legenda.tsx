@@ -66,7 +66,7 @@ export function Legenda({ tuman }: { tuman: number | null }) {
             </button>
           )
         })}
-        {!raster && (
+        {!raster && !sh.kategoriyali && (
           <button
             onClick={() => setKlassFiltr(klassFiltr === YOQ_KLASS ? null : YOQ_KLASS)}
             aria-pressed={klassFiltr === YOQ_KLASS}
