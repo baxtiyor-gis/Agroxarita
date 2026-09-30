@@ -58,3 +58,35 @@ def sorov(guruh, yil):
         "data_format": "netcdf",
         "download_format": "unarchived",
     }
+
+
+# --- Soatlik rejim: t2m soatlik (reanalysis-era5-land), bir oy = bir so'rov; kunlik mahalliy (UTC+5) hisoblanadi ---
+MAHALLIY_SOAT = 5  # Asia/Tashkent = UTC+5
+
+
+def soatlik_nomi(yil, oy):
+    return f"soatlik/t2m_{yil}_{oy:02d}.nc"
+
+
+def oy_kunlari(yil, oy):
+    import calendar
+
+    return calendar.monthrange(yil, oy)[1]
+
+
+def soatlik_sorov(yil, oy):
+    return {
+        "variable": ["2m_temperature"],
+        "year": str(yil),
+        "month": [f"{oy:02d}"],
+        "day": [f"{d:02d}" for d in range(1, oy_kunlari(yil, oy) + 1)],
+        "time": [f"{h:02d}:00" for h in range(24)],
+        "area": AREA,
+        "data_format": "netcdf",
+        "download_format": "unarchived",
+    }
+
+
+def yil_oylari(yil):
+    """Yil kunliklari uchun kerakli soatlik oylar: oldingi yil dekabri (1-yanvar 00-04 mahalliy) + 12 oy."""
+    return [(yil - 1, 12)] + [(yil, m) for m in range(1, 13)]

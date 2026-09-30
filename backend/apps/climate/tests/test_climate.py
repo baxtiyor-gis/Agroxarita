@@ -7,7 +7,7 @@ import pytest
 from django.core.management import call_command
 
 from apps.climate import hisob
-from apps.climate.era5 import GURUHLAR, fayl_nomi, sorov
+from apps.climate.era5 import GURUHLAR, fayl_nomi, soatlik_nomi, soatlik_sorov, sorov
 from apps.climate.models import IqlimKatak, IqlimKunlik, IqlimOylik, IqlimYillik
 from conftest import kontur_yarat, kvadrat
 
@@ -116,3 +116,57 @@ def test_sorov_shakli():
     assert sorov("tp", 2026)["day"] == ["01"]
     assert sorov("t_min", 2024)["daily_statistic"] == "daily_minimum"
     assert set(GURUHLAR) == {"t_min", "t_max", "tp"}
+
+
+def soatlik_yoz(yol, y, m, qiymat_fn):
+    import calendar
+
+    n = calendar.monthrange(y, m)[1]
+    vaqt = [dt.datetime(y, m, 1) + dt.timedelta(hours=h) for h in range(n * 24)]
+    with netCDF4.Dataset(yol, "w") as ds:
+        ds.createDimension("valid_time", len(vaqt))
+        ds.createDimension("latitude", len(LATS))
+        ds.createDimension("longitude", len(LONS))
+        t = ds.createVariable("valid_time", "i8", ("valid_time",))
+        t.units = "seconds since 1970-01-01"
+        t[:] = [int((x - dt.datetime(1970, 1, 1)).total_seconds()) for x in vaqt]
+        ds.createVariable("latitude", "f8", ("latitude",))[:] = LATS
+        ds.createVariable("longitude", "f8", ("longitude",))[:] = LONS
+        v = ds.createVariable("t2m", "f4", ("valid_time", "latitude", "longitude"))
+        v[:] = np.array([np.full((len(LATS), len(LONS)), qiymat_fn(x)) for x in vaqt])
+
+
+def test_soatlikdan_kunlik_utc5(tmp_path):
+    (tmp_path / "soatlik").mkdir()
+
+    def qiymat(x):  # asosiy 300 K; UTC 19-23 soatlar - keyingi mahalliy kunga tegishli
+        if x.hour >= 19:
+            if x == dt.datetime(2023, 12, 31, 19) or (x.year, x.month, x.day) == (2023, 12, 31):
+                return 280.0  # mahalliy 2024-01-01 ning 00-04 soatlari
+            if (x.year, x.month, x.day) == (2024, 1, 1):
+                return 290.0  # mahalliy 2024-01-02
+            if (x.year, x.month, x.day) == (2024, 12, 31):
+                return 200.0  # mahalliy 2025-01-01 - 2024 ga kirmaydi
+        return 300.0
+
+    for y, m in [(2023, 12)] + [(2024, k) for k in range(1, 13)]:
+        soatlik_yoz(tmp_path / soatlik_nomi(y, m), y, m, qiymat)
+    assert hisob.soatlik_tayyor(tmp_path, 2024)
+    sanalar = hisob.kunlik_fayllar_yoz(tmp_path, 2024)
+    assert len(sanalar) == 366 and sanalar[0] == dt.date(2024, 1, 1) and sanalar[-1] == dt.date(2024, 12, 31)
+    s, q = hisob.oqi_guruh(tmp_path / fayl_nomi("t_min", 2024), ["t2m"], [(69.1, 40.2)])
+    assert s[0] == dt.date(2024, 1, 1) and len(s) == 366
+    assert q["t2m"][0, 0] == pytest.approx(280.0)  # 31-dekabr 19-23 UTC = 1-yanvar mahalliy
+    assert q["t2m"][1, 0] == pytest.approx(290.0)
+    assert q["t2m"][2, 0] == pytest.approx(300.0)
+    assert q["t2m"][365, 0] == pytest.approx(300.0)  # 200 K qiymatlar 2025-01-01 ga tegishli
+    _, mx = hisob.oqi_guruh(tmp_path / fayl_nomi("t_max", 2024), ["t2m"], [(69.1, 40.2)])
+    assert mx["t2m"][0, 0] == pytest.approx(300.0)
+    _, ort = hisob.oqi_guruh(tmp_path / fayl_nomi("t_ort", 2024), ["t2m"], [(69.1, 40.2)])
+    assert ort["t2m"][0, 0] == pytest.approx((5 * 280 + 19 * 300) / 24, abs=1e-3)
+
+
+def test_soatlik_sorov_shakli():
+    s = soatlik_sorov(2024, 2)
+    assert s["variable"] == ["2m_temperature"] and len(s["time"]) == 24 and len(s["day"]) == 29
+    assert s["month"] == ["02"] and s["data_format"] == "netcdf"

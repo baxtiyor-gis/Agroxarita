@@ -4,7 +4,7 @@ import math
 
 import numpy as np
 
-from .era5 import fayl_nomi
+from .era5 import MAHALLIY_SOAT, fayl_nomi, oy_kunlari, soatlik_nomi, yil_oylari
 
 
 def _o(ds, nom):
@@ -82,6 +82,9 @@ def yil_kunlik(papka, yil, kataklar):
     _, b = oqi_guruh(papka / fayl_nomi("t_max", yil), ["t2m"], kataklar)
     t_min, t_max = a["t2m"] - 273.15, b["t2m"] - 273.15
     t_ort = (t_min + t_max) / 2
+    yol_ort = papka / fayl_nomi("t_ort", yil)
+    if yol_ort.exists():  # soatlikdan hisoblangan haqiqiy kunlik o'rtacha
+        t_ort = oqi_guruh(yol_ort, ["t2m"], kataklar)[1]["t2m"] - 273.15
 
     tp_kunlar = {}
     for y in (yil, yil + 1):
@@ -132,3 +135,78 @@ def yillik_hisob(sanalar, t_min, t_ort, yogin, et0):
     fah = float(np.nansum(np.where(t_ort > 10, t_ort, 0)))
     ort = None if np.all(np.isnan(t_ort)) else float(np.nanmean(t_ort))
     return fah, (oxiri - boshi).days - 1, ob, bk, yig(yogin), yig(et0), ort
+
+
+def _soatlik_oy(yol):
+    """(t2m[vaqt, lat, lon] K, lat, lon, vaqtlar UTC datetime) — bitta oy fayli."""
+    import netCDF4
+
+    with netCDF4.Dataset(yol) as ds:
+        lat = _o(ds, "latitude")
+        lon = _o(ds, "longitude")
+        v = ds.variables["valid_time"]
+        vaqt = netCDF4.num2date(v[:], v.units, only_use_cftime_datetimes=False, only_use_python_datetimes=True)
+        a = ds.variables["t2m"][:]
+        a = a.astype("float32").filled(np.nan) if np.ma.isMaskedArray(a) else np.asarray(a, dtype="float32")
+        while a.ndim > 3:  # expver o'lchami
+            a = np.nanmax(a, axis=1)
+    return a, lat, lon, list(vaqt)
+
+
+def soatlikdan_kunlik(papka, yil):
+    """Soatlik oy fayllari -> mahalliy kun (UTC+5) bo'yicha (sanalar, t_min, t_max, t_ort, lat, lon), K.
+
+    Mahalliy kun D = UTC (D-1) 19:00 ... D 18:59, shuning uchun oldingi oyning oxirgi 5 soati qo'shiladi
+    va oy oxirgi 5 soati (keyingi oy 1-kuni) tashlanadi. Oldingi yil dekabri kerak.
+    """
+    sh = MAHALLIY_SOAT
+    oldingi = None
+    mn, mx, ort, sanalar = [], [], [], []
+    lat = lon = None
+    for y, m in yil_oylari(yil):
+        a, lat, lon, vaqt = _soatlik_oy(papka / soatlik_nomi(y, m))
+        n = oy_kunlari(y, m)
+        if len(vaqt) != n * 24 or vaqt[0] != dt.datetime(y, m, 1):
+            raise ValueError(f"{soatlik_nomi(y, m)}: kutilgan {n * 24} soat, {len(vaqt)} ta topildi")
+        if y == yil:
+            tail = oldingi[-sh:]
+            x = np.concatenate([tail, a[:-sh]]).reshape(n, 24, *a.shape[1:])
+            mn.append(np.nanmin(x, axis=1))
+            mx.append(np.nanmax(x, axis=1))
+            ort.append(np.nanmean(x, axis=1))
+            sanalar += [dt.date(y, m, d) for d in range(1, n + 1)]
+        oldingi = a
+    return sanalar, np.concatenate(mn), np.concatenate(mx), np.concatenate(ort), lat, lon
+
+
+def yoz_kunlik(yol, sanalar, qiymat, lat, lon):
+    """Kunlik massivni mavjud o'qish kodi kutgan shaklda yozadi (t2m, K; valid_time = kunlar)."""
+    import netCDF4
+
+    bosh = sanalar[0]
+    with netCDF4.Dataset(yol, "w") as ds:
+        ds.createDimension("valid_time", len(sanalar))
+        ds.createDimension("latitude", len(lat))
+        ds.createDimension("longitude", len(lon))
+        t = ds.createVariable("valid_time", "i8", ("valid_time",))
+        t.units = f"days since {bosh.isoformat()} 00:00:00"
+        t[:] = [(s - bosh).days for s in sanalar]
+        ds.createVariable("latitude", "f8", ("latitude",))[:] = lat
+        ds.createVariable("longitude", "f8", ("longitude",))[:] = lon
+        v = ds.createVariable("t2m", "f4", ("valid_time", "latitude", "longitude"), zlib=True)
+        v.units = "K"
+        v[:] = qiymat
+
+
+def kunlik_fayllar_yoz(papka, yil):
+    """t_min/t_max/t_ort_{yil}.nc ni soatlik fayllardan yozadi (mahalliy kun)."""
+    sanalar, mn, mx, ort, lat, lon = soatlikdan_kunlik(papka, yil)
+    for guruh, q in (("t_min", mn), ("t_max", mx), ("t_ort", ort)):
+        tmp = papka / (fayl_nomi(guruh, yil) + ".part")
+        yoz_kunlik(tmp, sanalar, q, lat, lon)
+        tmp.replace(papka / fayl_nomi(guruh, yil))
+    return sanalar
+
+
+def soatlik_tayyor(papka, yil):
+    return all((papka / soatlik_nomi(y, m)).exists() for y, m in yil_oylari(yil))
