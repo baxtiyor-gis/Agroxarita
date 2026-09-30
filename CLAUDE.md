@@ -61,12 +61,20 @@ o'zgartir. Har task tugagach commit qilinadi, shunda yo'qolgan o'zgarish git'dan
 
 ## Buyruqlar
 
-Batafsil: [dev.md](dev.md). Asosiylari (repo ildizidan):
+Ishga tushirish (alohida terminallarda):
+- Backend: `cd backend; .venv\Scripts\python.exe manage.py runserver 8000`; testlar — `.venv\Scripts\python.exe -m pytest -q`.
+- Frontend: `cd frontend; npm run dev` (5173, `/api` va `/tiles` 8000 ga proksi); tekshiruv — `npm run lint; npm run build`.
+- Production (docker, CI/CD, backup): [docs/DEPLOY.md](docs/DEPLOY.md).
 
-- `npm run dev` — backend (8000) + frontend (5173); `npm test` — pytest; `npm run check` — lint + build.
-- Import (`backend/`, `.venv\Scripts\python.exe manage.py ...`): `import_border` → `import_kontur`
-  (oxirida `kontur_tuman` + `kontur_tur` ham) → `import_tuproq`.
-- Test bazasi `test_agroxarita`, `--reuse-db`; `--create-db` ishlatilmaydi.
+Import tartibi (`backend/`, `.venv\Scripts\python.exe manage.py ...`):
+`import_border` → `import_kontur` (oxirida `kontur_tuman` + `kontur_tur`) → `kontur_tuproq` → `import_tuproq` →
+`import_agrokimyo --qatlam Kaliy --korsatkich kaliy` (fosfor, gumus ham) → `hisobla_relyef` → `hisobla_korsatkich` →
+`import_ekin --yil 2026` (keyin 2025…2022; manbalar `apps/crop/yillar.py`) → iqlim: `katak_yarat` → `yukla_era5 --soatlik
+--boshlash Y --tugash Y --import` (joriy yil: `yukla_era5 --joriy --import`).
+`import_kontur` konturlarni qayta yozsa — ko'rsatkich, relyef va ekinlar ham qayta hisoblanadi.
+
+Testlar: baza `test_agroxarita` (PostGIS oldindan yoqilgan), `--reuse-db`; `--create-db` ishlatilmaydi
+(`agro-xarita` superuser emas). Dev'da `.env` → `TILE_CACHE_MAX_AGE=0`.
 
 Muhit: Windows, Python 3.11, lokal PostgreSQL 17 + PostGIS.
 - Backend GDAL — `backend/.venv` dagi **wheel**; GeoDjango `.env` dagi `GDAL_LIBRARY_PATH`/`GEOS_LIBRARY_PATH` orqali.

@@ -12,7 +12,7 @@ npm run build   # tsc -b && vite build
 npm run lint    # oxlint
 ```
 
-`/api` va `/tiles` proxy `vite.config.ts` da izohda — backend ulanganda yoqiladi.
+`/api` va `/tiles` — `vite.config.ts` da backendga (8000) proksi; productionda nginx (`nginx.conf`).
 Dev'da `maplibre-gl` `optimizeDeps.exclude` da (worker fayli uchun) — olib tashlama.
 
 ## Tuzilma
