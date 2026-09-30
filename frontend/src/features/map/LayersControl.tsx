@@ -3,7 +3,8 @@ import { Layers } from 'lucide-react'
 import { useSearchParams } from 'react-router'
 import { useUi, type QatlamId } from '@/store/useUi'
 import type { AsosiyXarita } from './config'
-import { SHKALA, TEMATIK_GURUHLAR, gradient, rasterTematikmi } from './tematik'
+import { useEkinYillar } from './api'
+import { gradient, rasterTematikmi, shkalaOl, tematikGuruhlar } from './tematik'
 
 const ASOSIY: { id: AsosiyXarita; nom: string }[] = [
   { id: 'sputnik', nom: 'Sputnik' },
@@ -72,6 +73,7 @@ export function LayersControl() {
   const toggleQatlam = useUi((s) => s.toggleQatlam)
   const tematik = useUi((s) => s.tematik)
   const setTematik = useUi((s) => s.setTematik)
+  const ekinYillar = useEkinYillar().data?.yillar ?? []
   const tumanParam = useSearchParams()[0].get('tuman')
   const tuman = tumanParam != null && /^\d+$/.test(tumanParam) ? Number(tumanParam) : null
 
@@ -112,11 +114,11 @@ export function LayersControl() {
           <div className="eyebrow mt-3 mb-1.5">Xaritani ranglash</div>
           {/* Tanlangan bandni qayta bosish ranglashni o'chiradi */}
           <div role="radiogroup" aria-label="Tematik qatlam">
-            {TEMATIK_GURUHLAR.map((g) => (
+            {tematikGuruhlar(ekinYillar).map((g) => (
               <div key={g.nom}>
                 <div className="eyebrow mt-2 mb-0.5">{g.nom}</div>
                 {g.idlar.map((id) => {
-                  const sh = SHKALA[id]
+                  const sh = shkalaOl(id)
                   const yoq = rasterTematikmi(id) && tuman == null
                   return (
                     <label

@@ -1,11 +1,12 @@
 import { AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { useEkinYillar } from '@/features/map/api'
 import { ekinRangi } from '@/features/map/tematik'
 import { ga } from './format'
 import type { EkinQator } from './types'
 
-/** Bazadagi ekin yillari (Crop_2026, Crop_2025) — eng yangisi tepada */
-const YILLAR = [2026, 2025]
+/** Ketma-ket bir xil asosiy ekin shu yildan ko'p bo'lsa ogohlantiriladi (V1) */
+const TAKROR_MIN = 3
 
 function Kichik({ nom, qiymat, birlik, ogoh }: { nom: string; qiymat: string; birlik?: string; ogoh?: boolean }) {
   return (
@@ -21,12 +22,25 @@ function Kichik({ nom, qiymat, birlik, ogoh }: { nom: string; qiymat: string; bi
 
 /** V1 Ekinlar tabi — bazadagi ekinlar (API `ekinlar`), yillar bo'yicha vaqt chizig'i */
 export function EkinlarTab({ maydon, ekinlar }: { id: number; maydon: number; ekinlar: EkinQator[] }) {
+  const apiYillar = useEkinYillar().data?.yillar
+  // API yillari (yangi -> eski); yuklanmagan bo'lsa — kontur ekinlaridagi yillar
+  const YILLAR = (apiYillar ?? [...new Set(ekinlar.map((e) => e.yil))]).slice().sort((a, b) => b - a)
   const tarix = YILLAR.map((yil) => ({ yil, l: ekinlar.filter((e) => e.yil === yil) }))
   const borYil = tarix.filter((t) => t.l.length).length
   const turlar = new Set(ekinlar.map((e) => e.kod))
-  // ketma-ket yillarda bir xil asosiy ekin — almashlab ekilmagan
-  const asosiylar = tarix.map((t) => t.l.find((e) => e.asosiy))
-  const takror = asosiylar[0] != null && asosiylar[0].kod === asosiylar[1]?.kod ? asosiylar[0] : null
+  // ketma-ket (qo'shni) yillarda bir xil asosiy ekin — eng uzun ketma-ketlik
+  let takror: { nom: string; uzunlik: number; dan: number; gacha: number } | null = null
+  let bosh = 0
+  for (let j = 1; j <= tarix.length; j++) {
+    const a = tarix[bosh].l.find((e) => e.asosiy)
+    const b = j < tarix.length ? tarix[j].l.find((e) => e.asosiy) : undefined
+    if (a && b && a.kod === b.kod) continue
+    const uzunlik = j - bosh
+    if (a && uzunlik >= TAKROR_MIN && uzunlik > (takror?.uzunlik ?? 0)) {
+      takror = { nom: a.nom, uzunlik, dan: tarix[j - 1].yil, gacha: tarix[bosh].yil }
+    }
+    bosh = j
+  }
   const ulush = (m: number) => (maydon > 0 ? Math.min(100, (m / maydon) * 100) : 0)
 
   return (
@@ -36,7 +50,7 @@ export function EkinlarTab({ maydon, ekinlar }: { id: number; maydon: number; ek
         <Kichik nom="Ekin turlari" qiymat={String(turlar.size)} birlik="ta" />
         <Kichik
           nom={takror ? 'Ketma-ket ekilgan' : 'Almashlab ekish'}
-          qiymat={takror ? `${YILLAR.length} yil` : borYil >= 2 ? 'Bor' : '—'}
+          qiymat={takror ? `${takror.uzunlik} yil` : borYil >= 2 ? 'Bor' : '—'}
           ogoh={!!takror}
         />
       </div>
@@ -46,7 +60,7 @@ export function EkinlarTab({ maydon, ekinlar }: { id: number; maydon: number; ek
           <AlertTriangle className="mt-px size-4 shrink-0" strokeWidth={2.2} />
           <span>
             <b className="font-semibold">
-              {YILLAR.length} yil ketma-ket ({YILLAR[YILLAR.length - 1]}–{YILLAR[0]}) {takror.nom}
+              {takror.uzunlik} yil ketma-ket ({takror.dan}–{takror.gacha}) {takror.nom}
             </b>{' '}
             — tuproq charchashi va kasallik xavfi. Almashlab ekish tavsiya etiladi.
           </span>

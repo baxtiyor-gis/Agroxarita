@@ -1,6 +1,6 @@
 import { useUi } from '@/store/useUi'
 import { useRelyefLegenda } from './api'
-import { SHKALA, YOQ_KLASS, YOQ_NOM, YOQ_RANG, rasterTematikmi, type Klass } from './tematik'
+import { shkalaOl, YOQ_KLASS, YOQ_NOM, YOQ_RANG, rasterTematikmi, type Klass } from './tematik'
 
 const son = (v: number) => Math.round(v).toLocaleString('ru')
 
@@ -13,7 +13,7 @@ export function Legenda({ tuman }: { tuman: number | null }) {
   const relyef = useRelyefLegenda(raster ? tuman : null)
 
   if (tematik == null || (raster && tuman == null)) return null
-  const sh = SHKALA[tematik]
+  const sh = shkalaOl(tematik)
 
   let klasslar: Klass[] = sh.klasslar
   if (raster) {

@@ -73,3 +73,52 @@ export interface Kontur {
   ekinlar?: EkinQator[]
   bbox: [number, number, number, number]
 }
+
+export interface IqlimEkstremum {
+  yil: number
+  qiymat: number
+}
+
+/** Yillik ko'rsatkichlar; qisman yilda (`toliq: false`) fah/sovuqsiz/sovuq sanalari null */
+export interface IqlimYil {
+  yil: number
+  fah: number | null
+  sovuqsiz: number | null
+  /** yil kuni (1..366), sovuq bo'lmasa null */
+  bahorgi_sovuq: number | null
+  kuzgi_sovuq: number | null
+  issiq_kun: number | null
+  min_t: number | null
+  yogin: number | null
+  et0: number | null
+  t_ort: number | null
+  toliq: boolean
+}
+
+/** GET /api/konturlar/{id}/iqlim/ (ERA5-Land katagi bo'yicha; 404 — katak yo'q) */
+export interface Iqlim {
+  katak: { id: number; lat: number; lon: number; balandlik: number | null }
+  /** [birinchi yil, oxirgi yil] */
+  davr: [number, number]
+  yillar: number[]
+  /** to'liq yillar o'rtachasi */
+  korsatkich: {
+    fah: number | null
+    sovuqsiz: number | null
+    bahorgi_sovuq: number | null
+    kuzgi_sovuq: number | null
+    issiq_kun: number | null
+    min_t: number | null
+    kech_sovuq_yillar: number
+  }
+  yillik: IqlimYil[]
+  oylik_ortacha: { oy: number; t_ort: number | null; yogin: number | null; et0: number | null }[]
+  yillar_oylar: { yil: number; oylar: { oy: number; t_ort: number | null; yogin: number | null }[] }[]
+  suv_balansi: { yogin: number; et0: number; tanqislik: number }
+  xavf: {
+    eng_issiq: IqlimEkstremum | null
+    eng_sovuq: IqlimEkstremum | null
+    eng_nam: IqlimEkstremum | null
+    eng_quruq: IqlimEkstremum | null
+  }
+}

@@ -17,3 +17,18 @@ export function useRelyefLegenda(tuman: number | null) {
     staleTime: Infinity,
   })
 }
+
+/** GET /api/ekinlar/ — bazadagi ekin yillari (yangi -> eski) */
+export interface EkinlarJavob {
+  yillar: number[]
+  ekinlar: { kod: number; nom: string; maydonlar: Record<string, number> }[]
+}
+
+export function useEkinYillar() {
+  return useQuery({
+    queryKey: ['ekinlar'],
+    queryFn: () => getJson<EkinlarJavob>('/api/ekinlar/'),
+    retry,
+    staleTime: Infinity,
+  })
+}

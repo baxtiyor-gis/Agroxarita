@@ -1,44 +1,100 @@
 import { useState } from 'react'
-import { Droplets, Flame, Snowflake, Sprout, Sun, Thermometer } from 'lucide-react'
+import { Droplets, Flame, Snowflake, Sprout, Sun, Thermometer, TriangleAlert } from 'lucide-react'
+import { ApiXato } from '@/features/border/api'
 import { cn } from '@/lib/cn'
-import { OYLAR, iqlimMock, iqlimYillarMock, kunSana, tuproqIsishOyi, type Iqlim } from './mock'
-import { NamunaBelgi } from './ui'
+import { useIqlim } from './api'
+import type { Iqlim } from './types'
 
 const rl = (v: number) => v.toLocaleString('ru')
 
-/** V1 Iqlim tabi: ko'rsatkichlar, klimatogramma, 10 yil heatmap, suv balansi (namuna ma'lumot) */
+const OYLAR = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek']
+const OY_KUN = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+const KUN_OY = ['yan', 'fev', 'mar', 'apr', 'may', 'iyun', 'iyul', 'avg', 'sen', 'okt', 'noy', 'dek']
+
+/** Yil kunini "12-apr" ko'rinishiga */
+function kunSana(doy: number | null): string {
+  if (doy == null) return '—'
+  let d = Math.round(doy)
+  for (let m = 0; m < 12; m++) {
+    if (d <= OY_KUN[m]) return `${d}-${KUN_OY[m]}`
+    d -= OY_KUN[m]
+  }
+  return '—'
+}
+
+/** Kech sovuqli yillar ulushi shundan yuqori bo'lsa — ogohlantirish (V1: 10 yilda 4 ta) */
+const KECH_SOVUQ_OGOH = 0.4
+
+const vergul = (v: number | null, d = 1) => (v == null ? '—' : v.toFixed(d).replace('.', ',').replace('-', '−'))
+
+/** Iqlim tabi (V1 tuzilishi): ko'rsatkichlar, klimatogramma, yillar × oylar, suv balansi — API (ERA5-Land katagi) */
 export function IqlimTab({ id }: { id: number }) {
-  const q = iqlimMock(id)
-  const isish = tuproqIsishOyi(q.tuproqT)
+  const q = useIqlim(id)
+  if (q.isPending) return <div className="py-10 text-center text-[12px] text-muted">Yuklanmoqda…</div>
+  if (q.isError) {
+    if (q.error instanceof ApiXato && q.error.status === 404)
+      return (
+        <div className="mx-2.5 rounded-lg border border-line bg-sunken/60 px-3 py-3 text-[12px] leading-snug text-muted">
+          Iqlim ma'lumoti yo'q — kontur iqlim katagidan tashqarida.
+        </div>
+      )
+    return (
+      <div className="mx-2.5 flex items-start gap-2 rounded-lg border border-clay/30 bg-clay-soft px-3 py-2.5 text-[12px] text-clay">
+        <TriangleAlert className="mt-px size-4 shrink-0" />
+        <span>
+          Iqlim ma'lumotini yuklab bo'lmadi: {q.error.message}
+          <button onClick={() => q.refetch()} className="ml-2 font-semibold underline">
+            Qayta urinish
+          </button>
+        </span>
+      </div>
+    )
+  }
+  return <IqlimKorinish d={q.data} />
+}
+
+function IqlimKorinish({ d }: { d: Iqlim }) {
+  const k = d.korsatkich
+  const toliqSoni = d.yillik.filter((y) => y.toliq).length
+  const qismanYillar = d.yillik.filter((y) => !y.toliq).map((y) => y.yil)
+  const kechOgoh = toliqSoni > 0 && k.kech_sovuq_yillar / toliqSoni >= KECH_SOVUQ_OGOH
   return (
     <div className="px-2.5 pb-1">
-      <div className="pb-2">
-        <NamunaBelgi />
+      <div className="pb-2 text-[11px] text-faint">
+        ERA5-Land, {d.davr[0]}–{d.davr[1]}
+        {qismanYillar.length > 0 && ` · ${qismanYillar.join(', ')} — qisman yil`}
+        {" · ko'rsatkichlar to'liq yillar o'rtachasi"}
       </div>
       <div className="grid grid-cols-2 gap-2">
         <Korsatkich
           icon={Sun}
           rang="#e0891f"
           nom="Faol haroratlar yig'indisi"
-          qiymat={rl(q.fah)}
+          qiymat={k.fah == null ? '—' : rl(Math.round(k.fah))}
           birlik="°C"
           izoh=">10 °C kunlar"
         />
-        <Korsatkich icon={Sprout} rang="#469d18" nom="Sovuqsiz davr" qiymat={String(q.sovuqsiz)} birlik="kun" />
+        <Korsatkich
+          icon={Sprout}
+          rang="#469d18"
+          nom="Sovuqsiz davr"
+          qiymat={k.sovuqsiz == null ? '—' : String(Math.round(k.sovuqsiz))}
+          birlik="kun"
+        />
         <Korsatkich
           icon={Snowflake}
           rang="#2c8ec4"
           nom="Bahorgi oxirgi sovuq"
-          qiymat={kunSana(q.bahorgiSovuq)}
-          izoh={`${q.kechSovuqYil} yilda 10-apreldan keyin`}
-          ogoh={q.kechSovuqYil >= 4}
+          qiymat={kunSana(k.bahorgi_sovuq)}
+          izoh={`${k.kech_sovuq_yillar} / ${toliqSoni} yilda 10-apreldan keyin`}
+          ogoh={kechOgoh}
         />
-        <Korsatkich icon={Snowflake} rang="#5b6fd1" nom="Kuzgi birinchi sovuq" qiymat={kunSana(q.kuzgiSovuq)} />
+        <Korsatkich icon={Snowflake} rang="#5b6fd1" nom="Kuzgi birinchi sovuq" qiymat={kunSana(k.kuzgi_sovuq)} />
         <Korsatkich
           icon={Flame}
           rang="#d9482b"
           nom="Issiq kunlar"
-          qiymat={String(q.issiqKun).replace('.', ',')}
+          qiymat={vergul(k.issiq_kun)}
           birlik="kun/yil"
           izoh="≥ 35 °C"
         />
@@ -46,7 +102,7 @@ export function IqlimTab({ id }: { id: number }) {
           icon={Thermometer}
           rang="#3d6fb6"
           nom="Qishki eng past"
-          qiymat={String(q.minT).replace('.', ',')}
+          qiymat={vergul(k.min_t)}
           birlik="°C"
           izoh="yillik o'rtacha"
         />
@@ -61,10 +117,10 @@ export function IqlimTab({ id }: { id: number }) {
             <Belgi rang="#f2c94c" /> ET₀
           </span>
         </div>
-        <Klimatogramma q={q} />
+        <Klimatogramma oylik={d.oylik_ortacha} />
       </div>
 
-      <YillarOylar id={id} />
+      <YillarOylar d={d} />
 
       <div className="mt-3 rounded-lg border border-line px-3 py-2.5">
         <div className="flex items-center gap-2 text-[12.5px] font-semibold text-navy">
@@ -72,14 +128,15 @@ export function IqlimTab({ id }: { id: number }) {
           Suv balansi (yillik)
         </div>
         <div className="nums mt-2 grid grid-cols-3 gap-2 text-center">
-          <Balans nom="Yog'in" v={q.yillikYogin} />
-          <Balans nom="Bug'lanish talabi" v={q.yillikEt0} />
-          <Balans nom="Tanqislik" v={q.suvTanqislik} ogoh />
+          <Balans nom="Yog'in" v={d.suv_balansi.yogin} />
+          <Balans nom="Bug'lanish talabi" v={d.suv_balansi.et0} />
+          <Balans nom="Tanqislik" v={d.suv_balansi.tanqislik} ogoh />
         </div>
-        <div className="mt-2 text-[11.5px] leading-snug text-muted">
-          Tanqislik sug'orish bilan qoplanadi — yozda yog'in deyarli yo'q.
-          {isish && ` Tuproq 12 °C gacha isishi: ${isish.toLowerCase()}.`}
-        </div>
+        {d.suv_balansi.tanqislik > 0 && (
+          <div className="mt-2 text-[11.5px] leading-snug text-muted">
+            Tanqislik sug'orish bilan qoplanadi — yozda yog'in deyarli yo'q.
+          </div>
+        )}
       </div>
     </div>
   )
@@ -139,7 +196,7 @@ function Belgi({ rang, chiziq }: { rang: string; chiziq?: boolean }) {
 }
 
 /** Oylik harorat (chiziq) + yog'in va ET₀ (ustunlar) — inline SVG */
-function Klimatogramma({ q }: { q: Iqlim }) {
+function Klimatogramma({ oylik }: { oylik: Iqlim['oylik_ortacha'] }) {
   const W = 356
   const H = 150
   const pad = { l: 26, r: 26, t: 8, b: 20 }
@@ -147,14 +204,24 @@ function Klimatogramma({ q }: { q: Iqlim }) {
   const ih = H - pad.t - pad.b
   const bw = iw / 12
 
-  const tMin = Math.min(-5, Math.floor(Math.min(...q.harorat) / 5) * 5)
-  const tMax = Math.max(30, Math.ceil(Math.max(...q.harorat) / 5) * 5)
-  const mMax = Math.max(50, Math.ceil(Math.max(...q.et0, ...q.yogin) / 50) * 50)
+  const oy = (m: number) => oylik.find((o) => o.oy === m + 1)
+  const harorat = OYLAR.map((_, m) => oy(m)?.t_ort ?? null)
+  const yogin = OYLAR.map((_, m) => oy(m)?.yogin ?? 0)
+  const et0 = OYLAR.map((_, m) => oy(m)?.et0 ?? 0)
+  const tBor = harorat.filter((t): t is number => t != null)
+  if (tBor.length === 0) return null
+
+  const tMin = Math.min(-5, Math.floor(Math.min(...tBor) / 5) * 5)
+  const tMax = Math.max(30, Math.ceil(Math.max(...tBor) / 5) * 5)
+  const mMax = Math.max(50, Math.ceil(Math.max(...et0, ...yogin) / 50) * 50)
   const yT = (t: number) => pad.t + ih - ((t - tMin) / (tMax - tMin)) * ih
   const yM = (v: number) => pad.t + ih - (v / mMax) * ih
   const xC = (i: number) => pad.l + bw * i + bw / 2
 
-  const yol = q.harorat.map((t, i) => `${i ? 'L' : 'M'}${xC(i).toFixed(1)},${yT(t).toFixed(1)}`).join('')
+  const yol = harorat
+    .flatMap((t, i) => (t == null ? [] : [{ t, i }]))
+    .map(({ t, i }, j) => `${j ? 'L' : 'M'}${xC(i).toFixed(1)},${yT(t).toFixed(1)}`)
+    .join('')
   const tTicks: number[] = []
   for (let t = tMin; t <= tMax; t += 10) tTicks.push(t)
 
@@ -173,18 +240,20 @@ function Klimatogramma({ q }: { q: Iqlim }) {
           {v}
         </text>
       ))}
-      {q.et0.map((v, i) => (
+      {et0.map((v, i) => (
         <rect key={`e${i}`} x={pad.l + bw * i + 2} y={yM(v)} width={bw - 4} height={yM(0) - yM(v)} rx={1.5} fill="#f2c94c" opacity={0.45} />
       ))}
-      {q.yogin.map((v, i) => (
+      {yogin.map((v, i) => (
         <rect key={`y${i}`} x={pad.l + bw * i + bw * 0.28} y={yM(v)} width={bw * 0.44} height={yM(0) - yM(v)} rx={1.5} fill="#5aa9e6" />
       ))}
       <path d={yol} fill="none" stroke="#e0572b" strokeWidth={2} strokeLinejoin="round" />
-      {q.harorat.map((t, i) => (
-        <circle key={i} cx={xC(i)} cy={yT(t)} r={2.2} fill="#fff" stroke="#e0572b" strokeWidth={1.5}>
-          <title>{`${OYLAR[i]}: ${String(t).replace('.', ',')} °C, yog'in ${q.yogin[i]} mm, ET₀ ${q.et0[i]} mm`}</title>
-        </circle>
-      ))}
+      {harorat.map((t, i) =>
+        t == null ? null : (
+          <circle key={i} cx={xC(i)} cy={yT(t)} r={2.2} fill="#fff" stroke="#e0572b" strokeWidth={1.5}>
+            <title>{`${OYLAR[i]}: ${vergul(t)} °C, yog'in ${Math.round(yogin[i])} mm, ET₀ ${Math.round(et0[i])} mm`}</title>
+          </circle>
+        ),
+      )}
       {OYLAR.map((m, i) => (
         <text key={m} x={xC(i)} y={H - 6} textAnchor="middle" fontSize="8.5" fill="var(--color-muted)">
           {m.slice(0, 3)}
@@ -194,7 +263,7 @@ function Klimatogramma({ q }: { q: Iqlim }) {
   )
 }
 
-// ============================================== 10 YIL: YILLAR × OYLAR
+// ============================================== YILLAR × OYLAR
 const OY_TOLIQ = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr']
 const OY_HARF = ['Y', 'F', 'M', 'A', 'M', 'I', 'I', 'A', 'S', 'O', 'N', 'D']
 const bosh = (s: string) => s[0].toUpperCase() + s.slice(1)
@@ -224,53 +293,56 @@ const rang = (shkala: string[], t: number) =>
 
 type Rejim = 'harorat' | 'yogin'
 
-function YillarOylar({ id }: { id: number }) {
+const BO_SH = '#e3e5e1' // ma'lumot yo'q oy (qisman yil) — kulrang
+
+/** Yillar × oylar heatmap — har katak shu oyning to'liq yillar o'rtachasiga nisbatan anomaliya */
+function YillarOylar({ d }: { d: Iqlim }) {
   const [rejim, setRejim] = useState<Rejim>('harorat')
-  const d = iqlimYillarMock(id)
-
-  const n = d.yillar.length
-  const ortT = OYLAR.map((_, m) => d.harorat.reduce((s, y) => s + y[m], 0) / n)
-  const ortP = OYLAR.map((_, m) => d.yogin.reduce((s, y) => s + y[m], 0) / n)
-  const yilT = d.harorat.map((y) => y.reduce((a, b) => a + b, 0) / 12)
-  const yilP = d.yogin.map((y) => y.reduce((a, b) => a + b, 0))
-  const ortYilT = yilT.reduce((a, b) => a + b, 0) / n
-  const ortYilP = yilP.reduce((a, b) => a + b, 0) / n
-
   const harorat = rejim === 'harorat'
   const shkala = harorat ? T_SHKALA : P_SHKALA
-  const katak = (yi: number, m: number) => {
-    const oy = `${d.yillar[yi]} · ${bosh(OY_TOLIQ[m])}`
-    if (harorat) {
-      const v = d.harorat[yi][m]
-      const a = v - ortT[m]
-      return { t: a / T_CHEGARA, title: `${oy}: ${son(v)} °C (o'rtachadan ${ishorali(a)})` }
-    }
-    const v = d.yogin[yi][m]
-    const a = v - ortP[m]
-    if (ortP[m] < P_QURUQ_OY)
-      return { t: a / P_QURUQ_CHEGARA, title: `${oy}: ${Math.round(v)} mm (o'rtachadan ${ishorali(a, 0)} mm)` }
-    const f = (a / ortP[m]) * 100
-    return { t: f / P_CHEGARA, title: `${oy}: ${Math.round(v)} mm (o'rtachadan ${ishorali(f, 0)} %)` }
+
+  const ort = OYLAR.map((_, m) => d.oylik_ortacha.find((o) => o.oy === m + 1))
+  const yillik = new Map(d.yillik.map((y) => [y.yil, y]))
+  const toliqlar = d.yillik.filter((y) => y.toliq)
+  const orta = (f: (y: Iqlim['yillik'][number]) => number | null) => {
+    const v = toliqlar.map(f).filter((x): x is number => x != null)
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null
+  }
+  const ortYilT = orta((y) => y.t_ort)
+  const ortYilP = orta((y) => y.yogin)
+  const n = toliqlar.length
+  const qismanBor = d.yillik.some((y) => !y.toliq)
+
+  const katak = (yil: number, m: number) => {
+    const c = d.yillar_oylar.find((y) => y.yil === yil)?.oylar.find((o) => o.oy === m + 1)
+    const v = harorat ? c?.t_ort : c?.yogin
+    const o = harorat ? ort[m]?.t_ort : ort[m]?.yogin
+    const oy = `${yil} · ${bosh(OY_TOLIQ[m])}`
+    if (v == null) return { rang: BO_SH, title: `${oy}: ma'lumot yo'q` }
+    if (o == null) return { rang: BO_SH, title: `${oy}: ${harorat ? son(v) + ' °C' : Math.round(v) + ' mm'}` }
+    const a = v - o
+    if (harorat) return { rang: rang(shkala, a / T_CHEGARA), title: `${oy}: ${son(v)} °C (o'rtachadan ${ishorali(a)})` }
+    if (o < P_QURUQ_OY)
+      return { rang: rang(shkala, a / P_QURUQ_CHEGARA), title: `${oy}: ${Math.round(v)} mm (o'rtachadan ${ishorali(a, 0)} mm)` }
+    const f = (a / o) * 100
+    return { rang: rang(shkala, f / P_CHEGARA), title: `${oy}: ${Math.round(v)} mm (o'rtachadan ${ishorali(f, 0)} %)` }
   }
 
-  // Xavf xulosasi
-  const ekstr = (v: number[], max: boolean) => v.reduce((b, x, j) => ((max ? x > v[b] : x < v[b]) ? j : b), 0)
-  const issiq = ekstr(yilT, true)
-  const sovuq = ekstr(yilT, false)
-  const quruq = ekstr(yilP, false)
-  const nam = ekstr(yilP, true)
-  let eng = { yi: 0, m: 0, a: 0 }
-  d.harorat.forEach((y, yi) =>
-    y.forEach((v, m) => {
-      const a = v - ortT[m]
-      if (Math.abs(a) > Math.abs(eng.a)) eng = { yi, m, a }
-    }),
-  )
+  // Xavf xulosasi: yillik ekstremumlar API dan; eng katta oylik harorat anomaliyasi — heatmapdan
+  let eng: { yil: number; m: number; a: number } | null = null
+  for (const y of d.yillar_oylar)
+    for (const c of y.oylar) {
+      const o = ort[c.oy - 1]?.t_ort
+      if (c.t_ort == null || o == null) continue
+      const a = c.t_ort - o
+      if (!eng || Math.abs(a) > Math.abs(eng.a)) eng = { yil: y.yil, m: c.oy - 1, a }
+    }
+  const x = d.xavf
 
   return (
     <div className="mt-4">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-[12.5px] font-semibold text-navy">10 yil: yillar × oylar</span>
+        <span className="text-[12.5px] font-semibold text-navy">{d.yillar.length} yil: yillar × oylar</span>
         <div className="flex rounded-md border border-line bg-sunken p-0.5 text-[11px]" role="group" aria-label="Ko'rsatkich">
           {(['harorat', 'yogin'] as const).map((r) => (
             <button
@@ -301,28 +373,35 @@ function YillarOylar({ id }: { id: number }) {
         ))}
         <span className="pb-0.5 text-right">{harorat ? '°C' : 'mm'}</span>
 
-        {d.yillar.map((yil, yi) => {
-          const yillik = harorat
-            ? `${yil}: yillik o'rtacha ${son(yilT[yi])} °C (o'rtachadan ${ishorali(yilT[yi] - ortYilT)})`
-            : `${yil}: yillik yog'in ${Math.round(yilP[yi])} mm (o'rtachadan ${ishorali(((yilP[yi] - ortYilP) / ortYilP) * 100, 0)} %)`
+        {d.yillar.map((yil) => {
+          const y = yillik.get(yil)
+          const t = y?.t_ort ?? null
+          const p = y?.yogin ?? null
+          const qisman = y ? !y.toliq : false
+          const yTitle =
+            (harorat
+              ? `${yil}: yillik o'rtacha ${t == null ? '—' : son(t)} °C${t != null && ortYilT != null ? ` (o'rtachadan ${ishorali(t - ortYilT)})` : ''}`
+              : `${yil}: yillik yog'in ${p == null ? '—' : Math.round(p)} mm${p != null && ortYilP ? ` (o'rtachadan ${ishorali(((p - ortYilP) / ortYilP) * 100, 0)} %)` : ''}`) +
+            (qisman ? ' — qisman yil (mavjud oylar)' : '')
           return (
             <div key={yil} className="contents">
-              <span className="flex h-4 items-center text-[10px] text-body" title={yillik}>
+              <span className="flex h-4 items-center text-[10px] text-body" title={yTitle}>
                 {yil}
               </span>
               {OYLAR.map((_, m) => {
-                const c = katak(yi, m)
+                const c = katak(yil, m)
                 return (
                   <span
                     key={m}
                     className="h-4 rounded-[2px] ring-1 ring-black/[0.06] ring-inset"
-                    style={{ background: rang(shkala, c.t) }}
+                    style={{ background: c.rang }}
                     title={c.title}
                   />
                 )
               })}
-              <span className="flex h-4 items-center justify-end text-[10px] text-body" title={yillik}>
-                {harorat ? son(yilT[yi]) : Math.round(yilP[yi])}
+              <span className="flex h-4 items-center justify-end text-[10px] text-body" title={yTitle}>
+                {harorat ? (t == null ? '—' : son(t)) : p == null ? '—' : Math.round(p)}
+                {qisman && '*'}
               </span>
             </div>
           )
@@ -341,27 +420,56 @@ function YillarOylar({ id }: { id: number }) {
       </div>
       <div className="mt-0.5 text-center text-[10px] text-faint">
         {harorat
-          ? "Shu oyning 10 yillik o'rtachasiga nisbatan farq"
+          ? `Shu oyning ${n} yillik (to'liq yillar) o'rtachasiga nisbatan farq`
           : `Oy o'rtachasiga nisbatan; o'rtacha < ${P_QURUQ_OY} mm oylarda ±${P_QURUQ_CHEGARA} mm`}
+        <span className="ml-1.5 inline-flex items-center gap-1 align-middle">
+          <span className="inline-block size-2 rounded-[2px] ring-1 ring-black/[0.06] ring-inset" style={{ background: BO_SH }} />
+          {"ma'lumot yo'q"}
+        </span>
       </div>
 
       <div className="mt-2.5 rounded-lg border border-line bg-sunken/60 px-3 py-2 text-[11.5px] leading-snug text-body">
         <div className="mb-0.5 text-[11px] font-semibold text-navy">Xavf xulosasi</div>
-        <div>
-          Eng issiq yil: <b className="font-semibold">{d.yillar[issiq]}</b> ({son(yilT[issiq])} °C) · eng sovuq:{' '}
-          <b className="font-semibold">{d.yillar[sovuq]}</b> ({son(yilT[sovuq])} °C)
-        </div>
-        <div>
-          Eng quruq yil: <b className="font-semibold">{d.yillar[quruq]}</b> ({Math.round(yilP[quruq])} mm) · eng nam:{' '}
-          <b className="font-semibold">{d.yillar[nam]}</b> ({Math.round(yilP[nam])} mm)
-        </div>
-        <div>
-          Eng {eng.a < 0 ? 'sovuq' : 'issiq'} anomaliya:{' '}
-          <b className="font-semibold">
-            {d.yillar[eng.yi]}-yil {OY_TOLIQ[eng.m]}
-          </b>
-          , {ishorali(eng.a)} °C
-        </div>
+        {(x.eng_issiq || x.eng_sovuq) && (
+          <div>
+            {x.eng_issiq && (
+              <>
+                Eng issiq yil: <b className="font-semibold">{x.eng_issiq.yil}</b> ({son(x.eng_issiq.qiymat)} °C)
+              </>
+            )}
+            {x.eng_issiq && x.eng_sovuq && ' · '}
+            {x.eng_sovuq && (
+              <>
+                eng sovuq: <b className="font-semibold">{x.eng_sovuq.yil}</b> ({son(x.eng_sovuq.qiymat)} °C)
+              </>
+            )}
+          </div>
+        )}
+        {(x.eng_quruq || x.eng_nam) && (
+          <div>
+            {x.eng_quruq && (
+              <>
+                Eng quruq yil: <b className="font-semibold">{x.eng_quruq.yil}</b> ({Math.round(x.eng_quruq.qiymat)} mm)
+              </>
+            )}
+            {x.eng_quruq && x.eng_nam && ' · '}
+            {x.eng_nam && (
+              <>
+                eng nam: <b className="font-semibold">{x.eng_nam.yil}</b> ({Math.round(x.eng_nam.qiymat)} mm)
+              </>
+            )}
+          </div>
+        )}
+        {eng && (
+          <div>
+            Eng {eng.a < 0 ? 'sovuq' : 'issiq'} anomaliya:{' '}
+            <b className="font-semibold">
+              {eng.yil}-yil {OY_TOLIQ[eng.m]}
+            </b>
+            , {ishorali(eng.a)} °C
+          </div>
+        )}
+        {qismanBor && <div className="mt-0.5 text-[10.5px] text-faint">* qisman yil — yillik ekstremumlarga kirmaydi</div>}
       </div>
     </div>
   )

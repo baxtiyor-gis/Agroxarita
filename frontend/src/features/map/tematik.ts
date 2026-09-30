@@ -6,8 +6,7 @@ import type { ExpressionSpecification } from 'maplibre-gl'
  * kaliy (1-5), balandlik (m). Atribut yo'q = ma'lumot yo'q.
  */
 export type TematikId =
-  | 'ekin_2026'
-  | 'ekin_2025'
+  | `ekin_${number}`
   | 'bonitet'
   | 'shorlanish'
   | 'gumus'
@@ -103,7 +102,7 @@ const BALANDLIK: Klass[] = BALANDLIK_RANGLAR.map((rang, i) => ({
   nom: BALANDLIK_NOMLAR[i],
 }))
 
-/** Asosiy ekinlar (kod = MVT ekin_2026/ekin_2025 qiymati), tartib bilan; qolganlari va ma'lumotsizlar — "Boshqa" */
+/** Asosiy ekinlar (kod = MVT ekin_{yil} qiymati), tartib bilan; qolganlari va ma'lumotsizlar — "Boshqa" */
 export const EKIN_ASOSIY: { kod: number; nom: string; rang: string }[] = [
   { kod: 102010000, nom: "G'alla", rang: '#d9a441' },
   { kod: 101010000, nom: 'Paxta', rang: '#8fb8de' },
@@ -132,21 +131,16 @@ const EKIN_KLASSLAR: Klass[] = [
 /** Ekin kodi -> rang (xarita bilan bir xil): asosiylar ro'yxatdan, qolganlari koddan */
 export const ekinRangi = (kod: number) => EKIN_ASOSIY.find((e) => e.kod === kod)?.rang ?? boshqaRangi(kod)
 
-export const SHKALA: Record<TematikId, Shkala> = {
-  ekin_2026: {
-    nom: 'Ekin 2026',
-    izoh: 'asosiy ekin',
-    atribut: 'ekin_2026',
-    klasslar: EKIN_KLASSLAR,
-    kategoriyali: true,
-  },
-  ekin_2025: {
-    nom: 'Ekin 2025',
-    izoh: 'asosiy ekin',
-    atribut: 'ekin_2025',
-    klasslar: EKIN_KLASSLAR,
-    kategoriyali: true,
-  },
+/** Ekin shkalasi (yil bo'yicha) — barcha yillarda bir xil klasslar */
+const ekinShkala = (yil: number): Shkala => ({
+  nom: `Ekin ${yil}`,
+  izoh: 'asosiy ekin',
+  atribut: `ekin_${yil}`,
+  klasslar: EKIN_KLASSLAR,
+  kategoriyali: true,
+})
+
+const SHKALA: Record<string, Shkala> = {
   bonitet: { nom: 'Tuproq boniteti', izoh: 'ball', atribut: 'bonitet', klasslar: BONITET },
   shorlanish: { nom: "Sho'rlanish", izoh: 'daraja', atribut: 'shorlanish', klasslar: SHOR },
   gumus: { nom: 'Gumus', izoh: 'chirindi miqdori', atribut: 'gumus', klasslar: GUMUS },
@@ -155,9 +149,13 @@ export const SHKALA: Record<TematikId, Shkala> = {
   balandlik: { nom: 'Balandlik (DEM)', izoh: 'dengiz sathidan, m', atribut: 'balandlik', klasslar: BALANDLIK },
 }
 
-/** Radio ro'yxat: bo'lim sarlavhasi bilan */
-export const TEMATIK_GURUHLAR: { nom: string; idlar: TematikId[] }[] = [
-  { nom: 'Ekin', idlar: ['ekin_2026', 'ekin_2025'] },
+/** Tematik id -> shkala (ekin_{yil} — dinamik) */
+export const shkalaOl = (id: TematikId): Shkala =>
+  id.startsWith('ekin_') ? ekinShkala(Number(id.slice(5))) : SHKALA[id]
+
+/** Radio ro'yxat: bo'lim sarlavhasi bilan; ekin yillari `/api/ekinlar/` dan (yangi -> eski) */
+export const tematikGuruhlar = (ekinYillar: number[]): { nom: string; idlar: TematikId[] }[] => [
+  ...(ekinYillar.length ? [{ nom: 'Ekin', idlar: ekinYillar.map((y): TematikId => `ekin_${y}`) }] : []),
   { nom: 'Tuproq', idlar: ['bonitet', 'shorlanish'] },
   { nom: 'Agrokimyo', idlar: ['gumus', 'fosfor', 'kaliy'] },
   { nom: 'Relyef', idlar: ['balandlik'] },
@@ -175,7 +173,7 @@ export function gradient(klasslar: { rang: string }[]): string {
 
 /** Kontur fill rangi: atribut yo'q -> YOQ_RANG, aks holda klass chegaralari bo'yicha `step` */
 export function rangIfoda(id: TematikId): ExpressionSpecification {
-  const { atribut, klasslar, kategoriyali } = SHKALA[id]
+  const { atribut, klasslar, kategoriyali } = shkalaOl(id)
   if (kategoriyali) {
     const match: unknown[] = ['match', ['get', atribut]]
     for (const k of klasslar) if (k.kod != null) match.push(k.kod, k.rang)
@@ -196,7 +194,7 @@ export const YOQ_KLASS = -2
 
 export function klassFiltri(id: TematikId, klassIdx: number | null): ExpressionSpecification | null {
   if (klassIdx == null) return null
-  const { atribut, klasslar, kategoriyali } = SHKALA[id]
+  const { atribut, klasslar, kategoriyali } = shkalaOl(id)
   if (klassIdx === YOQ_KLASS) return ['!', ['has', atribut]] as ExpressionSpecification
   const k = klasslar[klassIdx]
   if (!k) return null
