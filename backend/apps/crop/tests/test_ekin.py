@@ -9,9 +9,18 @@ from django.db import connection
 from osgeo import ogr, osr
 
 from apps.crop.models import EkinClass, KonturEkin
+from apps.crop.yillar import tozala
+from apps.soil.normalizatsiya import kirill_lotin
 from conftest import kontur_yarat, kvadrat
 
 ogr.UseExceptions()
+
+
+@pytest.fixture(autouse=True)
+def _kesh():
+    tozala()
+    yield
+    tozala()
 
 DOMEN = {101010000: "Paxta", 102010000: "Gʻalla", 5: "Arpa (ozuqa uchun)"}
 
@@ -145,7 +154,65 @@ def test_tile_ekin_atributlari(client, ekinlar):
 def test_api_ekinlar_royxati(client, ekinlar):
     r = client.get("/api/ekinlar/", HTTP_HOST="localhost")
     assert r.status_code == 200
-    assert r.json() == [
-        {"kod": 101010000, "nom": "Paxta", "maydon_2026": 50.0, "maydon_2025": 0.0},
-        {"kod": 102010000, "nom": "G‘alla", "maydon_2026": 10.0, "maydon_2025": 60.0},
-    ]
+    assert r.json() == {
+        "yillar": [2026, 2025],
+        "ekinlar": [
+            {"kod": 101010000, "nom": "Paxta", "maydonlar": {"2026": 50.0, "2025": 0.0}},
+            {"kod": 102010000, "nom": "G‘alla", "maydonlar": {"2026": 10.0, "2025": 60.0}},
+        ],
+    }
+
+
+@pytest.mark.django_db
+def test_tile_kop_yil(client, ekinlar):
+    a = ekinlar
+    galla = EkinClass.objects.get(kod=102010000)
+    KonturEkin.objects.create(kontur=a, yil=2022, ekin=galla, maydon=5.0, ulush=1.0, asosiy=True)
+    tozala()
+    z = 14
+    n = 2**z
+    x = int((69.105 + 180) / 360 * n)
+    y = int((1 - math.asinh(math.tan(math.radians(40.105))) / math.pi) / 2 * n)
+    javob = client.get(f"/tiles/kontur/{z}/{x}/{y}.pbf?tuman=1201")
+    assert javob.status_code == 200
+    for kalit in (b"ekin_2022", b"ekin_2025", b"ekin_2026"):
+        assert kalit in javob.content
+    assert b"ekin_2023" not in javob.content
+
+
+def test_kirill_lotin_ekin_nomlari():
+    assert kirill_lotin("Ғалла") == "G‘alla"
+    assert kirill_lotin("Янги Интенсив боғ") == "Yangi Intensiv bog‘"
+    assert kirill_lotin("Ўрик") == "O‘rik"
+    assert kirill_lotin("Шоли") == "Sholi"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_kirill_domen_lotin_ustuvor(tmp_path, konturlar):
+    """Avval lotin yil (Paxta), keyin kirill yil: mavjud kod nomi saqlanadi, yangi kod o'giriladi."""
+    def gpkg(nom, domen, qatlam):
+        ds = ogr.GetDriverByName("GPKG").CreateDataSource(str(tmp_path / nom))
+        ds.AddFieldDomain(ogr.CreateCodedFieldDomain("d", "", ogr.OFTInteger, ogr.OFSTNone, domen))
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+        srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+        q = ds.CreateLayer(qatlam, srs, ogr.wkbMultiPolygon, ["FID=OBJECTID"])
+        fd = ogr.FieldDefn("crop_name", ogr.OFTInteger)
+        fd.SetDomainName("d")
+        q.CreateField(fd)
+        for ust in ("crop_area", "kontur_raqami", "district"):
+            q.CreateField(ogr.FieldDefn(ust, ogr.OFTReal if ust == "crop_area" else ogr.OFTInteger))
+        for i, kod in enumerate(domen):
+            f = ogr.Feature(q.GetLayerDefn())
+            f["crop_name"] = kod
+            f.SetGeometry(ogr.CreateGeometryFromWkt(_poligon(69.1 + i * 0.004, 40.1, 69.1 + i * 0.004 + 0.003, 40.11)))
+            q.CreateFeature(f)
+        ds = None
+        return tmp_path / nom
+
+    lot = gpkg("l.gpkg", {1: "Paxta"}, "L")
+    kir = gpkg("k.gpkg", {1: "Пахта", 3: "Янги Интенсив боғ"}, "K")
+    call_command("import_ekin", "--gdb", str(lot), "--qatlam", "L", "--yil", "2025", stdout=StringIO())
+    call_command("import_ekin", "--gdb", str(kir), "--qatlam", "K", "--yil", "2022", stdout=StringIO())
+    assert dict(EkinClass.objects.values_list("kod", "nom")) == {1: "Paxta", 3: "Yangi Intensiv bog‘"}
+    assert set(KonturEkin.objects.values_list("yil", flat=True)) == {2022, 2025}

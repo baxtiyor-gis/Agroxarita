@@ -1,6 +1,10 @@
 """Ekinlarni GIS.gdb `Crop_<yil>` qatlamidan konturlarga bog'lash.
 
-    python manage.py import_ekin --yil 2026 [--viloyat 11 12 ...] [--qayta] [--data-dir PAPKA] [--gdb YOL]
+    python manage.py import_ekin --yil 2026 [--viloyat 11 12 ...] [--qayta] [--data-dir PAPKA]
+                                 [--gdb YOL] [--qatlam NOM]
+
+Manba (gdb, qatlam) — `apps.crop.yillar.MANBALAR` (yil bo'yicha) yoki `--gdb`/`--qatlam`; ikkalasi ham yo'q bo'lsa
+`data/GIS.gdb` va `Crop_<yil>`. Nisbiy `--gdb` yo'li data papkasiga nisbatan olinadi.
 
 Oqim: domen -> EkinClass (upsert); VectorTranslate (faqat crop_name, crop_area, kontur_raqami, district,
 geometriya; EPSG:4326) -> staging `ekin_staging` (UNLOGGED, MakeValid, GIST) -> bloklar bo'yicha fazoviy
@@ -18,6 +22,8 @@ from osgeo import gdal, ogr
 
 from apps.border.management.commands.import_border import nom_tozala
 from apps.crop.models import EkinClass
+from apps.crop.yillar import manba, tozala
+from apps.soil.normalizatsiya import kirill_lotin
 
 gdal.UseExceptions()
 ogr.UseExceptions()
@@ -36,8 +42,12 @@ def _pg_ulanish():
     return "PG:" + " ".join(f"{k}={v}" for k, v in qismlar.items() if v)
 
 
+def kirillmi(matn):
+    return any("Ѐ" <= h <= "ӿ" for h in matn)
+
+
 def domenni_oqi(ds, qatlam_nomi):
-    """{kod(int): nom} — qatlamdagi crop_name maydonining domeni."""
+    """{kod(int): nom} — qatlamdagi crop_name maydonining domeni (domen nomi maydondan olinadi; yo'q -> {})."""
     qatlam = ds.GetLayerByName(qatlam_nomi)
     if qatlam is None:
         raise CommandError(f"'{qatlam_nomi}' qatlami yo'q")
@@ -59,19 +69,26 @@ class Command(BaseCommand):
         parser.add_argument("--viloyat", type=int, nargs="+", default=None, help="region_id ro'yxati")
         parser.add_argument("--qayta", action="store_true", help="yil uchun mavjud yozuvlarni o'chirib qayta yozish")
         parser.add_argument("--data-dir", default=None)
-        parser.add_argument("--gdb", default=None, help="manba yo'li (testlar uchun)")
+        parser.add_argument("--gdb", default=None, help="manba GDB yo'li (default: yillar.MANBALAR yoki GIS.gdb)")
+        parser.add_argument("--qatlam", default=None, help="qatlam nomi (default: yillar.MANBALAR yoki Crop_<yil>)")
 
     def handle(self, *args, **o):
-        gdb = Path(o["gdb"]) if o["gdb"] else Path(o["data_dir"] or settings.DATA_DIR) / "GIS.gdb"
+        data = Path(o["data_dir"] or settings.DATA_DIR)
+        if o["gdb"]:
+            gdb, qatlam = o["gdb"], f"Crop_{o['yil']}"
+        else:
+            gdb, qatlam = manba(o["yil"])
+        gdb = data / gdb  # mutlaq yo'l bo'lsa o'zi qoladi
         if not gdb.exists():
             raise CommandError(f"Manba topilmadi: {gdb}")
         self.gdb, self.yil, self.viloyat = gdb, o["yil"], o["viloyat"]
-        self.qatlam = f"Crop_{self.yil}"
+        self.qatlam = o["qatlam"] or qatlam
         self.vaqt, self.w = [], self.stdout.write
         self.tekshir_mavjud(o["qayta"])
         try:
             self.yuklash()
         finally:
+            tozala()
             with connection.cursor() as c:
                 c.execute(f"DROP TABLE IF EXISTS {STAGING}, {BOGLASH}")
 
@@ -114,10 +131,17 @@ class Command(BaseCommand):
         ds = ogr.Open(str(self.gdb))
         domen = domenni_oqi(ds, self.qatlam)
         ds = None
+        # lotin domen — nom yangilanadi; kirill domen — faqat yangi kodlar (transliteratsiya), mavjud nom saqlanadi
+        self.yangi_kodlar = []
         with transaction.atomic():
             for kod, nom in domen.items():
-                EkinClass.objects.update_or_create(
-                    kod=kod, defaults={"nom": nom_tozala(nom)})
+                if kirillmi(nom):
+                    _, yaratildi = EkinClass.objects.get_or_create(
+                        kod=kod, defaults={"nom": nom_tozala(kirill_lotin(nom))})
+                else:
+                    _, yaratildi = EkinClass.objects.update_or_create(kod=kod, defaults={"nom": nom_tozala(nom)})
+                if yaratildi:
+                    self.yangi_kodlar.append(kod)
         self.lugat_soni = len(domen)
 
     def staging_yoz(self):
@@ -219,7 +243,8 @@ class Command(BaseCommand):
             top = c.fetchall()
         w(f"\n=== HISOBOT {self.qatlam} ===")
         w(f"manba {self.manba} poligon (bo'sh geometriya {self.bosh}, MakeValid: {self.invalid}); "
-          f"ishlangan {self.jami}, {self.jami_ga:,.0f} ga; lug'at {self.lugat_soni} kod")
+          f"ishlangan {self.jami}, {self.jami_ga:,.0f} ga; lug'at {self.lugat_soni} kod"
+          f" (yangi {len(self.yangi_kodlar)})")
         w(f"bog'langan (>= {MIN_ULUSH}): {self.boglangan} poligon, {self.boglangan_ga:,.0f} ga; "
           f"bog'lanmagan: {self.jami - self.boglangan} poligon, {self.jami_ga - self.boglangan_ga:,.0f} ga")
         if self.lugatsiz:

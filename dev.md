@@ -49,12 +49,12 @@ Talablar: Windows, Python 3.11, Node.js, PostgreSQL 17 + PostGIS.
    .venv\Scripts\python.exe manage.py import_border    # viloyat, tuman, massiv (~1 daq)
    .venv\Scripts\python.exe manage.py import_kontur    # 948 ming kontur + tuman_geo + tur (~12 daq)
    .venv\Scripts\python.exe manage.py import_tuproq    # 75 ming tuproq poligoni + lug'atlar
-   .venv\Scripts\python.exe manage.py import_ekin --yil 2026   # import_kontur dan keyin; --yil 2025 ham (~3 va ~1 daq)
+   .venv\Scripts\python.exe manage.py import_ekin --yil 2026   # import_kontur dan keyin; tartib: 2026, 2025, 2024, 2023, 2022 (lotin domen avval)
    ```
    Qayta hisoblash (import qilmasdan), shu tartibda: `kontur_tuman [--tuman KOD]` → `kontur_tur [--tuman KOD]` →
    `kontur_tuproq [--tuman KOD] [--chegara 0.5]` (qolgan yerlar tuproq bilan ≥50% qoplansa → `sugoriladigan`;
    `kontur_tur` uni qayta `aniqlanmagan` qiladi, shuning uchun doim undan keyin). Respublika bo'yicha qo'llangan.
-   **Ekin:** `import_ekin --yil YYYY [--viloyat ID ...] [--qayta]` — `import_kontur` konturlarni tozalaganda ekinlar ham o'chadi, qayta ishga tushiring.
+   **Ekin:** `import_ekin --yil YYYY [--gdb YOL] [--qatlam NOM] [--viloyat ID ...] [--qayta]` (manba jadvali — `apps/crop/yillar.py`: 2022–2025 `ASOSIY_2022_2025.gdb`/`ASOSIY_<yil>`, 2026 `GIS.gdb`/`Crop_2026`; yangi 2026 fayl uchun `--gdb`/`--qatlam`) — `import_kontur` konturlarni tozalaganda ekinlar ham o'chadi, qayta ishga tushiring.
    **Relyef:** `yukla_dem` (Copernicus DEM → `data/dem/`), `hisobla_relyef` — `import_kontur` dan keyin qayta ishga tushiriladi.
    **Agrokimyo:** `import_agrokimyo --qatlam Kaliy --korsatkich kaliy`. **Iqlim:** `katak_yarat` → `yukla_era5` → `import_iqlim` (CDS kaliti `.env` da).
    Joriy (to'liq bo'lmagan) yil: `yukla_era5 --joriy --import` (= `--soatlik --yil <bugungi yil>`; mavjud sana = bugun−7 kun, qayta ishga tushirilsa faqat yangi qismi; IqlimKunlik — mavjud kunlar, IqlimOylik — faqat to'liq oylar, IqlimYillik yozilmaydi).

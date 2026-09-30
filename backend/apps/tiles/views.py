@@ -7,6 +7,7 @@ from django.views.decorators.http import require_GET
 
 from apps.border.models import Massiv, Tuman, Viloyat
 from apps.crop.models import EkinClass, KonturEkin
+from apps.crop.yillar import ekin_yillari
 from apps.land.models import Kontur, KonturKorsatkich
 from apps.relief.models import KonturRelyef
 
@@ -111,8 +112,18 @@ def maska_sql(z):
     """
 
 
-def kontur_sql(z):
-    """(sql, tolerantlik). Params: z, x, y, qatlam, [tolerantlik], tuman_id. z >= 13 — soddalashtirishsiz."""
+def kontur_sql(z, yillar=()):
+    """(sql, tolerantlik). Params: z, x, y, qatlam, [tolerantlik], tuman_id. z >= 13 — soddalashtirishsiz.
+    `yillar` — bazadagi ekin yillari (int); har biri uchun `ekin_<yil>` atributi (asosiy ekin kodi)."""
+    yillar = [int(y) for y in yillar]
+    # bitta LATERAL pivot: konturning asosiy ekinlari (kontur_yil indeksi) -> yil bo'yicha kod
+    ekin_ustun = "".join(f", ek.ekin_{y} AS ekin_{y}" for y in yillar)
+    ekin_lateral = ""
+    if yillar:
+        pivot = ", ".join(f"MAX(c.kod) FILTER (WHERE e.yil = {y}) AS ekin_{y}" for y in yillar)
+        ekin_lateral = (f"LEFT JOIN LATERAL (SELECT {pivot} FROM {KonturEkin._meta.db_table} e "
+                        f"JOIN {EkinClass._meta.db_table} c ON c.id = e.ekin_id "
+                        f"WHERE e.kontur_id = t.id AND e.asosiy) ek ON TRUE")
     if z <= KONTUR_SODDALASH_MAX_ZOOM:
         piksel = EKVATOR_M / (256 * 2**z)  # metr
         # oldindan soddalashtirilgan geom_mvt_s (~19 m) ustida tez ST_Simplify; NULL bo'lsa geom_mvt
@@ -129,16 +140,13 @@ def kontur_sql(z):
             SELECT t.id, t.kontur_raqami, ROUND(t.umumiy_maydoni::numeric, 2)::float8 AS maydon, t.tur,
                    ks.bonitet, ks.shorlanish, ks.gumus, ks.fosfor, ks.kaliy,
                    r.balandlik_ortacha AS balandlik, r.qiyalik_ortacha AS qiyalik,
-                   c26.kod AS ekin_2026, c25.kod AS ekin_2025,
+                   {ekin_ustun[2:] + ',' if ekin_ustun else ''}
                    ST_AsMVTGeom({geom_ifoda}, tile.env, {EXTENT}, {BUFFER}, true) AS geom
             FROM {Kontur._meta.db_table} t
             LEFT JOIN {KonturKorsatkich._meta.db_table} ks ON ks.kontur_id = t.id
             LEFT JOIN {KonturRelyef._meta.db_table} r ON r.kontur_id = t.id
             -- asosiy ekin kodi (yil bo'yicha); yo'q bo'lsa NULL -> MVT'da atribut yo'q
-            LEFT JOIN {KonturEkin._meta.db_table} e26 ON e26.kontur_id = t.id AND e26.yil = 2026 AND e26.asosiy
-            LEFT JOIN {EkinClass._meta.db_table} c26 ON c26.id = e26.ekin_id
-            LEFT JOIN {KonturEkin._meta.db_table} e25 ON e25.kontur_id = t.id AND e25.yil = 2025 AND e25.asosiy
-            LEFT JOIN {EkinClass._meta.db_table} c25 ON c25.id = e25.ekin_id, tile
+            {ekin_lateral}, tile
             -- tuman_geo hali hisoblanmagan konturlar uchun vaqtincha manba tumani (distrikt_id)
             WHERE COALESCE(t.tuman_geo_id, t.tuman_id) = %s AND t.geom_mvt && tile.env{maydon_sharti}
         ) q
@@ -194,7 +202,7 @@ def tile(request, qatlam, z, x, y):
     if qatlam == "maska":
         sql, params = maska_sql(z), [qatlam, z, x, y, z, x, y, filtrlar["tuman"]]
     elif qatlam == "kontur":
-        sql, tolerantlik = kontur_sql(z)
+        sql, tolerantlik = kontur_sql(z, ekin_yillari())
         params = [z, x, y, qatlam, *tolerantlik, tuman_id]
     else:
         sql, tolerantlik, filtr_params = tile_sql(qatlam, z, filtrlar)

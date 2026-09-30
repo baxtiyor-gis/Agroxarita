@@ -85,7 +85,7 @@ Tile ichidagi qatlam nomi = URL dagi `{qatlam}`. Extent 4096, buffer 64.
 | `tuman` | 5–14 | `kod`, `nom`, `tip`, `region_id` | `?viloyat={region_id}` |
 | `massiv` | 9–16 (`?tuman=` bilan **6–16**) | `nom`, `kod` (tuman kodi) | `?tuman={kod}` |
 | `maska` | 0–16 | — (faqat geometriya) | `?tuman={kod}` **majburiy** |
-| `kontur` | 9–18 | `id`, `kontur_raqami`, `maydon` (ga, 2 xona), `tur` (`sugoriladigan` \| `aniqlanmagan`), tematik: `bonitet`, `shorlanish` (1–5), `gumus` (1–6), `fosfor` (1–5), `kaliy` (1–5), `balandlik` (m), `qiyalik` (gradus), ekin: `ekin_2026`, `ekin_2025` (asosiy ekin **kodi**, butun son, masalan `101010000`) | `?tuman={kod}` **majburiy** (`tuman_geo` bo'yicha) |
+| `kontur` | 9–18 | `id`, `kontur_raqami`, `maydon` (ga, 2 xona), `tur` (`sugoriladigan` \| `aniqlanmagan`), tematik: `bonitet`, `shorlanish` (1–5), `gumus` (1–6), `fosfor` (1–5), `kaliy` (1–5), `balandlik` (m), `qiyalik` (gradus), ekin: `ekin_<yil>` — har yil 2022…2026 (asosiy ekin **kodi**, butun son, masalan `101010000`) | `?tuman={kod}` **majburiy** (`tuman_geo` bo'yicha) |
 
 `maska` — tile to'rtburchagi minus tuman geometriyasi (`ST_Difference`); tuman tile'ga tegmasa — butun
 tile to'rtburchagi; tile to'liq tuman ichida bo'lsa — `204`. `z < 9` da `geom_mvt_s`. `?tuman` yo'q yoki
@@ -138,16 +138,21 @@ yo'q bo'lsa atribut tile'da umuman bo'lmaydi (MapLibre'da `["has", "gumus"]`). B
 
 ## Ekin (Task 12)
 
-Manba: GIS.gdb `Crop_2026` (244 668 poligon), `Crop_2025` (85 598). Har ekin poligoni eng katta kesishuvli konturga
-bog'lanadi (kesishuv >= poligon maydonining 0.5; qolganlari bog'lanmaydi), (kontur, yil, ekin) bo'yicha jamlanadi.
-`kontur` tile'ida `ekin_2026`, `ekin_2025` — shu yilning asosiy ekini **kodi** (`EkinClass.kod`, butun son); ekin yo'q bo'lsa
-atribut tile'da bo'lmaydi (`["has", "ekin_2026"]`). Ekinlar guruhlanmaydi; kod -> rang xaritasi frontendda (`GET /api/ekinlar/` — legenda uchun).
-To'ldirish: `manage.py import_ekin --yil 2026 [--viloyat ID ...] [--qayta]` (yil uchun yozuv bor bo'lsa `--qayta` kerak).
+Manba: `data/ASOSIY_2022_2025.gdb` (`ASOSIY_2022`…`ASOSIY_2025`, asosiy ekinlar) va `data/GIS.gdb` `Crop_2026` (jadval — `apps/crop/yillar.py`).
+Har ekin poligoni eng katta kesishuvli konturga bog'lanadi (kesishuv >= poligon maydonining 0.5; qolganlari bog'lanmaydi),
+(kontur, yil, ekin) bo'yicha jamlanadi. `kontur` tile'ida bazadagi **har yil** uchun `ekin_<yil>` (2022…2026) — shu yilning asosiy
+ekini **kodi** (`EkinClass.kod`, butun son); ekin yo'q bo'lsa atribut tile'da bo'lmaydi (`["has", "ekin_2026"]`).
+Yillar ro'yxati `GET /api/ekinlar/` dagi `yillar`. Ekinlar guruhlanmaydi; kod -> rang xaritasi frontendda. Nomlar lotinda
+(lotin domen ustuvor; faqat kirillda kelgan kodlar transliteratsiya qilingan).
+To'ldirish (tartib: 2026, 2025, 2024, 2023, 2022):
+`manage.py import_ekin --yil N [--gdb YOL] [--qatlam NOM] [--viloyat ID ...] [--qayta]` (yil uchun yozuv bor bo'lsa `--qayta` kerak).
+`GET /api/konturlar/{id}/` dagi `ekinlar` — barcha yillar.
 
 ### GET `/api/ekinlar/`
 
-Barcha ekinlar, 2026 maydoni kamayish tartibida (SQL agregat, 30 daqiqa keshlanadi):
-`[{"kod": 102010000, "nom": "G‘alla", "maydon_2026": 871006.87, "maydon_2025": 0.0}, ...]` (maydon — ga).
+Barcha ekinlar; eng yangi yil (2026) maydoni kamayish, keyin oldingi yillar (SQL agregat, 30 daqiqa keshlanadi):
+`{"yillar": [2026, 2025, 2024, 2023, 2022], "ekinlar": [{"kod": 102010000, "nom": "G‘alla", "maydonlar": {"2026": 871006.87, "2025": 0.0, ...}}, ...]}`
+(maydon — ga; ekin o'sha yil ekilmagan bo'lsa `0.0`).
 
 ## DEM raster tile (Task 11)
 
