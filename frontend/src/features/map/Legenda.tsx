@@ -45,7 +45,7 @@ export function Legenda({ tuman }: { tuman: number | null }) {
           const tanlangan = klassFiltr === i
           const ichki = (
             <>
-              <span className="size-3.5 shrink-0 rounded-[4px] ring-1 ring-black/10" style={{ background: k.rang }} />
+              <span className="size-3.5 shrink-0 rounded-[4px] ring-1 ring-black/10" style={{ background: k.fon ?? k.rang }} />
               <span className="min-w-0 flex-1 truncate text-[12px] text-ink">{k.nom}</span>
               {k.oraliq && <span className="nums shrink-0 text-[10.5px] text-faint">{k.oraliq}</span>}
             </>

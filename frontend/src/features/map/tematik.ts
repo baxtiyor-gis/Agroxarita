@@ -20,6 +20,8 @@ export interface Klass {
   kod?: number
   /** "Boshqa": asosiy kodlardan hech biri emas yoki atribut yo'q */
   boshqa?: boolean
+  /** Legenda belgisi uchun CSS fon (rang o'rniga, masalan "Boshqa" — ko'p rangli) */
+  fon?: string
   /** Quyi chegara (shu qiymatdan boshlab shu klass) */
   min: number
   /** Yuqori chegara (kiritilmaydi), oxirgi klassda Infinity */
@@ -117,13 +119,18 @@ export const EKIN_ASOSIY: { kod: number; nom: string; rang: string }[] = [
   { kod: 103020000, nom: 'Kungaboqar', rang: '#0f8b8d' },
 ]
 
+/** Asosiy bo'lmagan ekinlar: xaritada har kod o'z rangida (kod -> hue), legendada bitta "Boshqa" */
+const HUE_KOEF = 47
+const boshqaRangi = (kod: number) => `hsl(${(kod * HUE_KOEF) % 360}, 55%, 62%)`
+const BOSHQA_FON = `linear-gradient(135deg, ${[11, 83, 155, 227, 299].map((h) => `hsl(${h}, 55%, 62%)`).join(', ')})`
+
 const EKIN_KLASSLAR: Klass[] = [
   ...EKIN_ASOSIY.map((e, i) => ({ kod: e.kod, min: i, max: i + 1, rang: e.rang, nom: e.nom })),
-  { boshqa: true, min: EKIN_ASOSIY.length, max: EKIN_ASOSIY.length + 1, rang: YOQ_RANG, nom: 'Boshqa' },
+  { boshqa: true, min: EKIN_ASOSIY.length, max: EKIN_ASOSIY.length + 1, rang: YOQ_RANG, fon: BOSHQA_FON, nom: 'Boshqa' },
 ]
 
-/** Ekin kodi -> rang (kontur paneli uchun); asosiy ro'yxatda bo'lmasa kulrang */
-export const ekinRangi = (kod: number) => EKIN_ASOSIY.find((e) => e.kod === kod)?.rang ?? YOQ_RANG
+/** Ekin kodi -> rang (xarita bilan bir xil): asosiylar ro'yxatdan, qolganlari koddan */
+export const ekinRangi = (kod: number) => EKIN_ASOSIY.find((e) => e.kod === kod)?.rang ?? boshqaRangi(kod)
 
 export const SHKALA: Record<TematikId, Shkala> = {
   ekin_2026: {
@@ -172,7 +179,9 @@ export function rangIfoda(id: TematikId): ExpressionSpecification {
   if (kategoriyali) {
     const match: unknown[] = ['match', ['get', atribut]]
     for (const k of klasslar) if (k.kod != null) match.push(k.kod, k.rang)
-    match.push(YOQ_RANG)
+    // ro'yxatda yo'q kod — o'z rangi (ekinRangi bilan bir xil formula)
+    const hue = ['%', ['*', ['to-number', ['get', atribut]], HUE_KOEF], 360]
+    match.push(['to-color', ['concat', 'hsl(', ['to-string', hue], ', 55%, 62%)']])
     return ['case', ['has', atribut], match, YOQ_RANG] as unknown as ExpressionSpecification
   }
   const step: unknown[] = ['step', ['get', atribut], klasslar[0].rang]
