@@ -19,6 +19,58 @@ tugma, SSH orqali `deploy/deploy.sh <sha>`, health tekshiruvi, muvaffaqiyatsiz b
 
 ---
 
+## Dasturchi uchun qisqa qo'llanma
+
+### A. Yangi versiyani chiqarish (har safar)
+1. O'zgarishni branchda qiling, lokal tekshiring:
+   `backend`: `.venv\Scripts\python.exe -m pytest -q`; `frontend`: `npm run lint; npm run build`.
+   Model o'zgargan bo'lsa — migratsiya faylini commit qilishni unutmang (`manage.py makemigrations`).
+2. `main` ga merge qiling va push qiling (`git push origin main`).
+3. GitLab → CI/CD → Pipelines: `build` → `test` → `release` yashil bo'lishini kuting.
+4. `deploy:production` tugmasini bosing (qo'lda). U serverda `git pull` + `./deploy/deploy.sh <sha>` qiladi:
+   yangi obrazlar tortiladi, backend ishga tushganda `migrate` va `collectstatic` avtomatik, `/api/health/` tekshiriladi.
+   Health o'tmasa — avtomatik oldingi versiyaga qaytadi (pipeline qizil bo'ladi).
+5. Tekshiring: sayt ochiladi, `https://<domen>/api/health/` → `{"status": "ok", ...}`.
+
+Qo'lda (CI siz) chiqarish yoki qaytarish — serverda:
+```bash
+cd /opt/agroxarita
+git pull --ff-only
+./deploy/deploy.sh <commit-sha>      # yoki latest
+./deploy/deploy.sh "$(cat .tag_oldingi)"   # oldingi versiyaga qaytish
+```
+Ma'lumot importi kerak bo'lsa (yangi ekin yili va h.k.) — deploydan keyin:
+`docker compose run --rm manage import_ekin --yil 2027` (fayl `/opt/agroxarita/data/` ga oldin qo'yiladi),
+so'ng keshni tozalash: `docker compose exec redis redis-cli FLUSHDB`.
+
+### B. Prodda backupni ishga tushirish (bir marta)
+```bash
+cd /opt/agroxarita
+chmod +x deploy/*.sh
+sudo cp deploy/systemd/agroxarita.service deploy/systemd/agroxarita-backup.service deploy/systemd/agroxarita-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now agroxarita.service          # server qayta yuklanganda stek o'zi ko'tariladi
+sudo systemctl enable --now agroxarita-backup.timer     # har kuni 02:30
+sudo systemctl start agroxarita-backup.service          # birinchi backupni hozir olish
+journalctl -u agroxarita-backup.service -n 20           # natija: "backup tayyor: ..."
+ls -lh backups/kunlik/
+systemctl list-timers | grep agroxarita                 # keyingi ishga tushish vaqti
+```
+- Zaxiralar `BACKUP_PATH` (default `/opt/agroxarita/backups`): `kunlik/` 7 ta, `haftalik/` 4 ta (yakshanba),
+  `oylik/` 6 ta (oyning 1-kuni). Har dump `pg_restore -l` bilan tekshiriladi.
+- Qo'lda backup: `sudo systemctl start agroxarita-backup.service` (yoki `./deploy/backup.sh`).
+- Tiklash: `./deploy/restore.sh backups/kunlik/agroxarita_YYYYmmdd_HHMM.dump` ("ha" deb tasdiqlanadi;
+  backend va web vaqtincha to'xtaydi).
+- Oyiga bir marta tiklashni alohida serverda sinab ko'ring. Zaxiralarni boshqa joyga (boshqa server/disk)
+  ko'chirish hali sozlanmagan — shu serverning o'zi ishdan chiqsa zaxira ham yo'qoladi.
+
+### C. Birinchi baza (lokaldan)
+Lokal baza nusxasi `data/backups/agroxarita_20260930.dump` (git'da emas, fleshkada beriladi). Serverda
+`/opt/agroxarita/backups/` ga qo'yib, quyidagi 4-bosqichdagi `pg_restore` bilan tiklanadi. DEM fayllari ham shu
+yo'l bilan (`data/dem/dem.vrt` + `Copernicus_DSM_*.tif`) `/opt/agroxarita/data/dem/` ga.
+
+---
+
 ## Birinchi ishga tushirish rejasi
 
 ### 0. Oldindan kerak (kimdan)
