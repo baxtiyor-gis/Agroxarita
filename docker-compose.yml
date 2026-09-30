@@ -1,5 +1,6 @@
 # Agroxarita V2 — production (umumiy server, repo katalogidan). Batafsil: docs/DEPLOY.md
 # Obrazlar serverda yig'iladi: `docker compose build` (registry ishlatilsa — REGISTRY_IMAGE + `pull`).
+# Resurs chegarasi (jami): CPU 6 yadro (db 3 + backend 2 + redis 0.5 + web 0.5), RAM ~5.1 GB (3g + 1.5g + 384m + 256m).
 # Umumiy server qoidalari: tashqariga faqat web (127.0.0.1), har servisda xotira/CPU chegarasi,
 # log hajmi cheklangan, tarmoq subneti aniq — boshqa loyihalar bilan to'qnashmasin.
 name: agroxarita
@@ -35,8 +36,8 @@ x-backend: &backend
       condition: service_healthy
     redis:
       condition: service_started
-  mem_limit: ${BACKEND_MEM:-2500m}
-  cpus: ${BACKEND_CPUS:-4}
+  mem_limit: ${BACKEND_MEM:-1500m}
+  cpus: ${BACKEND_CPUS:-2}
 
 services:
   db:
@@ -49,7 +50,7 @@ services:
     command: >
       postgres
       -c shared_buffers=${PG_SHARED_BUFFERS:-1GB}
-      -c effective_cache_size=${PG_EFFECTIVE_CACHE:-3GB}
+      -c effective_cache_size=${PG_EFFECTIVE_CACHE:-2GB}
       -c work_mem=${PG_WORK_MEM:-32MB}
       -c maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-512MB}
       -c max_connections=50
@@ -58,8 +59,8 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ${BACKUP_PATH:-./backups}:/backups
     shm_size: 1g
-    mem_limit: ${DB_MEM:-4g}
-    cpus: ${DB_CPUS:-4}
+    mem_limit: ${DB_MEM:-3g}
+    cpus: ${DB_CPUS:-3}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -69,9 +70,9 @@ services:
   redis:
     <<: *umumiy
     image: redis:7-alpine
-    command: redis-server --maxmemory ${REDIS_MAXMEMORY:-512mb} --maxmemory-policy allkeys-lru --save ""
-    mem_limit: ${REDIS_MEM:-640m}
-    cpus: 1
+    command: redis-server --maxmemory ${REDIS_MAXMEMORY:-256mb} --maxmemory-policy allkeys-lru --save ""
+    mem_limit: ${REDIS_MEM:-384m}
+    cpus: 0.5
 
   backend:
     <<: *backend
@@ -108,7 +109,7 @@ services:
     depends_on:
       - backend
     mem_limit: 256m
-    cpus: 1
+    cpus: 0.5
 
 networks:
   default:

@@ -9,7 +9,7 @@ yig'iladi — registry, GitLab CI va GitHub Actions deploy'i ishlatilmaydi.
 Boshqa ilovalarga ta'sir qilmaslik uchun (`docker-compose.yml`):
 - tashqariga faqat `web`, faqat `127.0.0.1:8090` (`HTTP_BIND`); **8080 band** (host nginx → jenkins), 80/443 — host nginx.
   `db` va `redis` port ochmaydi — host PostgreSQL (5432) va redis (6379) bilan to'qnashmaydi;
-- har servisda `mem_limit`/`cpus` (db 4 GB, backend 2.5 GB, redis 640 MB, web 256 MB) — serverda swap yo'q;
+- har servisda `mem_limit`/`cpus` — jami 6 yadro va ~5.1 GB (db 3 yadro/3 GB, backend 2/1.5 GB, redis 0.5/384 MB, web 0.5/256 MB) — serverda swap yo'q;
 - tarmoq subneti aniq `172.30.0.0/24` (`DOCKER_SUBNET`), log hajmi cheklangan (10 MB × 5);
 - **global docker buyruqlari ishlatilmaydi**: `docker image prune`, `docker system prune`, `docker volume prune` —
   boshqa loyihalarning obraz/volume'larini o'chiradi. Faqat `docker compose ...` (loyiha `agroxarita`).
