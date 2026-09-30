@@ -1,15 +1,12 @@
 from django.db import models
 from django.db.models import Q
 
-from .guruhlar import GURUH_TANLOV
-
 
 class EkinClass(models.Model):
     """Ekin lug'ati (GIS.gdb `crop_name` domeni; ikki yil domeni birlashtirilgan)."""
 
     kod = models.IntegerField(unique=True)
     nom = models.CharField(max_length=128)
-    guruh = models.CharField(max_length=16, choices=GURUH_TANLOV, db_index=True)
 
     class Meta:
         ordering = ["kod"]

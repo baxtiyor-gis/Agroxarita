@@ -60,11 +60,11 @@ Faqat atributlar (geometriya yo'q; xarita — MVT). Javob:
  "relyef": {"balandlik": {"min": 810.5, "ortacha": 815.2, "max": 821.0},
             "qiyalik": {"ortacha": 1.88, "sinf": "yengil", "sinf_nom": "Yengil (1-3°)"},
             "yonalish": {"kod": "ShSh", "nom": "Shimoli-sharq", "gradus": 38.5}},
- "ekinlar": [{"yil": 2026, "kod": 101010000, "nom": "Paxta", "guruh": "paxta", "maydon": 12.4, "asosiy": true},
-             {"yil": 2025, "kod": 102010000, "nom": "G‘alla", "guruh": "galla", "maydon": 12.1, "asosiy": true}],
+ "ekinlar": [{"yil": 2026, "kod": 101010000, "nom": "Paxta", "maydon": 12.4, "asosiy": true},
+             {"yil": 2025, "kod": 102010000, "nom": "G‘alla", "maydon": 12.1, "asosiy": true}],
  "bbox": [minLon, minLat, maxLon, maxLat]}
 ```
-- `ekinlar` — kontur bilan bog'langan ekinlar (Task 12), yil kamayish, keyin `maydon` kamayish tartibida; ekin yo'q bo'lsa `[]`. `maydon` — ga (kesishuv, kontur maydonidan oshmaydi), `asosiy` — shu yilda konturdagi eng katta jami maydonli ekin (yilda bittadan). `guruh` — pastdagi ro'yxatdan.
+- `ekinlar` — kontur bilan bog'langan ekinlar (Task 12), yil kamayish, keyin `maydon` kamayish tartibida; ekin yo'q bo'lsa `[]`. `maydon` — ga (kesishuv, kontur maydonidan oshmaydi), `asosiy` — shu yilda konturdagi eng katta jami maydonli ekin (yilda bittadan).
 - `tuman`/`viloyat` — geometrik tuman (`tuman_geo`) bo'yicha; u yo'q bo'lsa manba `tuman`.
 - `maydon` — `umumiy_maydoni` (ga, 2 xona).
 - `yer_turlari` — faqat 0 dan katta ustunlar, `maydon` (ga) kamayish tartibida; `jami: true` — yig'indi ustunlar (`jami_qx_yeri`, `jami_qx_sug_yeri`), ular boshqa turlarning yig'indisi (qo'shib hisoblanmasin).
@@ -85,7 +85,7 @@ Tile ichidagi qatlam nomi = URL dagi `{qatlam}`. Extent 4096, buffer 64.
 | `tuman` | 5–14 | `kod`, `nom`, `tip`, `region_id` | `?viloyat={region_id}` |
 | `massiv` | 9–16 (`?tuman=` bilan **6–16**) | `nom`, `kod` (tuman kodi) | `?tuman={kod}` |
 | `maska` | 0–16 | — (faqat geometriya) | `?tuman={kod}` **majburiy** |
-| `kontur` | 9–18 | `id`, `kontur_raqami`, `maydon` (ga, 2 xona), `tur` (`sugoriladigan` \| `aniqlanmagan`), tematik: `bonitet`, `shorlanish` (1–5), `gumus` (1–6), `fosfor` (1–5), `kaliy` (1–5), `balandlik` (m), `qiyalik` (gradus), ekin: `ekin_2026`, `ekin_2025` (asosiy ekin guruhi kodi, masalan `"paxta"`) | `?tuman={kod}` **majburiy** (`tuman_geo` bo'yicha) |
+| `kontur` | 9–18 | `id`, `kontur_raqami`, `maydon` (ga, 2 xona), `tur` (`sugoriladigan` \| `aniqlanmagan`), tematik: `bonitet`, `shorlanish` (1–5), `gumus` (1–6), `fosfor` (1–5), `kaliy` (1–5), `balandlik` (m), `qiyalik` (gradus), ekin: `ekin_2026`, `ekin_2025` (asosiy ekin **kodi**, butun son, masalan `101010000`) | `?tuman={kod}` **majburiy** (`tuman_geo` bo'yicha) |
 
 `maska` — tile to'rtburchagi minus tuman geometriyasi (`ST_Difference`); tuman tile'ga tegmasa — butun
 tile to'rtburchagi; tile to'liq tuman ichida bo'lsa — `204`. `z < 9` da `geom_mvt_s`. `?tuman` yo'q yoki
@@ -140,25 +140,14 @@ yo'q bo'lsa atribut tile'da umuman bo'lmaydi (MapLibre'da `["has", "gumus"]`). B
 
 Manba: GIS.gdb `Crop_2026` (244 668 poligon), `Crop_2025` (85 598). Har ekin poligoni eng katta kesishuvli konturga
 bog'lanadi (kesishuv >= poligon maydonining 0.5; qolganlari bog'lanmaydi), (kontur, yil, ekin) bo'yicha jamlanadi.
-`kontur` tile'ida `ekin_2026`, `ekin_2025` — shu yilning asosiy ekini **guruh kodi** (string); ekin yo'q bo'lsa
-atribut tile'da bo'lmaydi (`["has", "ekin_2026"]`). Guruh bo'yicha bo'yash — frontend.
+`kontur` tile'ida `ekin_2026`, `ekin_2025` — shu yilning asosiy ekini **kodi** (`EkinClass.kod`, butun son); ekin yo'q bo'lsa
+atribut tile'da bo'lmaydi (`["has", "ekin_2026"]`). Ekinlar guruhlanmaydi; kod -> rang xaritasi frontendda (`GET /api/ekinlar/` — legenda uchun).
 To'ldirish: `manage.py import_ekin --yil 2026 [--viloyat ID ...] [--qayta]` (yil uchun yozuv bor bo'lsa `--qayta` kerak).
 
-| Guruh kodi | Nom | Domen kodlari |
-|---|---|---|
-| `paxta` | Paxta | 101010000 |
-| `galla` | Don (g‘alla, arpa, javdar, suli) | 102010000, 102020000, 102040000, 102050000 |
-| `sholi` | Sholi | 102080000 |
-| `makkajoxori` | Makkajo‘xori (don) | 102060000 |
-| `moyli` | Moyli ekinlar | 103* |
-| `sabzavot` | Sabzavot | 104* |
-| `poliz` | Poliz | 105* |
-| `dukkakli` | Dukkakli ekinlar | 106* |
-| `kartoshka` | Kartoshka | 107* |
-| `ozuqa` | Ozuqa ekinlari | 108*, 5, 6, 7, 9 ("... ozuqa uchun") |
-| `bog` | Bog‘ va mevali daraxtlar | 109* (uzumdan tashqari), 113000000 (tutzor) |
-| `uzum` | Uzumzor | 109190000 |
-| `boshqa` | Boshqa | 101020000 kanop, 101030000 tamaki, 10, 11, 12 (dorivor, kannabis, kovrak) |
+### GET `/api/ekinlar/`
+
+Barcha ekinlar, 2026 maydoni kamayish tartibida (SQL agregat, 30 daqiqa keshlanadi):
+`[{"kod": 102010000, "nom": "G‘alla", "maydon_2026": 871006.87, "maydon_2025": 0.0}, ...]` (maydon — ga).
 
 ## DEM raster tile (Task 11)
 

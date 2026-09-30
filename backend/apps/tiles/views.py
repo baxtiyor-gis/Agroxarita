@@ -129,12 +129,12 @@ def kontur_sql(z):
             SELECT t.id, t.kontur_raqami, ROUND(t.umumiy_maydoni::numeric, 2)::float8 AS maydon, t.tur,
                    ks.bonitet, ks.shorlanish, ks.gumus, ks.fosfor, ks.kaliy,
                    r.balandlik_ortacha AS balandlik, r.qiyalik_ortacha AS qiyalik,
-                   c26.guruh AS ekin_2026, c25.guruh AS ekin_2025,
+                   c26.kod AS ekin_2026, c25.kod AS ekin_2025,
                    ST_AsMVTGeom({geom_ifoda}, tile.env, {EXTENT}, {BUFFER}, true) AS geom
             FROM {Kontur._meta.db_table} t
             LEFT JOIN {KonturKorsatkich._meta.db_table} ks ON ks.kontur_id = t.id
             LEFT JOIN {KonturRelyef._meta.db_table} r ON r.kontur_id = t.id
-            -- asosiy ekin guruhi (yil bo'yicha); yo'q bo'lsa NULL -> MVT'da atribut yo'q
+            -- asosiy ekin kodi (yil bo'yicha); yo'q bo'lsa NULL -> MVT'da atribut yo'q
             LEFT JOIN {KonturEkin._meta.db_table} e26 ON e26.kontur_id = t.id AND e26.yil = 2026 AND e26.asosiy
             LEFT JOIN {EkinClass._meta.db_table} c26 ON c26.id = e26.ekin_id
             LEFT JOIN {KonturEkin._meta.db_table} e25 ON e25.kontur_id = t.id AND e25.yil = 2025 AND e25.asosiy

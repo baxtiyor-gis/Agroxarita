@@ -88,7 +88,7 @@ def ekin_malumoti(kontur_id):
         .order_by("-yil", "-maydon", "ekin__kod")
     )
     return [
-        {"yil": q.yil, "kod": q.ekin.kod, "nom": q.ekin.nom, "guruh": q.ekin.guruh,
+        {"yil": q.yil, "kod": q.ekin.kod, "nom": q.ekin.nom,
          "maydon": round(q.maydon, 2), "asosiy": q.asosiy}
         for q in qatorlar
     ]

@@ -17,7 +17,6 @@ from django.db import connection, transaction
 from osgeo import gdal, ogr
 
 from apps.border.management.commands.import_border import nom_tozala
-from apps.crop.guruhlar import guruh_kodi
 from apps.crop.models import EkinClass
 
 gdal.UseExceptions()
@@ -118,7 +117,7 @@ class Command(BaseCommand):
         with transaction.atomic():
             for kod, nom in domen.items():
                 EkinClass.objects.update_or_create(
-                    kod=kod, defaults={"nom": nom_tozala(nom), "guruh": guruh_kodi(kod)})
+                    kod=kod, defaults={"nom": nom_tozala(nom)})
         self.lugat_soni = len(domen)
 
     def staging_yoz(self):
@@ -214,9 +213,9 @@ class Command(BaseCommand):
             c.execute("""SELECT count(DISTINCT kontur_id), coalesce(sum(maydon), 0) FROM crop_konturekin
                          WHERE yil = %s""", [self.yil])
             kontur_soni, ga = c.fetchone()
-            c.execute("""SELECT e.kod, e.nom, e.guruh, sum(x.maydon) FROM crop_konturekin x
+            c.execute("""SELECT e.kod, e.nom, sum(x.maydon) FROM crop_konturekin x
                          JOIN crop_ekinclass e ON e.id = x.ekin_id WHERE x.yil = %s
-                         GROUP BY 1, 2, 3 ORDER BY 4 DESC LIMIT 10""", [self.yil])
+                         GROUP BY 1, 2 ORDER BY 3 DESC LIMIT 10""", [self.yil])
             top = c.fetchall()
         w(f"\n=== HISOBOT {self.qatlam} ===")
         w(f"manba {self.manba} poligon (bo'sh geometriya {self.bosh}, MakeValid: {self.invalid}); "
@@ -227,6 +226,6 @@ class Command(BaseCommand):
             w("lug'atda yo'q kodlar (tashlandi): " + ", ".join(f"{k}: {n}" for k, n, _ in self.lugatsiz))
         w(f"KonturEkin: o'chirildi {self.ochirildi}, yozildi {self.yozildi}; ekinli konturlar (yil {self.yil}): "
           f"{kontur_soni}, jami {ga:,.0f} ga")
-        w("top-10 ekin (ga): " + "; ".join(f"{nom} [{g}] {m:,.0f}" for _, nom, g, m in top))
+        w("top-10 ekin (ga): " + "; ".join(f"{nom} {m:,.0f}" for _, nom, m in top))
         w("bosqichlar: " + ", ".join(f"{n} {t:.1f}s" for n, t in self.vaqt)
           + f"; jami {sum(t for _, t in self.vaqt):.1f}s")

@@ -1,4 +1,4 @@
-"""Ekin: guruhlar, import_ekin (kichik GPKG manba), kontur API `ekinlar` va tile atributlari."""
+"""Ekin: import_ekin (kichik GPKG manba), kontur API `ekinlar` va tile atributlari."""
 import math
 from io import StringIO
 
@@ -8,26 +8,12 @@ from django.core.management.base import CommandError
 from django.db import connection
 from osgeo import ogr, osr
 
-from apps.crop.guruhlar import GURUHLAR, guruh_kodi
 from apps.crop.models import EkinClass, KonturEkin
 from conftest import kontur_yarat, kvadrat
 
 ogr.UseExceptions()
 
 DOMEN = {101010000: "Paxta", 102010000: "Gʻalla", 5: "Arpa (ozuqa uchun)"}
-
-
-@pytest.mark.parametrize("kod, guruh", [
-    (101010000, "paxta"), (101020000, "boshqa"), (101030000, "boshqa"),
-    (102010000, "galla"), (102020000, "galla"), (102040000, "galla"), (102050000, "galla"),
-    (102060000, "makkajoxori"), (102080000, "sholi"), (103010100, "moyli"), (104091200, "sabzavot"),
-    (105030000, "poliz"), (106020000, "dukkakli"), (107010000, "kartoshka"), (108030000, "ozuqa"),
-    (5, "ozuqa"), (7, "ozuqa"), (9, "ozuqa"), (10, "boshqa"), (12, "boshqa"),
-    (109000000, "bog"), (109210000, "bog"), (109190000, "uzum"), (113000000, "bog"), (999, "boshqa"),
-])
-def test_guruh_kodi(kod, guruh):
-    assert guruh_kodi(kod) == guruh
-    assert guruh in GURUHLAR
 
 
 def _poligon(x0, y0, x1, y1):
@@ -91,7 +77,6 @@ class TestImportEkin:
         assert "bog'langan (>= 0.5): 4 poligon" in chiqish  # 999 ham bog'lanadi, lekin lug'atda yo'q
         assert "lug'atda yo'q kodlar (tashlandi): 999: 1" in chiqish
         assert EkinClass.objects.get(kod=102010000).nom == "G‘alla"  # ʻ -> ‘ (loyiha apostrofi)
-        assert EkinClass.objects.get(kod=5).guruh == "ozuqa"
         qatorlar = {(q.kontur_id, q.ekin.kod): q for q in KonturEkin.objects.select_related("ekin")}
         assert set(qatorlar) == {(a.pk, 101010000), (a.pk, 102010000), (b.pk, 101010000)}
         paxta_a, galla_a, paxta_b = (qatorlar[(a.pk, 101010000)], qatorlar[(a.pk, 102010000)],
@@ -122,8 +107,8 @@ class TestImportEkin:
 @pytest.fixture
 def ekinlar(konturlar):
     a, _ = konturlar
-    paxta = EkinClass.objects.create(kod=101010000, nom="Paxta", guruh="paxta")
-    galla = EkinClass.objects.create(kod=102010000, nom="G‘alla", guruh="galla")
+    paxta = EkinClass.objects.create(kod=101010000, nom="Paxta")
+    galla = EkinClass.objects.create(kod=102010000, nom="G‘alla")
     KonturEkin.objects.create(kontur=a, yil=2026, ekin=paxta, maydon=50.0, ulush=1.0, asosiy=True)
     KonturEkin.objects.create(kontur=a, yil=2026, ekin=galla, maydon=10.0, ulush=1.0)
     KonturEkin.objects.create(kontur=a, yil=2025, ekin=galla, maydon=60.0, ulush=1.0, asosiy=True)
@@ -134,10 +119,10 @@ def ekinlar(konturlar):
 def test_api_ekinlar(client, ekinlar, konturlar):
     r = client.get(f"/api/konturlar/{ekinlar.pk}/", HTTP_HOST="localhost")
     assert r.status_code == 200
-    assert [(e["yil"], e["kod"], e["guruh"], e["maydon"], e["asosiy"]) for e in r.json()["ekinlar"]] == [
-        (2026, 101010000, "paxta", 50.0, True),
-        (2026, 102010000, "galla", 10.0, False),
-        (2025, 102010000, "galla", 60.0, True),
+    assert [(e["yil"], e["kod"], e["nom"], e["maydon"], e["asosiy"]) for e in r.json()["ekinlar"]] == [
+        (2026, 101010000, "Paxta", 50.0, True),
+        (2026, 102010000, "G‘alla", 10.0, False),
+        (2025, 102010000, "G‘alla", 60.0, True),
     ]
     assert r.json()["ekinlar"][0]["nom"] == "Paxta"
     _, b = konturlar
@@ -152,5 +137,15 @@ def test_tile_ekin_atributlari(client, ekinlar):
     y = int((1 - math.asinh(math.tan(math.radians(40.105))) / math.pi) / 2 * n)
     javob = client.get(f"/tiles/kontur/{z}/{x}/{y}.pbf?tuman=1201")
     assert javob.status_code == 200
-    for kalit in (b"ekin_2026", b"ekin_2025", b"paxta", b"galla"):
+    for kalit in (b"ekin_2026", b"ekin_2025"):
         assert kalit in javob.content
+
+
+@pytest.mark.django_db
+def test_api_ekinlar_royxati(client, ekinlar):
+    r = client.get("/api/ekinlar/", HTTP_HOST="localhost")
+    assert r.status_code == 200
+    assert r.json() == [
+        {"kod": 101010000, "nom": "Paxta", "maydon_2026": 50.0, "maydon_2025": 0.0},
+        {"kod": 102010000, "nom": "G‘alla", "maydon_2026": 10.0, "maydon_2025": 60.0},
+    ]

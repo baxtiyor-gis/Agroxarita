@@ -5,8 +5,7 @@ from .models import EkinClass, KonturEkin
 
 @admin.register(EkinClass)
 class EkinClassAdmin(admin.ModelAdmin):
-    list_display = ("kod", "nom", "guruh")
-    list_filter = ("guruh",)
+    list_display = ("kod", "nom")
     search_fields = ("nom",)
 
 
