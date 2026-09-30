@@ -98,15 +98,26 @@ TILE_CACHE_MAX_AGE = env.int("TILE_CACHE_MAX_AGE", default=3600)
 # Chegara tile'lari (viloyat/tuman/massiv/maska) — brauzer keshi (soniya); server xotirasida ham keshlanadi
 TILE_STATIK_MAX_AGE = env.int("TILE_STATIK_MAX_AGE", default=86400)
 
+# Production (docker): REDIS_URL bo'lsa kesh gunicorn worker'lari orasida umumiy; dev — jarayon xotirasi
+REDIS_URL = env("REDIS_URL", default="")
 CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "tile",
-        "OPTIONS": {"MAX_ENTRIES": 20000},
-    }
+    "default": (
+        {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": REDIS_URL, "KEY_PREFIX": "agx"}
+        if REDIS_URL
+        else {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "tile",
+            "OPTIONS": {"MAX_ENTRIES": 20000},
+        }
+    )
 }
 
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=["http://localhost:5173"])
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+# nginx orqasida: https va host sarlavhalari proksidan olinadi
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = env.bool("USE_X_FORWARDED_HOST", default=False)
+SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = env.bool("COOKIE_SECURE", default=False)
 
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
@@ -121,4 +132,12 @@ TIME_ZONE = "Asia/Tashkent"
 USE_I18N = False
 USE_TZ = True
 STATIC_URL = "static/"
+STATIC_ROOT = Path(env("STATIC_ROOT", default=str(BASE_DIR / "staticfiles")))
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": env("LOG_LEVEL", default="WARNING")},
+}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

@@ -1,0 +1,91 @@
+# Agroxarita V2 — production (serverda /opt/agroxarita). Batafsil: docs/DEPLOY.md
+# Obrazlar GitLab registry'dan (CI build qiladi); lokal build: `docker compose build`.
+name: agroxarita
+
+x-backend: &backend
+  image: ${REGISTRY_IMAGE:-agroxarita}/backend:${TAG:-latest}
+  build: ./backend
+  env_file: .env
+  environment:
+    DB_HOST: db
+    DB_PORT: "5432"
+    REDIS_URL: redis://redis:6379/0
+    DATA_DIR: /data
+  volumes:
+    - ${DATA_PATH:-./data}:/data
+    - static:/app/staticfiles
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_started
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    command: >
+      postgres
+      -c shared_buffers=${PG_SHARED_BUFFERS:-2GB}
+      -c effective_cache_size=${PG_EFFECTIVE_CACHE:-6GB}
+      -c work_mem=${PG_WORK_MEM:-64MB}
+      -c maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-1GB}
+      -c max_connections=100
+      -c random_page_cost=1.1
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ${BACKUP_PATH:-./backups}:/backups
+    shm_size: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --maxmemory ${REDIS_MAXMEMORY:-1gb} --maxmemory-policy allkeys-lru --save ""
+    restart: unless-stopped
+
+  backend:
+    <<: *backend
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      REDIS_URL: redis://redis:6379/0
+      DATA_DIR: /data
+      RUN_MIGRATIONS: "1"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health/', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Bir martalik buyruqlar uchun (import, iqlim yuklash): docker compose run --rm manage <buyruq>
+  manage:
+    <<: *backend
+    entrypoint: ["./docker-entrypoint.sh", "python", "manage.py"]
+    command: ["help"]
+    restart: "no"
+    profiles: ["tools"]
+
+  web:
+    image: ${REGISTRY_IMAGE:-agroxarita}/frontend:${TAG:-latest}
+    build: ./frontend
+    ports:
+      - "${HTTP_BIND:-80}:80"
+    volumes:
+      - static:/static:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  static:

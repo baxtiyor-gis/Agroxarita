@@ -1,0 +1,11 @@
+# /etc/systemd/system/agroxarita-backup.timer — har kuni 02:30 (Toshkent vaqti serverda sozlangan bo'lsa)
+[Unit]
+Description=Agroxarita kunlik backup
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

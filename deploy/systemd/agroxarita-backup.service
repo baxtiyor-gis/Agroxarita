@@ -1,0 +1,12 @@
+# /etc/systemd/system/agroxarita-backup.service — timer chaqiradi
+[Unit]
+Description=Agroxarita bazasini zaxiralash
+Requires=agroxarita.service
+After=agroxarita.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/agroxarita
+ExecStart=/opt/agroxarita/deploy/backup.sh
+Nice=10
+IOSchedulingClass=idle
