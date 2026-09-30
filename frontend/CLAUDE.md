@@ -23,8 +23,8 @@ src/
   layouts/MapLayout.tsx sidebar + header + <Outlet/>
   components/           Header, Sidebar, Logo; ui/ — Button, Select, Panel
   features/<nom>/       funksiya bo'yicha (hozir map/; keyin border/, kontur/ ...)
-  pages/                MapPage, NotFound
-  store/useUi.ts        faolBolim (sidebar dropdown, bittasi ochiq)
+  pages/                MapPage, EskiMap (/map -> /), NotFound
+  store/useUi.ts        faolBolim, tematik/klassFiltr, qatlamlar; `tozala()` — logo va "Tozalash" tugmasi
   lib/cn.ts             clsx + tailwind-merge
   styles/index.css      @theme tokenlari, .float-panel, .sidebar-navy
 ```

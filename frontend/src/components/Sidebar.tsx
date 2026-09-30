@@ -1,4 +1,5 @@
 import { ChevronDown } from 'lucide-react'
+import { Link } from 'react-router'
 import { Logo } from '@/components/Logo'
 import { cn } from '@/lib/cn'
 import { useUi, type BolimId } from '@/store/useUi'
@@ -14,16 +15,23 @@ const BOLIMLAR: { id: BolimId; nom: string }[] = [
 export function Sidebar() {
   const faolBolim = useUi((s) => s.faolBolim)
   const toggleBolim = useUi((s) => s.toggleBolim)
+  const tozala = useUi((s) => s.tozala)
 
   return (
     <aside className="sidebar-navy z-30 flex w-[320px] shrink-0 flex-col">
-      <div className="flex h-[68px] shrink-0 items-center gap-2.5 px-4">
+      <Link
+        to="/"
+        onClick={tozala}
+        title="Bosh sahifa"
+        aria-label="Bosh sahifa"
+        className="flex h-[68px] shrink-0 items-center gap-2.5 px-4"
+      >
         <Logo size={34} />
         <div className="flex items-baseline">
           <span className="text-[22px] font-semibold tracking-[-0.02em] text-leaf">agro</span>
           <span className="text-[22px] font-semibold tracking-[-0.02em] text-white">xarita</span>
         </div>
-      </div>
+      </Link>
 
       <div className="scrollbar-dark min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-2">
         {BOLIMLAR.map(({ id, nom }) => {

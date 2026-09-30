@@ -52,6 +52,8 @@ interface UiState extends Saqlangan {
   klassFiltr: number | null
   setTematik: (id: TematikId | null) => void
   setKlassFiltr: (i: number | null) => void
+  /** Boshlang'ich ko'rinish: ranglash, legenda filtri va ochiq bo'lim tozalanadi (qatlam/asos xarita sozlamalari qoladi) */
+  tozala: () => void
 }
 
 export const useUi = create<UiState>((set, get) => ({
@@ -66,6 +68,7 @@ export const useUi = create<UiState>((set, get) => ({
   klassFiltr: null,
   setTematik: (tematik) => set({ tematik, klassFiltr: null }),
   setKlassFiltr: (klassFiltr) => set({ klassFiltr }),
+  tozala: () => set({ tematik: null, klassFiltr: null, faolBolim: null }),
   toggleQatlam: (id) => {
     set((s) => ({ qatlamlar: { ...s.qatlamlar, [id]: !s.qatlamlar[id] } }))
     yozish(get())

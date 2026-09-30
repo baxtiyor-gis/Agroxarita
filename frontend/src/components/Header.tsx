@@ -1,21 +1,37 @@
 import { useState } from 'react'
-import { Info, MapPin } from 'lucide-react'
+import { Info, MapPin, X } from 'lucide-react'
+import { Link } from 'react-router'
 import { InfoOyna } from '@/components/InfoOyna'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { useTanlov } from '@/features/border/useTanlov'
+import { useUi } from '@/store/useUi'
 
 export function Header() {
   const { viloyat, tuman, viloyatlar, tumanlar, setViloyat, setTuman } = useTanlov()
   const xato = 'border-clay text-clay'
   const [info, setInfo] = useState(false)
+  const tematik = useUi((s) => s.tematik)
+  const tozalaUi = useUi((s) => s.tozala)
+  const tanlovBor = viloyat != null || tuman != null || tematik != null
+  // viloyat tozalansa tuman va kontur ham URL'dan olib tashlanadi -> xarita respublika ko'rinishiga qaytadi
+  const tozala = () => {
+    tozalaUi()
+    setViloyat(null)
+  }
   return (
     <header className="z-30 flex h-[68px] shrink-0 items-center gap-3 border-b border-line bg-surface px-6">
       <InfoOyna ochiq={info} onYop={() => setInfo(false)} />
-      <span className="shrink-0 text-[20px] font-semibold tracking-[-0.02em]">
+      <Link
+        to="/"
+        onClick={tozalaUi}
+        title="Bosh sahifa"
+        aria-label="Bosh sahifa"
+        className="shrink-0 text-[20px] font-semibold tracking-[-0.02em]"
+      >
         <span className="text-leaf">agro</span>
         <span className="text-navy">xarita</span>
-      </span>
+      </Link>
       <span className="h-7 w-px shrink-0 bg-line" />
       <div className="min-w-0 truncate text-[14px] font-medium text-body">
         O'zbekiston qishloq xo'jaligi yerlarining raqamli xaritasi
@@ -71,6 +87,15 @@ export function Header() {
           </option>
         ))}
       </Select>
+      <Button
+        className="shrink-0 whitespace-nowrap disabled:pointer-events-none disabled:opacity-45"
+        onClick={tozala}
+        disabled={!tanlovBor}
+        title="Tanlangan viloyat, tuman, kontur va ranglashni tozalash"
+      >
+        <X className="size-4 text-clay" />
+        Tozalash
+      </Button>
     </header>
   )
 }
