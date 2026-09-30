@@ -110,16 +110,8 @@ export function LayersControl() {
             </label>
           ))}
           <div className="eyebrow mt-3 mb-1.5">Xaritani ranglash</div>
+          {/* Tanlangan bandni qayta bosish ranglashni o'chiradi */}
           <div role="radiogroup" aria-label="Tematik qatlam">
-            <label className="flex cursor-pointer items-center gap-2 py-1">
-              <input
-                type="radio"
-                name="tematik"
-                checked={tematik === null}
-                onChange={() => setTematik(null)}
-              />
-              Faqat kontur chegaralari
-            </label>
             {TEMATIK_GURUHLAR.map((g) => (
               <div key={g.nom}>
                 <div className="eyebrow mt-2 mb-0.5">{g.nom}</div>
@@ -138,6 +130,7 @@ export function LayersControl() {
                         checked={tematik === id}
                         disabled={yoq}
                         onChange={() => setTematik(id)}
+                        onClick={() => tematik === id && setTematik(null)}
                       />
                       <span className="min-w-0 flex-1 truncate">{sh.nom}</span>
                       {yoq ? (

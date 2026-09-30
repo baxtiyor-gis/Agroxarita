@@ -3,9 +3,9 @@ import type { ExpressionSpecification } from 'maplibre-gl'
 /**
  * Tematik ranglash (V1 `old/src/lib/ranglar.ts`): klasslangan shkala.
  * Kontur MVT atributlari: bonitet (ball), shorlanish (1-5), gumus (1-6), fosfor (1-5),
- * kaliy (1-5), balandlik (m), qiyalik (gradus). Atribut yo'q = ma'lumot yo'q.
+ * kaliy (1-5), balandlik (m). Atribut yo'q = ma'lumot yo'q.
  */
-export type TematikId = 'bonitet' | 'shorlanish' | 'gumus' | 'fosfor' | 'kaliy' | 'balandlik' | 'qiyalik'
+export type TematikId = 'bonitet' | 'shorlanish' | 'gumus' | 'fosfor' | 'kaliy' | 'balandlik'
 
 export interface Klass {
   /** Quyi chegara (shu qiymatdan boshlab shu klass) */
@@ -69,14 +69,6 @@ const SHOR: Klass[] = [
   { min: 5, max: Infinity, rang: '#9e3535', nom: "Sho'rxok" },
 ]
 
-const QIYALIK: Klass[] = [
-  { min: -Infinity, max: 1, rang: '#eef4ea', nom: 'Tekis', oraliq: '< 1°' },
-  { min: 1, max: 3, rang: '#d5e3c4', nom: 'Deyarli tekis', oraliq: '1–3°' },
-  { min: 3, max: 8, rang: '#f0c273', nom: 'Yengil nishab', oraliq: '3–8°' },
-  { min: 8, max: 15, rang: '#dc8452', nom: 'Nishab', oraliq: '8–15°' },
-  { min: 15, max: Infinity, rang: '#a04430', nom: 'Tik', oraliq: '15°+' },
-]
-
 /** Balandlik (DEM) — namuna ranglari; haqiqiy chegaralar tuman bo'yicha backenddan (`/relyef/`) */
 export const BALANDLIK_RANGLAR = ['#4b8c5a', '#9cbd6c', '#e2cc84', '#c99a63', '#9a6a4c']
 const BALANDLIK_NOMLAR = ['Eng past', 'Past', "O'rtacha", 'Baland', 'Eng baland']
@@ -95,14 +87,13 @@ export const SHKALA: Record<TematikId, Shkala> = {
   fosfor: { nom: 'Fosfor', izoh: 'P₂O₅', atribut: 'fosfor', klasslar: DARAJA },
   kaliy: { nom: 'Kaliy', izoh: 'K₂O', atribut: 'kaliy', klasslar: DARAJA },
   balandlik: { nom: 'Balandlik (DEM)', izoh: 'dengiz sathidan, m', atribut: 'balandlik', klasslar: BALANDLIK },
-  qiyalik: { nom: 'Qiyalik', izoh: 'nishablik', atribut: 'qiyalik', klasslar: QIYALIK },
 }
 
 /** Radio ro'yxat: bo'lim sarlavhasi bilan */
 export const TEMATIK_GURUHLAR: { nom: string; idlar: TematikId[] }[] = [
   { nom: 'Tuproq', idlar: ['bonitet', 'shorlanish'] },
   { nom: 'Agrokimyo', idlar: ['gumus', 'fosfor', 'kaliy'] },
-  { nom: 'Relyef', idlar: ['balandlik', 'qiyalik'] },
+  { nom: 'Relyef', idlar: ['balandlik'] },
 ]
 
 /** Balandlik (DEM) — raster; kontur fill rang olmaydi */
