@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Info, MapPin } from 'lucide-react'
+import { InfoOyna } from '@/components/InfoOyna'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { useTanlov } from '@/features/border/useTanlov'
@@ -6,8 +8,10 @@ import { useTanlov } from '@/features/border/useTanlov'
 export function Header() {
   const { viloyat, tuman, viloyatlar, tumanlar, setViloyat, setTuman } = useTanlov()
   const xato = 'border-clay text-clay'
+  const [info, setInfo] = useState(false)
   return (
     <header className="z-30 flex h-[68px] shrink-0 items-center gap-3 border-b border-line bg-surface px-6">
+      <InfoOyna ochiq={info} onYop={() => setInfo(false)} />
       <span className="shrink-0 text-[20px] font-semibold tracking-[-0.02em]">
         <span className="text-leaf">agro</span>
         <span className="text-navy">xarita</span>
@@ -17,7 +21,7 @@ export function Header() {
         O'zbekiston qishloq xo'jaligi yerlarining raqamli xaritasi
       </div>
 
-      <Button className="ml-auto shrink-0 whitespace-nowrap">
+      <Button className="ml-auto shrink-0 whitespace-nowrap" onClick={() => setInfo(true)}>
         <Info className="size-4 text-leaf" />
         Loyiha haqida
       </Button>
