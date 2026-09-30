@@ -13,7 +13,7 @@ export function NotFound() {
           Siz izlagan manzil mavjud emas.
         </div>
         <Link
-          to="/map"
+          to="/"
           className="mt-1 flex h-9 items-center rounded-card bg-leaf px-4 text-[13px] font-medium text-white transition-colors hover:bg-leaf-dark"
         >
           Xaritaga qaytish

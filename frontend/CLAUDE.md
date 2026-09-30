@@ -7,7 +7,7 @@ Paket menejeri — **npm** (`package-lock.json`).
 
 ```
 npm install
-npm run dev     # http://localhost:5173  (/ -> /map)
+npm run dev     # http://localhost:5173  (xarita — /)
 npm run build   # tsc -b && vite build
 npm run lint    # oxlint
 ```
@@ -19,7 +19,7 @@ Dev'da `maplibre-gl` `optimizeDeps.exclude` da (worker fayli uchun) — olib tas
 
 ```
 src/
-  app/router.tsx        createBrowserRouter: / -> /map, /map, * (404)
+  app/router.tsx        createBrowserRouter: / (xarita), /map -> / (eski havolalar), * (404)
   layouts/MapLayout.tsx sidebar + header + <Outlet/>
   components/           Header, Sidebar, Logo; ui/ — Button, Select, Panel
   features/<nom>/       funksiya bo'yicha (hozir map/; keyin border/, kontur/ ...)
