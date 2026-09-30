@@ -54,6 +54,9 @@ Qaytarish: `sudo rm /etc/nginx/sites-enabled/agro-xarita && sudo nginx -t && sud
   tozalanadi. Ma'lumot importidan keyin darhol yangilash: `docker compose exec redis redis-cli FLUSHDB` va
   `docker compose up -d --force-recreate web`.
 - Deploy paytida backend qayta yaratiladi (migrate + collectstatic) — ~10–15 soniya `/api` va keshlanmagan tile'lar 502 beradi.
+- `/admin/` tashqaridan o'chirilgan (`frontend/nginx.conf` — `return 404`). `/api/` va `/tiles/` faqat saytning o'z
+  sahifalaridan (Referer hosti = so'rov hosti) ishlaydi, aks holda `403`. Qo'lda tekshirish:
+  `curl -e http://127.0.0.1:8090/ http://127.0.0.1:8090/api/health/`. Django buyruqlari — `docker compose run --rm manage ...`.
 - To'liq to'xtatish: `docker compose down` (faqat shu loyiha; `pgdata` volume saqlanadi). **`down -v` — bazani o'chiradi.**
 
 ---
